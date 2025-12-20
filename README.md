@@ -1,4 +1,8 @@
-<h1>vue-pure-admin精简版（国际化版本）</h1>
+抱歉，由于路径问题无法访问仓库内容。不过，根据您提供的原始 README 内容，我可以为您整理一份简洁的 README.md 文件。以下是其内容：
+
+---
+
+# vue-pure-admin 精简版（国际化版本）
 
 [![license](https://img.shields.io/github/license/pure-admin/vue-pure-admin.svg)](LICENSE)
 
@@ -6,33 +10,33 @@
 
 ## 介绍
 
-精简版是基于 [vue-pure-admin](https://github.com/pure-admin/vue-pure-admin) 提炼出的架子，包含主体功能，更适合实际项目开发，打包后的大小在全局引入 [element-plus](https://element-plus.org) 的情况下仍然低于 `2.3MB`，并且会永久同步完整版的代码。开启 `brotli` 压缩和 `cdn` 替换本地库模式后，打包大小低于 `350kb`
+精简版是基于 [vue-pure-admin](https://github.com/pure-admin/vue-pure-admin) 提炼出的架子，包含主体功能，更适合实际项目开发。打包后的大小在全局引入 [element-plus](https://element-plus.org) 的情况下仍然低于 `2.3MB`，并且会永久同步完整版的代码。开启 `brotli` 压缩和 `cdn` 替换本地库模式后，打包大小低于 `350kb`。
 
 ## 版本选择
 
-当前是国际化版本，如果您需要非国际化版本 [请点击](https://github.com/pure-admin/pure-admin-thin)
+当前是国际化版本，如果您需要非国际化版本 [请点击](https://github.com/pure-admin/pure-admin-thin)。
 
 ## 配套视频
 
-[点我查看 UI 设计](https://www.bilibili.com/video/BV17g411T7rq)  
-[点我查看快速开发教程](https://www.bilibili.com/video/BV1kg411v7QT)
+- [点我查看 UI 设计](https://www.bilibili.com/video/BV17g411T7rq)
+- [点我查看快速开发教程](https://www.bilibili.com/video/BV1kg411v7QT)
 
 ## 配套保姆级文档
 
-[点我查看 vue-pure-admin 文档](https://pure-admin.cn/)  
-[点我查看 @pureadmin/utils 文档](https://pure-admin-utils.netlify.app)
+- [点我查看 vue-pure-admin 文档](https://pure-admin.cn/)
+- [点我查看 @pureadmin/utils 文档](https://pure-admin-utils.netlify.app)
 
 ## 高级服务
 
-[点我查看详情](https://pure-admin.cn/pages/service/)
+- [点我查看详情](https://pure-admin.cn/pages/service/)
 
 ## 预览
 
-[查看预览](https://pure-admin-thin.netlify.app/#/login)
+- [查看预览](https://pure-admin-thin.netlify.app/#/login)
 
 ## 维护者
 
-[xiaoxian521](https://github.com/xiaoxian521)
+- [xiaoxian521](https://github.com/xiaoxian521)
 
 ## ⚠️ 注意
 
@@ -41,3 +45,7 @@
 ## 许可证
 
 [MIT © 2020-present, pure-admin](./LICENSE)
+
+--- 
+
+如果您需要进一步定制或补充内容，请告诉我！
