@@ -105,6 +105,56 @@ const systemMonitorRouter = {
   ]
 };
 
+const configManagementRouter = {
+  path: "/config",
+  meta: {
+    icon: "ep:setting",
+    title: "menus.configManagement"
+  },
+  children: [
+    {
+      path: "/config/reward",
+      component: "config/reward/index",
+      name: "Reward",
+      meta: {
+        icon: "ri:medal-2-fill",
+        title: "menus.configReward",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/config/subject",
+      component: "config/subject/index",
+      name: "Subject",
+      meta: {
+        icon: "fa-solid:book-open",
+        title: "menus.configSubject",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/config/mail",
+      component: "config/mail/index",
+      name: "Mail",
+      meta: {
+        icon: "fa-solid:mail-bulk",
+        title: "menus.configMail",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/config/money",
+      component: "config/money/index",
+      name: "Money",
+      meta: {
+        icon: "ri:money-dollar-box-line",
+        title: "menus.configMoney",
+        roles: ["admin"]
+      }
+    }
+  ]
+};
+
 export default defineFakeRoute([
   {
     url: "/get-async-routes",
@@ -112,7 +162,7 @@ export default defineFakeRoute([
     response: () => {
       return {
         success: true,
-        data: [permissionRouter, systemMonitorRouter]
+        data: [permissionRouter, systemMonitorRouter, configManagementRouter]
       };
     }
   }

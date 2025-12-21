@@ -39,6 +39,12 @@ export const getRoleList = (data?: object) => {
   return http.request<ResultTable>("post", "/role", { data });
 };
 
+export const getRewardConfigList = (data?: object) => {
+  return http.request<ResultTable>("post", "/api/reward-configs/page", {
+    data
+  });
+};
+
 /** 获取系统管理-菜单管理列表 */
 export const getMenuList = (data?: object) => {
   return http.request<Result>("post", "/menu", { data });

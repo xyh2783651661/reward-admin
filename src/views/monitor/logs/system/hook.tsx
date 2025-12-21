@@ -81,6 +81,11 @@ export function useRole(tableRef: Ref) {
       minWidth: 140
     },
     {
+      label: "请求来源",
+      prop: "client",
+      minWidth: 140
+    },
+    {
       label: "设备类型",
       prop: "deviceType",
       minWidth: 100
@@ -95,16 +100,6 @@ export function useRole(tableRef: Ref) {
       prop: "browserType",
       minWidth: 100
     },
-    // {
-    //   label: "级别",
-    //   prop: "level",
-    //   minWidth: 90,
-    //   cellRenderer: ({ row, props }) => (
-    //     <el-tag size={props.size} type={getLevelType(row.level)} effect="plain">
-    //       {getLevelType(row.level, true)}
-    //     </el-tag>
-    //   )
-    // },
     {
       label: "请求耗时",
       prop: "timeCost",

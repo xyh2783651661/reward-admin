@@ -73,6 +73,11 @@ menus:
   pureLoginLog: 登录日志
   pureOperationLog: 操作日志
   pureSystemLog: 系统日志
+  configManagement: 配置管理
+  configReward: 奖励配置
+  configSubject: 科目配置
+  configMail: 邮件配置
+  configMoney: 零花钱配置
   purePermissionPage: 页面权限
   purePermissionButton: 按钮权限
   purePermissionButtonRouter: 路由返回按钮权限
