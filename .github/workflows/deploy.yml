@@ -1,0 +1,73 @@
+name: Vue Build & Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: 20
+  BUILD_OUTPUT_PATH: dist
+  APP_NAME: reward-vue-admin
+  SERVER_HOST: ${{ secrets.SERVER_HOST }}
+  SERVER_USER: ${{ secrets.SERVER_USER }}
+  SERVER_DEPLOY_PATH: /project/vue_project/reward-admin
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Cache pnpm store
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Vue project
+        run: pnpm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-dist
+          path: ${{ env.BUILD_OUTPUT_PATH }}
+          retention-days: 90
+
+      - name: Upload files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ${{ env.BUILD_OUTPUT_PATH }}/*
+          target: /home/${{ env.SERVER_USER }}/temp-${{ env.APP_NAME }}
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ env.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            sudo mkdir -p ${{ env.SERVER_DEPLOY_PATH }}
+            sudo rsync -av --delete /home/${{ env.SERVER_USER }}/temp-${{ env.APP_NAME }}/ ${{ env.SERVER_DEPLOY_PATH }}/
+            echo "✅ Vue project deployed successfully!"
