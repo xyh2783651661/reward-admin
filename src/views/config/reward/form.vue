@@ -49,7 +49,7 @@ defineExpose({ getRef });
       </el-select>
     </el-form-item>
 
-    <el-form-item label="数值">
+    <el-form-item label="数值" prop="rewardValue">
       <el-input-number
         v-model="newFormInline.rewardValue"
         :min="0"
@@ -59,7 +59,7 @@ defineExpose({ getRef });
       />
     </el-form-item>
 
-    <el-form-item label="说明">
+    <el-form-item label="说明" prop="description">
       <el-input
         v-model="newFormInline.description"
         placeholder="请输入说明"

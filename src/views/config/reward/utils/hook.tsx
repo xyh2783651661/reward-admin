@@ -9,7 +9,14 @@ import { addDialog } from "@/components/ReDialog";
 import type { FormItemProps } from "../utils/types";
 import type { PaginationProps } from "@pureadmin/table";
 import { getKeyList, deviceDetection } from "@pureadmin/utils";
-import { getRewardConfigList, getRoleMenu, getRoleMenuIds } from "@/api/system";
+import {
+  addRewardConfig,
+  deleteRewardConfig,
+  getRewardConfigList,
+  getRoleMenu,
+  getRoleMenuIds,
+  updateRewardConfig
+} from "@/api/system";
 import { type Ref, reactive, ref, onMounted, h, toRaw, watch } from "vue";
 
 export function useRole(treeRef: Ref) {
@@ -89,10 +96,17 @@ export function useRole(treeRef: Ref) {
     },
     {
       label: "创建时间",
-      prop: "createTime",
+      prop: "createdTime",
       minWidth: 160,
-      formatter: ({ createTime }) =>
-        dayjs(createTime).format("YYYY-MM-DD HH:mm:ss")
+      formatter: ({ createdTime }) =>
+        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
+    },
+    {
+      label: "更新时间",
+      prop: "updatedTime",
+      minWidth: 160,
+      formatter: ({ updatedTime }) =>
+        dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
       label: "操作",
@@ -143,8 +157,15 @@ export function useRole(treeRef: Ref) {
               loading: false
             }
           );
-          message(`已${row.status === 0 ? "停用" : "启用"}${row.rewardKey}`, {
-            type: "success"
+          updateRewardConfig({ id: row.id, status: row.status }).then(r => {
+            if (r.code === 200) {
+              message(
+                `已${row.status === 0 ? "停用" : "启用"}${row.rewardKey}`,
+                {
+                  type: "success"
+                }
+              );
+            }
           });
         }, 300);
       })
@@ -157,6 +178,7 @@ export function useRole(treeRef: Ref) {
     message(`您删除了ID为${row.id}的这条数据`, {
       type: "success"
     });
+    deleteRewardConfig(row.id);
     onSearch();
   }
 
@@ -201,6 +223,7 @@ export function useRole(treeRef: Ref) {
       title: `${title}配置`,
       props: {
         formInline: {
+          id: row?.id ?? "",
           rewardKey: row?.rewardKey ?? "",
           rewardType: row?.rewardType ?? "",
           rewardValue: row?.rewardValue ?? "",
@@ -217,7 +240,7 @@ export function useRole(treeRef: Ref) {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
         function chores() {
-          message(`您${title}了角色名称为${curData.rewardKey}的这条数据`, {
+          message(`您${title}了KEY为${curData.rewardKey}的这条数据`, {
             type: "success"
           });
           done(); // 关闭弹框
@@ -229,10 +252,29 @@ export function useRole(treeRef: Ref) {
             // 表单规则校验通过
             if (title === "新增") {
               // 实际开发先调用新增接口，再进行下面操作
-              chores();
+              addRewardConfig(curData)
+                .then(r => {
+                  if (r.code === 200) {
+                    message(r.msg, { type: "success" });
+                  } else {
+                    message(r.msg, { type: "error" });
+                  }
+                })
+                .finally(() => {
+                  chores();
+                });
             } else {
-              // 实际开发先调用修改接口，再进行下面操作
-              chores();
+              updateRewardConfig(curData)
+                .then(r => {
+                  if (r.code === 200) {
+                    message(r.msg, { type: "success" });
+                  } else {
+                    message(r.msg, { type: "error" });
+                  }
+                })
+                .finally(() => {
+                  chores();
+                });
             }
           }
         });

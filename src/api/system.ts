@@ -1,6 +1,8 @@
 import { http } from "@/utils/http";
 
 type Result = {
+  code: number;
+  msg: string;
   success: boolean;
   data?: Array<any>;
 };
@@ -43,6 +45,22 @@ export const getRewardConfigList = (data?: object) => {
   return http.request<ResultTable>("post", "/api/reward-configs/page", {
     data
   });
+};
+
+export const addRewardConfig = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-configs/add", {
+    data
+  });
+};
+
+export const updateRewardConfig = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-configs/update", {
+    data
+  });
+};
+
+export const deleteRewardConfig = (id: string | number) => {
+  return http.request<Result>("delete", `/api/reward-configs/${id}`);
 };
 
 /** 获取系统管理-菜单管理列表 */
