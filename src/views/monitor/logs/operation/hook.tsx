@@ -5,12 +5,16 @@ import { getOperationLogsList } from "@/api/system";
 import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { addDialog } from "@/components/ReDialog/index";
+import Detail from "@/views/monitor/logs/operation/detail.vue";
 
 export function useRole(tableRef: Ref) {
   const form = reactive({
-    module: "",
-    status: "",
-    operatingTime: ""
+    taskName: "",
+    success: "",
+    requestTime: ["", ""],
+    current: 1,
+    size: 10
   });
   const dataList = ref([]);
   const loading = ref(true);
@@ -31,70 +35,92 @@ export function useRole(tableRef: Ref) {
       reserveSelection: true // 数据刷新后保留选项
     },
     {
-      label: "序号",
+      label: "ID",
       prop: "id",
       minWidth: 90
     },
     {
-      label: "操作人员",
-      prop: "username",
+      label: "任务名",
+      prop: "taskName",
       minWidth: 100
     },
     {
-      label: "所属模块",
-      prop: "module",
+      label: "描述",
+      prop: "description",
       minWidth: 140
     },
     {
-      label: "操作概要",
-      prop: "summary",
-      minWidth: 140
-    },
-    {
-      label: "操作 IP",
-      prop: "ip",
-      minWidth: 100
-    },
-    {
-      label: "操作地点",
-      prop: "address",
-      minWidth: 140
-    },
-    {
-      label: "操作系统",
-      prop: "system",
-      minWidth: 100
-    },
-    {
-      label: "浏览器类型",
-      prop: "browser",
-      minWidth: 100
-    },
-    {
-      label: "操作状态",
-      prop: "status",
+      label: "执行耗时",
+      prop: "timeCost",
       minWidth: 100,
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.status)}>
-          {row.status === 1 ? "成功" : "失败"}
+        <el-tag
+          size={props.size}
+          type={row.timeCost < 1000 ? "success" : "warning"}
+          effect="plain"
+        >
+          {row.timeCost} ms
         </el-tag>
       )
     },
     {
-      label: "操作时间",
-      prop: "operatingTime",
+      label: "状态",
+      prop: "status",
+      minWidth: 100,
+      cellRenderer: ({ row, props }) => (
+        <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 0)}>
+          {row.success ? "成功" : "失败"}
+        </el-tag>
+      )
+    },
+    {
+      label: "开始时间",
+      prop: "startTime",
       minWidth: 180,
-      formatter: ({ operatingTime }) =>
-        dayjs(operatingTime).format("YYYY-MM-DD HH:mm:ss")
+      formatter: ({ startTime }) =>
+        dayjs(startTime).format("YYYY-MM-DD HH:mm:ss")
+    },
+    {
+      label: "结束时间",
+      prop: "endTime",
+      minWidth: 180,
+      formatter: ({ endTime }) => dayjs(endTime).format("YYYY-MM-DD HH:mm:ss")
+    },
+    {
+      label: "调用方法",
+      prop: "classMethod",
+      minWidth: 140
+    },
+    {
+      label: "操作",
+      fixed: "right",
+      slot: "operation"
     }
   ];
 
+  function onDetail(row) {
+    addDialog({
+      title: "异常信息详情",
+      fullscreen: true,
+      hideFooter: true,
+      contentRenderer: () => Detail,
+      props: {
+        exception: row.exception
+      }
+    });
+  }
+
   function handleSizeChange(val: number) {
     console.log(`${val} items per page`);
+    form.size = val;
+    form.current = 1; // 切换 pageSize 时重置到第一页
+    onSearch();
   }
 
   function handleCurrentChange(val: number) {
     console.log(`current page: ${val}`);
+    form.current = val;
+    onSearch();
   }
 
   /** 当CheckBox选择项发生变化时会触发该事件 */
@@ -169,6 +195,7 @@ export function useRole(tableRef: Ref) {
     handleSizeChange,
     onSelectionCancel,
     handleCurrentChange,
-    handleSelectionChange
+    handleSelectionChange,
+    onDetail
   };
 }

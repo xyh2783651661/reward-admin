@@ -85,7 +85,7 @@ export const getLoginLogsList = (data?: object) => {
 
 /** 获取系统监控-操作日志列表 */
 export const getOperationLogsList = (data?: object) => {
-  return http.request<ResultTable>("post", "/operation-logs", { data });
+  return http.request<ResultTable>("post", "/api/task-logs/page", { data });
 };
 
 /** 获取系统监控-系统日志列表 */
