@@ -47,8 +47,20 @@ export const getRewardConfigList = (data?: object) => {
   });
 };
 
+export const getRewardSubjectList = (data?: object) => {
+  return http.request<ResultTable>("post", "/api/reward-subjects/page", {
+    data
+  });
+};
+
 export const addRewardConfig = (data?: object) => {
   return http.request<Result>("post", "/api/reward-configs/add", {
+    data
+  });
+};
+
+export const addRewardSubject = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-subjects/add", {
     data
   });
 };
@@ -59,8 +71,18 @@ export const updateRewardConfig = (data?: object) => {
   });
 };
 
+export const updateRewardSubject = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-subjects/update", {
+    data
+  });
+};
+
 export const deleteRewardConfig = (id: string | number) => {
   return http.request<Result>("delete", `/api/reward-configs/${id}`);
+};
+
+export const deleteRewardSubject = (id: string | number) => {
+  return http.request<Result>("delete", `/api/reward-subjects/${id}`);
 };
 
 /** 获取系统管理-菜单管理列表 */

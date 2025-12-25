@@ -6,8 +6,10 @@ import { FormProps } from "./utils/types";
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
     name: "",
-    code: "",
-    remark: ""
+    type: "",
+    base: "",
+    full: "",
+    excellence: ""
   })
 });
 
@@ -28,7 +30,7 @@ defineExpose({ getRef });
     :rules="formRules"
     label-width="82px"
   >
-    <el-form-item label="角色名称" prop="name">
+    <el-form-item label="科目" prop="name">
       <el-input
         v-model="newFormInline.name"
         clearable
@@ -36,19 +38,44 @@ defineExpose({ getRef });
       />
     </el-form-item>
 
-    <el-form-item label="角色标识" prop="code">
-      <el-input
-        v-model="newFormInline.code"
+    <el-form-item label="类型" prop="type">
+      <el-select
+        v-model="newFormInline.type"
+        placeholder="请选择类型"
         clearable
-        placeholder="请输入角色标识"
+      >
+        <el-option label="CORE" value="CORE" />
+        <el-option label="GENERAL" value="GENERAL" />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="基础" prop="base">
+      <el-input-number
+        v-model="newFormInline.base"
+        :min="0"
+        :step="1"
+        controls-position="right"
+        placeholder="请输入数值"
       />
     </el-form-item>
 
-    <el-form-item label="备注">
-      <el-input
-        v-model="newFormInline.remark"
-        placeholder="请输入备注信息"
-        type="textarea"
+    <el-form-item label="卓越" prop="excellence">
+      <el-input-number
+        v-model="newFormInline.excellence"
+        :min="0"
+        :step="1"
+        controls-position="right"
+        placeholder="请输入数值"
+      />
+    </el-form-item>
+
+    <el-form-item label="满分" prop="full">
+      <el-input-number
+        v-model="newFormInline.full"
+        :min="0"
+        :step="1"
+        controls-position="right"
+        placeholder="请输入数值"
       />
     </el-form-item>
   </el-form>

@@ -12,6 +12,9 @@ import type {
 import { stringify } from "qs";
 import { getToken, formatToken } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
+import { generateSignature } from "@/utils/http/sign";
+
+const appId = "wep-client";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -20,7 +23,8 @@ const defaultConfig: AxiosRequestConfig = {
   headers: {
     Accept: "application/json, text/plain, */*",
     "Content-Type": "application/json",
-    "X-Requested-With": "XMLHttpRequest"
+    "X-Requested-With": "XMLHttpRequest",
+    "X-App-Id": appId
   },
   // 数组格式参数序列化（https://github.com/axios/axios/issues/5142）
   paramsSerializer: {
@@ -60,6 +64,14 @@ class PureHttp {
   private httpInterceptorsRequest(): void {
     PureHttp.axiosInstance.interceptors.request.use(
       async (config: PureHttpRequestConfig): Promise<any> => {
+        /** ===== 签名相关（重点） ===== */
+        const timestamp = Date.now();
+        const signature = generateSignature(appId, timestamp);
+
+        config.headers["X-Timestamp"] = timestamp;
+        config.headers["X-Signature"] = signature;
+        /** ============================ */
+
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
         if (typeof config.beforeRequestCallback === "function") {
           config.beforeRequestCallback(config);
