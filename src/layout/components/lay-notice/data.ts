@@ -64,7 +64,7 @@ export const noticesData: TabItem[] = [
           "小林提交于 2024-05-10，需在 2024-05-11 前完成代码变更任务",
         datetime: "",
         extra: "马上到期",
-        status: "danger",
+        versionCode: "danger",
         type: "3"
       },
       {
@@ -73,7 +73,7 @@ export const noticesData: TabItem[] = [
         description: "指派小铭于 2024-06-18 前完成更新并发布",
         datetime: "",
         extra: "已耗时 8 天",
-        status: "warning",
+        versionCode: "warning",
         type: "3"
       },
       {
@@ -90,7 +90,7 @@ export const noticesData: TabItem[] = [
         description: "任务需要在 2030-10-30 10:00 前启动",
         datetime: "",
         extra: "未开始",
-        status: "info",
+        versionCode: "info",
         type: "3"
       }
     ],

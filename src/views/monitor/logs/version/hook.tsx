@@ -1,17 +1,16 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getKeyList } from "@pureadmin/utils";
-import { getOperationLogsList } from "@/api/system";
-import { usePublicHooks } from "@/views/system/hooks";
+import { getRewardApkVersionsList } from "@/api/system";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { addDialog } from "@/components/ReDialog/index";
-import Detail from "@/views/monitor/logs/operation/detail.vue";
+import Detail from "@/views/monitor/logs/login/detail.vue";
 
 export function useRole(tableRef: Ref) {
   const form = reactive({
-    taskName: "",
-    success: "",
+    versionName: "",
+    versionCode: "",
     requestTime: ["", ""],
     current: 1,
     size: 10
@@ -19,7 +18,6 @@ export function useRole(tableRef: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
   const selectedNum = ref(0);
-  const { tagStyle } = usePublicHooks();
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -40,72 +38,51 @@ export function useRole(tableRef: Ref) {
       minWidth: 90
     },
     {
-      label: "任务名",
-      prop: "taskName",
+      label: "Code",
+      prop: "versionCode",
       minWidth: 100
     },
     {
-      label: "描述",
-      prop: "description",
+      label: "版本号",
+      prop: "versionName",
       minWidth: 140
     },
     {
-      label: "执行耗时",
-      prop: "timeCost",
-      minWidth: 100,
-      cellRenderer: ({ row, props }) => (
-        <el-tag
-          size={props.size}
-          type={row.timeCost < 1000 ? "success" : "warning"}
-          effect="plain"
-        >
-          {row.timeCost} ms
-        </el-tag>
-      )
+      label: "提交记录",
+      prop: "commit",
+      minWidth: 100
     },
     {
-      label: "状态",
-      prop: "status",
-      minWidth: 100,
-      cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 2)}>
-          {row.success ? "成功" : "失败"}
-        </el-tag>
-      )
+      label: "分支",
+      prop: "branch",
+      minWidth: 100
     },
     {
-      label: "开始时间",
-      prop: "startTime",
+      label: "创建时间",
+      prop: "createdTime",
       minWidth: 180,
-      formatter: ({ startTime }) =>
-        dayjs(startTime).format("YYYY-MM-DD HH:mm:ss")
+      formatter: ({ createdTime }) =>
+        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
-      label: "结束时间",
-      prop: "endTime",
+      label: "更新时间",
+      prop: "updatedTime",
       minWidth: 180,
-      formatter: ({ endTime }) => dayjs(endTime).format("YYYY-MM-DD HH:mm:ss")
-    },
-    {
-      label: "调用方法",
-      prop: "classMethod",
-      minWidth: 140
-    },
-    {
-      label: "操作",
-      fixed: "right",
-      slot: "operation"
+      formatter: ({ updatedTime }) =>
+        dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
     }
   ];
 
   function onDetail(row) {
+    console.log("row", row);
+    console.log("row-content", row.content);
     addDialog({
-      title: "异常信息详情",
+      title: "邮件详情",
       fullscreen: true,
       hideFooter: true,
       contentRenderer: () => Detail,
       props: {
-        exception: row.exception
+        content: row.content
       }
     });
   }
@@ -151,7 +128,7 @@ export function useRole(tableRef: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { data } = await getOperationLogsList(toRaw(form));
+    const { data } = await getRewardApkVersionsList(toRaw(form));
     dataList.value = data.records;
     pagination.total = data.total;
     pagination.pageSize = data.size;

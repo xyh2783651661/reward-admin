@@ -70,9 +70,10 @@ menus:
   purePermission: 权限管理
   pureSysMonitor: 系统监控
   pureOnlineUser: 在线用户
-  pureLoginLog: 登录日志
+  pureLoginLog: 邮件日志
   pureOperationLog: 任务日志
   pureSystemLog: 系统日志
+  pureVersionLog: 版本日志
   configManagement: 配置管理
   configReward: 奖励配置
   configSubject: 科目配置

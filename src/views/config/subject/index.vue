@@ -10,15 +10,10 @@ import {
   useResizeObserver
 } from "@pureadmin/utils";
 
-// import Database from "~icons/ri/database-2-line";
-// import More from "~icons/ep/more-filled";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import Refresh from "~icons/ep/refresh";
-import Menu from "~icons/ep/menu";
 import AddFill from "~icons/ri/add-circle-line";
-import Close from "~icons/ep/close";
-import Check from "~icons/ep/check";
 
 defineOptions({
   name: "SystemRole"
@@ -50,28 +45,16 @@ const treeHeight = ref();
 const {
   form,
   isShow,
-  curRow,
   loading,
   columns,
   rowStyle,
   dataList,
-  treeData,
-  treeProps,
-  isLinkage,
   pagination,
-  isExpandAll,
-  isSelectAll,
-  treeSearchValue,
   // buttonClass,
   onSearch,
   resetForm,
   openDialog,
-  handleMenu,
-  handleSave,
   handleDelete,
-  filterMethod,
-  transformI18n,
-  onQueryChanged,
   // handleDatabase,
   handleSizeChange,
   handleCurrentChange,
@@ -159,7 +142,7 @@ onMounted(() => {
             :icon="useRenderIcon(AddFill)"
             @click="openDialog()"
           >
-            新增配置
+            新增科目
           </el-button>
         </template>
         <template v-slot="{ size, dynamicColumns }">
@@ -252,69 +235,6 @@ onMounted(() => {
           </pure-table>
         </template>
       </PureTableBar>
-
-      <div
-        v-if="isShow"
-        class="min-w-[calc(100vw-60vw-268px)]! w-full mt-2 px-2 pb-2 bg-bg_color ml-2 overflow-auto"
-      >
-        <div class="flex justify-between w-full px-3 pt-5 pb-4">
-          <div class="flex">
-            <span :class="iconClass">
-              <IconifyIconOffline
-                v-tippy="{
-                  content: '关闭'
-                }"
-                class="dark:text-white"
-                width="18px"
-                height="18px"
-                :icon="Close"
-                @click="handleMenu"
-              />
-            </span>
-            <span :class="[iconClass, 'ml-2']">
-              <IconifyIconOffline
-                v-tippy="{
-                  content: '保存菜单权限'
-                }"
-                class="dark:text-white"
-                width="18px"
-                height="18px"
-                :icon="Check"
-                @click="handleSave"
-              />
-            </span>
-          </div>
-          <p class="font-bold truncate">
-            菜单权限
-            {{ `${curRow?.name ? `（${curRow.name}）` : ""}` }}
-          </p>
-        </div>
-        <el-input
-          v-model="treeSearchValue"
-          placeholder="请输入菜单进行搜索"
-          class="mb-1"
-          clearable
-          @input="onQueryChanged"
-        />
-        <div class="flex flex-wrap">
-          <el-checkbox v-model="isExpandAll" label="展开/折叠" />
-          <el-checkbox v-model="isSelectAll" label="全选/全不选" />
-          <el-checkbox v-model="isLinkage" label="父子联动" />
-        </div>
-        <el-tree-v2
-          ref="treeRef"
-          show-checkbox
-          :data="treeData"
-          :props="treeProps"
-          :height="treeHeight"
-          :check-strictly="!isLinkage"
-          :filter-method="filterMethod"
-        >
-          <template #default="{ node }">
-            <span>{{ transformI18n(node.label) }}</span>
-          </template>
-        </el-tree-v2>
-      </div>
     </div>
   </div>
 </template>

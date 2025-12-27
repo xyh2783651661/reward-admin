@@ -110,6 +110,18 @@ export const getOperationLogsList = (data?: object) => {
   return http.request<ResultTable>("post", "/api/task-logs/page", { data });
 };
 
+export const getMailSendRecordsList = (data?: object) => {
+  return http.request<ResultTable>("post", "/api/mail-send-records/page", {
+    data
+  });
+};
+
+export const getRewardApkVersionsList = (data?: object) => {
+  return http.request<ResultTable>("post", "/api/reward-apk-versions/page", {
+    data
+  });
+};
+
 /** 获取系统监控-系统日志列表 */
 export const getSystemLogsList = (data?: object) => {
   return http.request<ResultTable>("post", "/api/access-logs/page", { data });

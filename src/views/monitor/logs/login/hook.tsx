@@ -1,16 +1,20 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getKeyList } from "@pureadmin/utils";
-import { getLoginLogsList } from "@/api/system";
+import { getMailSendRecordsList } from "@/api/system";
 import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { addDialog } from "@/components/ReDialog/index";
+import Detail from "@/views/monitor/logs/login/detail.vue";
 
 export function useRole(tableRef: Ref) {
   const form = reactive({
-    username: "",
+    subject: "",
     status: "",
-    loginTime: ""
+    requestTime: ["", ""],
+    current: 1,
+    size: 10
   });
   const dataList = ref([]);
   const loading = ref(true);
@@ -31,65 +35,74 @@ export function useRole(tableRef: Ref) {
       reserveSelection: true // 数据刷新后保留选项
     },
     {
-      label: "序号",
+      label: "ID",
       prop: "id",
       minWidth: 90
     },
     {
-      label: "用户名",
-      prop: "username",
+      label: "主题",
+      prop: "subject",
       minWidth: 100
     },
     {
-      label: "登录 IP",
-      prop: "ip",
+      label: "接收人",
+      prop: "recipient",
       minWidth: 140
     },
     {
-      label: "登录地点",
-      prop: "address",
-      minWidth: 140
-    },
-    {
-      label: "操作系统",
-      prop: "system",
-      minWidth: 100
-    },
-    {
-      label: "浏览器类型",
-      prop: "browser",
-      minWidth: 100
-    },
-    {
-      label: "登录状态",
+      label: "状态",
       prop: "status",
       minWidth: 100,
       cellRenderer: ({ row, props }) => (
         <el-tag size={props.size} style={tagStyle.value(row.status)}>
-          {row.status === 1 ? "成功" : "失败"}
+          {row.status == 0 ? "待发送" : row.status == 1 ? "成功" : "失败"}
         </el-tag>
       )
     },
     {
-      label: "登录行为",
-      prop: "behavior",
-      minWidth: 100
+      label: "发送时间",
+      prop: "lastSendTime",
+      minWidth: 180,
+      formatter: ({ lastSendTime }) =>
+        dayjs(lastSendTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
-      label: "登录时间",
-      prop: "loginTime",
-      minWidth: 180,
-      formatter: ({ loginTime }) =>
-        dayjs(loginTime).format("YYYY-MM-DD HH:mm:ss")
+      label: "发送次数",
+      prop: "sendAttempts",
+      minWidth: 140
+    },
+    {
+      label: "操作",
+      fixed: "right",
+      slot: "operation"
     }
   ];
 
+  function onDetail(row) {
+    console.log("row", row);
+    console.log("row-content", row.content);
+    addDialog({
+      title: "邮件详情",
+      fullscreen: true,
+      hideFooter: true,
+      contentRenderer: () => Detail,
+      props: {
+        content: row.content
+      }
+    });
+  }
+
   function handleSizeChange(val: number) {
     console.log(`${val} items per page`);
+    form.size = val;
+    form.current = 1; // 切换 pageSize 时重置到第一页
+    onSearch();
   }
 
   function handleCurrentChange(val: number) {
     console.log(`current page: ${val}`);
+    form.current = val;
+    onSearch();
   }
 
   /** 当CheckBox选择项发生变化时会触发该事件 */
@@ -118,18 +131,9 @@ export function useRole(tableRef: Ref) {
     onSearch();
   }
 
-  /** 清空日志 */
-  function clearAll() {
-    // 根据实际业务，调用接口删除所有日志数据
-    message("已删除所有日志数据", {
-      type: "success"
-    });
-    onSearch();
-  }
-
   async function onSearch() {
     loading.value = true;
-    const { data } = await getLoginLogsList(toRaw(form));
+    const { data } = await getMailSendRecordsList(toRaw(form));
     dataList.value = data.records;
     pagination.total = data.total;
     pagination.pageSize = data.size;
@@ -158,12 +162,12 @@ export function useRole(tableRef: Ref) {
     pagination,
     selectedNum,
     onSearch,
-    clearAll,
     resetForm,
     onbatchDel,
     handleSizeChange,
     onSelectionCancel,
     handleCurrentChange,
-    handleSelectionChange
+    handleSelectionChange,
+    onDetail
   };
 }

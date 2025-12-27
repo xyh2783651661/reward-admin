@@ -5,8 +5,8 @@ import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
-import Delete from "~icons/ep/delete";
 import Refresh from "~icons/ep/refresh";
+import AntDesignMailOutlined from "~icons/ant-design/mail-outlined";
 
 defineOptions({
   name: "LoginLog"
@@ -23,13 +23,13 @@ const {
   pagination,
   selectedNum,
   onSearch,
-  clearAll,
   resetForm,
   onbatchDel,
   handleSizeChange,
   onSelectionCancel,
   handleCurrentChange,
-  handleSelectionChange
+  handleSelectionChange,
+  onDetail
 } = useRole(tableRef);
 </script>
 
@@ -41,28 +41,29 @@ const {
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
     >
-      <el-form-item label="用户名" prop="username">
+      <el-form-item label="任务名" prop="taskName">
         <el-input
-          v-model="form.username"
-          placeholder="请输入用户名"
+          v-model="form.subject"
+          placeholder="请输入主题"
           clearable
-          class="w-[150px]!"
+          class="w-[170px]!"
         />
       </el-form-item>
-      <el-form-item label="登录状态" prop="status">
+      <el-form-item label="状态" prop="success">
         <el-select
           v-model="form.status"
           placeholder="请选择"
           clearable
           class="w-[150px]!"
         >
+          <el-option label="待发送" value="0" />
           <el-option label="成功" value="1" />
-          <el-option label="失败" value="0" />
+          <el-option label="失败" value="2" />
         </el-select>
       </el-form-item>
-      <el-form-item label="登录时间" prop="loginTime">
+      <el-form-item label="发送时间" prop="requestTime">
         <el-date-picker
-          v-model="form.loginTime"
+          v-model="form.requestTime"
           :shortcuts="getPickerShortcuts()"
           type="datetimerange"
           range-separator="至"
@@ -85,20 +86,7 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar
-      title="登录日志（仅演示，操作后不生效）"
-      :columns="columns"
-      @refresh="onSearch"
-    >
-      <template #buttons>
-        <el-popconfirm title="确定要删除所有日志数据吗？" @confirm="clearAll">
-          <template #reference>
-            <el-button type="danger" :icon="useRenderIcon(Delete)">
-              清空日志
-            </el-button>
-          </template>
-        </el-popconfirm>
-      </template>
+    <PureTableBar :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
         <div
           v-if="selectedNum > 0"
@@ -141,7 +129,21 @@ const {
           @selection-change="handleSelectionChange"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
-        />
+        >
+          <template #operation="{ row }">
+            <el-button
+              v-if="!row.success"
+              class="reset-margin outline-hidden!"
+              link
+              type="primary"
+              :size="size"
+              :icon="useRenderIcon(AntDesignMailOutlined)"
+              @click="onDetail(row)"
+            >
+              邮件详情
+            </el-button>
+          </template>
+        </pure-table>
       </template>
     </PureTableBar>
   </div>

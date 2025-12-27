@@ -5,11 +5,11 @@ import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
-import AntDesignExceptionOutlined from "~icons/ant-design/exception-outlined";
 import Refresh from "~icons/ep/refresh";
+import AntDesignMailOutlined from "~icons/ant-design/mail-outlined";
 
 defineOptions({
-  name: "OperationLog"
+  name: "LoginLog"
 });
 
 const formRef = ref();
@@ -41,26 +41,23 @@ const {
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
     >
-      <el-form-item label="任务名" prop="taskName">
+      <el-form-item label="Code" prop="versionCode">
         <el-input
-          v-model="form.taskName"
-          placeholder="请输入任务名"
+          v-model="form.versionCode"
+          placeholder="请输入Code"
           clearable
           class="w-[170px]!"
         />
       </el-form-item>
-      <el-form-item label="状态" prop="success">
-        <el-select
-          v-model="form.success"
-          placeholder="请选择"
+      <el-form-item label="版本号" prop="versionName">
+        <el-input
+          v-model="form.versionName"
+          placeholder="请输入版本号"
           clearable
-          class="w-[150px]!"
-        >
-          <el-option label="成功" value="true" />
-          <el-option label="失败" value="false" />
-        </el-select>
+          class="w-[170px]!"
+        />
       </el-form-item>
-      <el-form-item label="开始时间" prop="requestTime">
+      <el-form-item label="创建时间" prop="requestTime">
         <el-date-picker
           v-model="form.requestTime"
           :shortcuts="getPickerShortcuts()"
@@ -136,10 +133,10 @@ const {
               link
               type="primary"
               :size="size"
-              :icon="useRenderIcon(AntDesignExceptionOutlined)"
+              :icon="useRenderIcon(AntDesignMailOutlined)"
               @click="onDetail(row)"
             >
-              异常详情
+              邮件详情
             </el-button>
           </template>
         </pure-table>

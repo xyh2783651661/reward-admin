@@ -77,7 +77,7 @@ const systemMonitorRouter = {
       component: "monitor/logs/login/index",
       name: "LoginLog",
       meta: {
-        icon: "ri:window-line",
+        icon: "ri:mail-send-line",
         title: "menus.pureLoginLog",
         roles: ["admin"]
       }
@@ -99,6 +99,16 @@ const systemMonitorRouter = {
       meta: {
         icon: "ri:file-search-line",
         title: "menus.pureSystemLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/monitor/version-logs",
+      component: "monitor/logs/version/index",
+      name: "VersionLog",
+      meta: {
+        icon: "ri:file-copy-2-line",
+        title: "menus.pureVersionLog",
         roles: ["admin"]
       }
     }
@@ -137,7 +147,7 @@ const configManagementRouter = {
       component: "config/mail/index",
       name: "Mail",
       meta: {
-        icon: "fa-solid:mail-bulk",
+        icon: "ri:mail-settings-fill",
         title: "menus.configMail",
         roles: ["admin"]
       }
@@ -147,7 +157,7 @@ const configManagementRouter = {
       component: "config/money/index",
       name: "Money",
       meta: {
-        icon: "ri:money-dollar-box-line",
+        icon: "ri:money-cny-box-fill",
         title: "menus.configMoney",
         roles: ["admin"]
       }

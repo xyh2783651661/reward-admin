@@ -7,6 +7,7 @@ import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { getKeyList, useCopyToClipboard } from "@pureadmin/utils";
 import { getSystemLogsList, getSystemLogsDetail } from "@/api/system";
 import Info from "~icons/ri/question-line";
+import { usePublicHooks } from "@/views/system/hooks";
 
 export function useRole(tableRef: Ref) {
   const form = reactive({
@@ -19,6 +20,7 @@ export function useRole(tableRef: Ref) {
   const loading = ref(true);
   const selectedNum = ref(0);
   const { copied, update } = useCopyToClipboard();
+  const { tagStyle } = usePublicHooks();
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -59,6 +61,16 @@ export function useRole(tableRef: Ref) {
       ),
       prop: "uri",
       minWidth: 140
+    },
+    {
+      label: "状态",
+      prop: "status",
+      minWidth: 100,
+      cellRenderer: ({ row, props }) => (
+        <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 0)}>
+          {row.success ? "成功" : "失败"}
+        </el-tag>
+      )
     },
     {
       label: "请求描述",

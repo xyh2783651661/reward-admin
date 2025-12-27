@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<FormProps>(), {
     phone: "",
     email: "",
     sort: 0,
-    status: 1,
+    versionCode: 1,
     remark: ""
   })
 });
