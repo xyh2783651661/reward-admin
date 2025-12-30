@@ -12,6 +12,7 @@ import { usePublicHooks } from "@/views/system/hooks";
 export function useRole(tableRef: Ref) {
   const form = reactive({
     module: "",
+    uri: "",
     requestTime: ["", ""],
     current: 1,
     size: 10

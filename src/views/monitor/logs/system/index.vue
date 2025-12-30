@@ -52,6 +52,14 @@ const {
           class="w-[170px]!"
         />
       </el-form-item>
+      <el-form-item label="请求接口" prop="uri">
+        <el-input
+          v-model="form.uri"
+          placeholder="请输入请求接口"
+          clearable
+          class="w-[170px]!"
+        />
+      </el-form-item>
       <el-form-item label="请求时间" prop="requestTime">
         <el-date-picker
           v-model="form.requestTime"
