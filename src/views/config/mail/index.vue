@@ -98,31 +98,31 @@ onMounted(() => {
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
     >
-      <el-form-item label="角色名称：" prop="name">
+      <el-form-item label="邮件：" prop="email">
+        <el-input
+          v-model="form.email"
+          placeholder="请输入邮件"
+          clearable
+          class="w-[180px]!"
+        />
+      </el-form-item>
+      <el-form-item label="姓名：" prop="name">
         <el-input
           v-model="form.name"
-          placeholder="请输入角色名称"
+          placeholder="请输入姓名"
           clearable
           class="w-[180px]!"
         />
       </el-form-item>
-      <el-form-item label="角色标识：" prop="code">
-        <el-input
-          v-model="form.code"
-          placeholder="请输入角色标识"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item label="状态：" prop="status">
+      <el-form-item label="状态：" prop="enabled">
         <el-select
-          v-model="form.status"
+          v-model="form.enabled"
           placeholder="请选择状态"
           clearable
           class="w-[180px]!"
         >
-          <el-option label="已启用" value="1" />
-          <el-option label="已停用" value="0" />
+          <el-option label="已启用" value="true" />
+          <el-option label="已禁用" value="false" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -147,7 +147,6 @@ onMounted(() => {
       <PureTableBar
         :class="[isShow && !deviceDetection() ? 'w-[60vw]!' : 'w-full']"
         style="transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1)"
-        title="角色管理（仅演示，操作后不生效）"
         :columns="columns"
         @refresh="onSearch"
       >
@@ -157,7 +156,7 @@ onMounted(() => {
             :icon="useRenderIcon(AddFill)"
             @click="openDialog()"
           >
-            新增角色
+            新增收件人
           </el-button>
         </template>
         <template v-slot="{ size, dynamicColumns }">

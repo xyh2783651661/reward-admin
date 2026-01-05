@@ -41,6 +41,22 @@ export const getRoleList = (data?: object) => {
   return http.request<ResultTable>("post", "/role", { data });
 };
 
+export const getMailRecipientList = (data?: object) => {
+  return http.request<ResultTable>("post", "/api/mail-recipients/page", {
+    data
+  });
+};
+
+export const deleteMailRecipient = (id: string | number) => {
+  return http.request<Result>("delete", `/api/mail-recipients/${id}`);
+};
+
+export const updateMailRecipient = (data?: object) => {
+  return http.request<Result>("post", "/api/mail-recipients/update", {
+    data
+  });
+};
+
 export const getRewardConfigList = (data?: object) => {
   return http.request<ResultTable>("post", "/api/reward-configs/page", {
     data

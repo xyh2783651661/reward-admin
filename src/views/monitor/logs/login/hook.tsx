@@ -63,8 +63,10 @@ export function useRole(tableRef: Ref) {
       label: "发送时间",
       prop: "lastSendTime",
       minWidth: 180,
-      formatter: ({ lastSendTime }) =>
-        dayjs(lastSendTime).format("YYYY-MM-DD HH:mm:ss")
+      cellRenderer: ({ row }) =>
+        row.status == 1
+          ? dayjs(row.lastSendTime).format("YYYY-MM-DD HH:mm:ss")
+          : ""
     },
     {
       label: "发送次数",

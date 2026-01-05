@@ -64,6 +64,13 @@ export function useRole(tableRef: Ref) {
       minWidth: 140
     },
     {
+      label: "请求时间",
+      prop: "createdTime",
+      minWidth: 180,
+      formatter: ({ createdTime }) =>
+        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
+    },
+    {
       label: "状态",
       prop: "status",
       minWidth: 100,
@@ -126,13 +133,6 @@ export function useRole(tableRef: Ref) {
           {row.timeCost} ms
         </el-tag>
       )
-    },
-    {
-      label: "请求时间",
-      prop: "createdTime",
-      minWidth: 180,
-      formatter: ({ createdTime }) =>
-        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
       label: "操作",
