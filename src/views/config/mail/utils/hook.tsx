@@ -85,7 +85,8 @@ export function useRole(treeRef: Ref) {
     },
     {
       label: "类型",
-      prop: "type"
+      prop: "type",
+      minWidth: 90
     },
     {
       label: "组别",
