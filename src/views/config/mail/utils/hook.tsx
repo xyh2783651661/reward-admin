@@ -10,6 +10,7 @@ import type { FormItemProps } from "../utils/types";
 import type { PaginationProps } from "@pureadmin/table";
 import { getKeyList, deviceDetection } from "@pureadmin/utils";
 import {
+  addMailRecipient,
   deleteMailRecipient,
   getMailRecipientList,
   getRoleMenu,
@@ -156,7 +157,7 @@ export function useRole(treeRef: Ref) {
           );
           updateMailRecipient({ id: row.id, enabled: row.enabled }).then(r => {
             if (r.code === 200) {
-              message(`已${row.enabled ? "禁用" : "启用"}${row.name}`, {
+              message(`已${row.enabled ? "启用" : "禁用"}${row.name}`, {
                 type: "success"
               });
             }
@@ -214,11 +215,16 @@ export function useRole(treeRef: Ref) {
 
   function openDialog(title = "新增", row?: FormItemProps) {
     addDialog({
-      title: `${title}角色`,
+      title: `${title}收件人`,
       props: {
         formInline: {
+          id: row?.id ?? "",
+          email: row?.email ?? "",
           name: row?.name ?? "",
-          code: row?.code ?? "",
+          enabled: row?.enabled ?? true,
+          type: row?.type ?? "",
+          groupCode: row?.groupCode ?? "",
+          priority: row?.priority ?? "",
           remark: row?.remark ?? ""
         }
       },
@@ -231,10 +237,8 @@ export function useRole(treeRef: Ref) {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
+        const msg = `您${title}了收件人名称为${curData.name}的这条数据`;
         function chores() {
-          message(`您${title}了角色名称为${curData.name}的这条数据`, {
-            type: "success"
-          });
           done(); // 关闭弹框
           onSearch(); // 刷新表格数据
         }
@@ -244,10 +248,29 @@ export function useRole(treeRef: Ref) {
             // 表单规则校验通过
             if (title === "新增") {
               // 实际开发先调用新增接口，再进行下面操作
-              chores();
+              addMailRecipient(curData)
+                .then(r => {
+                  if (r.code === 200) {
+                    message(msg + `${r.msg}`, { type: "success" });
+                  } else {
+                    message(msg + `${r.msg}`, { type: "error" });
+                  }
+                })
+                .finally(() => {
+                  chores();
+                });
             } else {
-              // 实际开发先调用修改接口，再进行下面操作
-              chores();
+              updateMailRecipient(curData)
+                .then(r => {
+                  if (r.code === 200) {
+                    message(msg + `${r.msg}`, { type: "success" });
+                  } else {
+                    message(msg + `msg${r.msg}`, { type: "error" });
+                  }
+                })
+                .finally(() => {
+                  chores();
+                });
             }
           }
         });
@@ -282,7 +305,7 @@ export function useRole(treeRef: Ref) {
     const { id, name } = curRow.value;
     // 根据用户 id 调用实际项目中菜单权限修改接口
     console.log(id, treeRef.value.getCheckedKeys());
-    message(`角色名称为${name}的菜单权限修改成功`, {
+    message(`收件人名称为${name}的菜单权限修改成功`, {
       type: "success"
     });
   }

@@ -75,6 +75,12 @@ export const addRewardConfig = (data?: object) => {
   });
 };
 
+export const addMailRecipient = (data?: object) => {
+  return http.request<Result>("post", "/api/mail-recipients/add", {
+    data
+  });
+};
+
 export const addRewardSubject = (data?: object) => {
   return http.request<Result>("post", "/api/reward-subjects/add", {
     data

@@ -75,7 +75,7 @@ export function useRole(tableRef: Ref) {
       prop: "status",
       minWidth: 100,
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 0)}>
+        <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 2)}>
           {row.success ? "成功" : "失败"}
         </el-tag>
       )

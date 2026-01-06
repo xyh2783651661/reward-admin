@@ -1,8 +1,16 @@
-import { reactive } from "vue";
 import type { FormRules } from "element-plus";
+import { reactive } from "vue";
 
-/** 自定义表单规则校验 */
-export const formRules = reactive(<FormRules>{
-  name: [{ required: true, message: "角色名称为必填项", trigger: "blur" }],
-  code: [{ required: true, message: "角色标识为必填项", trigger: "blur" }]
+export const formRules = reactive<FormRules>({
+  email: [
+    { required: true, message: "邮箱为必填项", trigger: "blur" },
+    {
+      type: "email",
+      message: "请输入正确的邮箱格式",
+      trigger: ["blur", "change"]
+    }
+  ],
+  name: [{ required: true, message: "姓名为必填项", trigger: "blur" }],
+  type: [{ required: true, message: "类型为必选项", trigger: "change" }],
+  priority: [{ required: true, message: "优先级为必选项", trigger: "change" }]
 });
