@@ -13,9 +13,10 @@ import {
   addMailRecipient,
   deleteMailRecipient,
   getMailRecipientList,
-  getRoleMenu,
-  getRoleMenuIds,
-  updateMailRecipient
+  getMailRecipientUserList,
+  getRewardUserList,
+  updateMailRecipient,
+  updateMailRecipientUser
 } from "@/api/system";
 import { type Ref, reactive, ref, onMounted, h, toRaw, watch } from "vue";
 
@@ -42,7 +43,7 @@ export function useRole(treeRef: Ref) {
   const { switchStyle } = usePublicHooks();
   const treeProps = {
     value: "id",
-    label: "title",
+    label: "nickName",
     children: "children"
   };
   const pagination = reactive<PaginationProps>({
@@ -285,8 +286,8 @@ export function useRole(treeRef: Ref) {
     if (id) {
       curRow.value = row;
       isShow.value = true;
-      const { data } = await getRoleMenuIds({ id });
-      treeRef.value.setCheckedKeys(data);
+      const { data } = await getMailRecipientUserList({ mailId: id });
+      treeRef.value.setCheckedKeys(getKeyList(data, "userId"));
     } else {
       curRow.value = null;
       isShow.value = false;
@@ -306,8 +307,19 @@ export function useRole(treeRef: Ref) {
     const { id, name } = curRow.value;
     // 根据用户 id 调用实际项目中菜单权限修改接口
     console.log(id, treeRef.value.getCheckedKeys());
-    message(`收件人名称为${name}的菜单权限修改成功`, {
-      type: "success"
+    updateMailRecipientUser({
+      mailId: id,
+      userIds: treeRef.value.getCheckedKeys()
+    }).then(r => {
+      if (r.code === 200) {
+        message(`收件人名称为${name}的菜单权限${r.msg}`, {
+          type: "success"
+        });
+      } else {
+        message(`收件人名称为${name}的菜单权限${r.msg}`, {
+          type: "error"
+        });
+      }
     });
   }
 
@@ -324,7 +336,7 @@ export function useRole(treeRef: Ref) {
 
   onMounted(async () => {
     onSearch();
-    const { data } = await getRoleMenu();
+    const { data } = await getRewardUserList({});
     treeIds.value = getKeyList(data, "id");
     treeData.value = handleTree(data);
   });

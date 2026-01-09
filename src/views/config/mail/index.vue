@@ -15,7 +15,7 @@ import {
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import Refresh from "~icons/ep/refresh";
-import Menu from "~icons/ep/menu";
+import FluentPersonMail20Regular from "~icons/fluent/person-mail-20-regular";
 import AddFill from "~icons/ri/add-circle-line";
 import Close from "~icons/ep/close";
 import Check from "~icons/ep/check";
@@ -156,7 +156,7 @@ onMounted(() => {
             :icon="useRenderIcon(AddFill)"
             @click="openDialog()"
           >
-            新增收件人
+            新增邮件配置
           </el-button>
         </template>
         <template v-slot="{ size, dynamicColumns }">
@@ -213,10 +213,10 @@ onMounted(() => {
                 link
                 type="primary"
                 :size="size"
-                :icon="useRenderIcon(Menu)"
+                :icon="useRenderIcon(FluentPersonMail20Regular)"
                 @click="handleMenu(row)"
               >
-                权限
+                人员
               </el-button>
               <!-- <el-dropdown>
               <el-button
@@ -281,7 +281,7 @@ onMounted(() => {
             <span :class="[iconClass, 'ml-2']">
               <IconifyIconOffline
                 v-tippy="{
-                  content: '保存菜单权限'
+                  content: '保存邮件人员配置'
                 }"
                 class="dark:text-white"
                 width="18px"
@@ -292,21 +292,19 @@ onMounted(() => {
             </span>
           </div>
           <p class="font-bold truncate">
-            菜单权限
+            邮件人员
             {{ `${curRow?.name ? `（${curRow.name}）` : ""}` }}
           </p>
         </div>
         <el-input
           v-model="treeSearchValue"
-          placeholder="请输入菜单进行搜索"
+          placeholder="请输入人员进行搜索"
           class="mb-1"
           clearable
           @input="onQueryChanged"
         />
         <div class="flex flex-wrap">
-          <el-checkbox v-model="isExpandAll" label="展开/折叠" />
           <el-checkbox v-model="isSelectAll" label="全选/全不选" />
-          <el-checkbox v-model="isLinkage" label="父子联动" />
         </div>
         <el-tree-v2
           ref="treeRef"
