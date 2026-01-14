@@ -75,6 +75,7 @@ menus:
   pureSystemLog: 系统日志
   pureVersionLog: 版本日志
   configManagement: 配置管理
+  configUser: 用户配置
   configReward: 奖励配置
   configSubject: 科目配置
   configMail: 邮件配置

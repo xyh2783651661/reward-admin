@@ -87,6 +87,12 @@ export const addRewardSubject = (data?: object) => {
   });
 };
 
+export const addRewardUser = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-users/add", {
+    data
+  });
+};
+
 export const updateRewardConfig = (data?: object) => {
   return http.request<Result>("post", "/api/reward-configs/update", {
     data
@@ -99,12 +105,22 @@ export const updateRewardSubject = (data?: object) => {
   });
 };
 
+export const updateRewardUser = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-users/update", {
+    data
+  });
+};
+
 export const deleteRewardConfig = (id: string | number) => {
   return http.request<Result>("delete", `/api/reward-configs/${id}`);
 };
 
 export const deleteRewardSubject = (id: string | number) => {
   return http.request<Result>("delete", `/api/reward-subjects/${id}`);
+};
+
+export const deleteRewardUser = (id: string | number) => {
+  return http.request<Result>("delete", `/api/reward-users/${id}`);
 };
 
 /** 获取系统管理-菜单管理列表 */
@@ -161,6 +177,14 @@ export const getRoleMenu = (data?: object) => {
 
 export const getRewardUserList = (data?: object) => {
   return http.request<Result>("post", "/api/reward-users/list", { data });
+};
+
+export const getRewardUserPage = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-users/page", { data });
+};
+
+export const resetPwdRewardUser = (data?: object) => {
+  return http.request<Result>("post", "/api/reward-users/reset-pwd", { data });
 };
 
 export const getMailRecipientUserList = (data?: object) => {

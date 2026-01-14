@@ -123,6 +123,16 @@ const configManagementRouter = {
   },
   children: [
     {
+      path: "/config/user",
+      component: "config/user/index",
+      name: "User",
+      meta: {
+        icon: "ri:user-settings-fill",
+        title: "menus.configUser",
+        roles: ["admin"]
+      }
+    },
+    {
       path: "/config/reward",
       component: "config/reward/index",
       name: "Reward",
