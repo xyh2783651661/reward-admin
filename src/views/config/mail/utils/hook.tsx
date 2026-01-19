@@ -318,11 +318,11 @@ export function useRole(treeRef: Ref) {
       userIds: treeRef.value.getCheckedKeys()
     }).then(r => {
       if (r.code === 200) {
-        message(`收件人名称为${name}的菜单权限${r.msg}`, {
+        message(`收件人名称为${name}的用户配置${r.msg}`, {
           type: "success"
         });
       } else {
-        message(`收件人名称为${name}的菜单权限${r.msg}`, {
+        message(`收件人名称为${name}的用户配置${r.msg}`, {
           type: "error"
         });
       }
