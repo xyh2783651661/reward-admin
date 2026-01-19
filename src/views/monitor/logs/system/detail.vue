@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import "vue-json-pretty/lib/styles.css";
 import VueJsonPretty from "vue-json-pretty";
 
@@ -55,30 +55,56 @@ const columns = [
   }
 ];
 
-const dataList = ref([
-  {
-    title: "响应头",
-    name: "responseHeaders",
-    data: props.data[0].responseHeaders
-  },
-  {
-    title: "响应体",
-    name: "responseBody",
-    data: props.data[0].responseBody
-  },
-  {
-    title: "请求头",
-    name: "requestHeaders",
-    data: props.data[0].requestHeaders
-  },
-  {
-    title: "请求体",
-    name: "requestBody",
-    data: props.data[0].requestBody
+const dataList = computed(() => {
+  const item = props.data?.[0];
+  if (!item) return [];
+
+  const list = [
+    {
+      title: "响应头",
+      name: "responseHeaders",
+      data: item.responseHeaders
+    },
+    {
+      title: "响应体",
+      name: "responseBody",
+      data: item.responseBody
+    },
+    {
+      title: "请求头",
+      name: "requestHeaders",
+      data: item.requestHeaders
+    },
+    {
+      title: "请求体",
+      name: "requestBody",
+      data: item.requestBody
+    }
+  ];
+
+  // ⚠️ 注意：异常 ≠ success
+  if (!item.success) {
+    list.push(
+      {
+        title: "异常类型",
+        name: "exceptionType",
+        data: item.exceptionType
+      },
+      {
+        title: "异常信息",
+        name: "exceptionMessage",
+        data: item.exceptionMessage
+      },
+      {
+        title: "异常堆栈",
+        name: "exceptionStackTrace",
+        data: item.exceptionStackTrace
+      }
+    );
   }
-]);
-console.log(props.data);
-console.log(dataList);
+
+  return list;
+});
 </script>
 
 <template>

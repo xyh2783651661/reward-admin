@@ -172,11 +172,17 @@ export function useRole(treeRef: Ref) {
   }
 
   function handleDelete(row) {
-    message(`您删除了ID为${row.id}的这条数据`, {
-      type: "success"
-    });
-    deleteMailRecipient(row.id);
-    onSearch();
+    deleteMailRecipient(row.id)
+      .then(r => {
+        if (r.code === 200) {
+          message(`已删除ID为${row.id}的这条数据`, {
+            type: "success"
+          });
+        }
+      })
+      .finally(() => {
+        onSearch();
+      });
   }
 
   function handleSizeChange(val: number) {
