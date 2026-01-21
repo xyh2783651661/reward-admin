@@ -12,6 +12,7 @@ import { getKeyList, deviceDetection } from "@pureadmin/utils";
 import {
   addRewardConfig,
   deleteRewardConfig,
+  exportRewardConfigList,
   getRewardConfigList,
   getRoleMenu,
   getRoleMenuIds,
@@ -36,6 +37,7 @@ export function useRole(treeRef: Ref) {
   const treeData = ref([]);
   const isShow = ref(false);
   const loading = ref(true);
+  const exportLoading = ref(false);
   const isLinkage = ref(false);
   const treeSearchValue = ref();
   const switchLoadMap = ref({});
@@ -61,11 +63,13 @@ export function useRole(treeRef: Ref) {
     {
       label: "KEY",
       prop: "rewardKey",
-      minWidth: 160
+      minWidth: 160,
+      sortable: true
     },
     {
       label: "类型",
-      prop: "rewardType"
+      prop: "rewardType",
+      sortable: true
     },
     {
       label: "状态",
@@ -87,7 +91,8 @@ export function useRole(treeRef: Ref) {
     },
     {
       label: "数值",
-      prop: "rewardValue"
+      prop: "rewardValue",
+      sortable: true
     },
     {
       label: "说明",
@@ -98,6 +103,7 @@ export function useRole(treeRef: Ref) {
       label: "创建时间",
       prop: "createdTime",
       minWidth: 160,
+      sortable: true,
       formatter: ({ createdTime }) =>
         dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
     },
@@ -105,6 +111,7 @@ export function useRole(treeRef: Ref) {
       label: "更新时间",
       prop: "updatedTime",
       minWidth: 160,
+      sortable: true,
       formatter: ({ updatedTime }) =>
         dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
     },
@@ -124,6 +131,34 @@ export function useRole(treeRef: Ref) {
   //     "dark:hover:text-primary!"
   //   ];
   // });
+
+  const exportExcel = async () => {
+    if (exportLoading.value) return;
+
+    exportLoading.value = true;
+    try {
+      const blob = await exportRewardConfigList(toRaw(form));
+
+      const fileName = "奖励配置.xlsx";
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = fileName;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("导出失败", e);
+      message("导出失败", {
+        type: "error"
+      });
+    } finally {
+      setTimeout(() => {
+        exportLoading.value = false;
+      }, 500);
+    }
+  };
 
   function onChange({ row, index }) {
     ElMessageBox.confirm(
@@ -240,9 +275,6 @@ export function useRole(treeRef: Ref) {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
         function chores() {
-          message(`您${title}了KEY为${curData.rewardKey}的这条数据`, {
-            type: "success"
-          });
           done(); // 关闭弹框
           onSearch(); // 刷新表格数据
         }
@@ -349,6 +381,7 @@ export function useRole(treeRef: Ref) {
     isShow,
     curRow,
     loading,
+    exportLoading,
     columns,
     rowStyle,
     dataList,
@@ -369,6 +402,7 @@ export function useRole(treeRef: Ref) {
     filterMethod,
     transformI18n,
     onQueryChanged,
+    exportExcel,
     // handleDatabase,
     handleSizeChange,
     handleCurrentChange,

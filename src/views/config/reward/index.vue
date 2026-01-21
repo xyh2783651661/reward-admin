@@ -15,8 +15,8 @@ import {
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import Refresh from "~icons/ep/refresh";
-import Menu from "~icons/ep/menu";
 import AddFill from "~icons/ri/add-circle-line";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 import Close from "~icons/ep/close";
 import Check from "~icons/ep/check";
 
@@ -52,6 +52,7 @@ const {
   isShow,
   curRow,
   loading,
+  exportLoading,
   columns,
   rowStyle,
   dataList,
@@ -64,6 +65,7 @@ const {
   treeSearchValue,
   // buttonClass,
   onSearch,
+  exportExcel,
   resetForm,
   openDialog,
   handleMenu,
@@ -177,6 +179,14 @@ onMounted(() => {
             @click="openDialog()"
           >
             新增配置
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="exportLoading"
+            :icon="useRenderIcon(HugeiconsDownload01)"
+            @click="exportExcel"
+          >
+            导出
           </el-button>
         </template>
         <template v-slot="{ size, dynamicColumns }">

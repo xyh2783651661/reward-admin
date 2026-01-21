@@ -63,6 +63,13 @@ export const getRewardConfigList = (data?: object) => {
   });
 };
 
+export const exportRewardConfigList = (data?: object) => {
+  return http.request<Blob>("post", "/api/reward-configs/export", {
+    data,
+    responseType: "blob"
+  });
+};
+
 export const getRewardSubjectList = (data?: object) => {
   return http.request<ResultTable>("post", "/api/reward-subjects/page", {
     data
