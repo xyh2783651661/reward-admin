@@ -6,6 +6,7 @@ interface FormItemProps {
   rewardType: string;
   rewardValue: string;
   description: string;
+  condition: string;
 }
 interface FormProps {
   formInline: FormItemProps;

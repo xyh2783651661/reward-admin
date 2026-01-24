@@ -63,7 +63,7 @@ export function useRole(treeRef: Ref) {
     {
       label: "KEY",
       prop: "rewardKey",
-      minWidth: 160,
+      minWidth: 280,
       sortable: true
     },
     {
@@ -97,7 +97,12 @@ export function useRole(treeRef: Ref) {
     {
       label: "说明",
       prop: "description",
-      minWidth: 100
+      minWidth: 120
+    },
+    {
+      label: "条件",
+      prop: "condition",
+      minWidth: 240
     },
     {
       label: "创建时间",
@@ -262,7 +267,8 @@ export function useRole(treeRef: Ref) {
           rewardKey: row?.rewardKey ?? "",
           rewardType: row?.rewardType ?? "",
           rewardValue: row?.rewardValue ?? "",
-          description: row?.description ?? ""
+          description: row?.description ?? "",
+          condition: row?.condition ?? ""
         }
       },
       width: "40%",

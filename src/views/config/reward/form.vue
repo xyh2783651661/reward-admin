@@ -8,7 +8,8 @@ const props = withDefaults(defineProps<FormProps>(), {
     rewardKey: "",
     rewardType: "",
     rewardValue: "",
-    description: ""
+    description: "",
+    condition: ""
   })
 });
 
@@ -33,7 +34,7 @@ defineExpose({ getRef });
       <el-input
         v-model="newFormInline.rewardKey"
         clearable
-        placeholder="请输入角色名称"
+        placeholder="请输入KEY"
       />
     </el-form-item>
 
@@ -59,10 +60,18 @@ defineExpose({ getRef });
       />
     </el-form-item>
 
-    <el-form-item label="说明" prop="description">
+    <el-form-item label="标签" prop="description">
       <el-input
         v-model="newFormInline.description"
-        placeholder="请输入说明"
+        clearable
+        placeholder="请输入标签"
+      />
+    </el-form-item>
+
+    <el-form-item label="条件" prop="condition">
+      <el-input
+        v-model="newFormInline.condition"
+        placeholder="请输入条件"
         type="textarea"
       />
     </el-form-item>
