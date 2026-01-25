@@ -64,7 +64,7 @@ export const getRewardConfigList = (data?: object) => {
 };
 
 export const exportRewardConfigList = (data?: object) => {
-  return http.request<Blob>("post", "/api/reward-configs/export", {
+  return http.request<Blob>("post", "/api/reward-configs/export-excel", {
     data,
     responseType: "blob"
   });
@@ -162,7 +162,7 @@ export const getMailSendRecordsList = (data?: object) => {
 };
 
 export const getRewardApkVersionsList = (data?: object) => {
-  return http.request<ResultTable>("post", "/api/reward-apk-versions/page", {
+  return http.request<ResultTable>("post", "/api/reward-apk/versions-page", {
     data
   });
 };
