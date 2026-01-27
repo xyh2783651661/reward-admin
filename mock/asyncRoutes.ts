@@ -83,16 +83,6 @@ const systemMonitorRouter = {
       }
     },
     {
-      path: "/monitor/operation-logs",
-      component: "monitor/logs/operation/index",
-      name: "OperationLog",
-      meta: {
-        icon: "ri:history-fill",
-        title: "menus.pureOperationLog",
-        roles: ["admin"]
-      }
-    },
-    {
       path: "/monitor/system-logs",
       component: "monitor/logs/system/index",
       name: "SystemLog",
@@ -110,6 +100,35 @@ const systemMonitorRouter = {
         icon: "ri:file-copy-2-line",
         title: "menus.pureVersionLog",
         roles: ["admin"]
+      }
+    }
+  ]
+};
+
+const timeManagementRouter = {
+  path: "/timer",
+  meta: {
+    icon: "ri:timer-line",
+    title: "menus.pureTimer"
+  },
+  children: [
+    {
+      path: "/logs",
+      component: "monitor/logs/operation/index",
+      name: "OperationLog",
+      meta: {
+        icon: "ri:file-text-line",
+        title: "menus.pureOperationLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/scheduling",
+      name: "https://xxl-job.xiaoyihao.tech/",
+      meta: {
+        icon: "ri:git-merge-line",
+        title: "menus.pureScheduling",
+        roles: ["admin", "common"]
       }
     }
   ]
@@ -182,7 +201,12 @@ export default defineFakeRoute([
     response: () => {
       return {
         success: true,
-        data: [permissionRouter, systemMonitorRouter, configManagementRouter]
+        data: [
+          permissionRouter,
+          systemMonitorRouter,
+          configManagementRouter,
+          timeManagementRouter
+        ]
       };
     }
   }

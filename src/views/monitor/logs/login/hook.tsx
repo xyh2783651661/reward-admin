@@ -36,18 +36,16 @@ export function useRole(tableRef: Ref) {
     },
     {
       label: "ID",
-      prop: "id",
-      minWidth: 90
+      prop: "id"
     },
     {
       label: "主题",
-      prop: "subject",
-      minWidth: 100
+      prop: "subject"
     },
     {
       label: "接收人",
       prop: "recipient",
-      minWidth: 140
+      minWidth: 100
     },
     {
       label: "状态",
@@ -62,7 +60,7 @@ export function useRole(tableRef: Ref) {
     {
       label: "发送时间",
       prop: "lastSendTime",
-      minWidth: 180,
+      minWidth: 300,
       cellRenderer: ({ row }) =>
         row.status == 1
           ? dayjs(row.lastSendTime).format("YYYY-MM-DD HH:mm:ss")
@@ -70,8 +68,7 @@ export function useRole(tableRef: Ref) {
     },
     {
       label: "发送次数",
-      prop: "sendAttempts",
-      minWidth: 140
+      prop: "sendAttempts"
     },
     {
       label: "操作",

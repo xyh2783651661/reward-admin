@@ -47,7 +47,7 @@ export function useRole(tableRef: Ref) {
     {
       label: "描述",
       prop: "description",
-      minWidth: 140
+      minWidth: 200
     },
     {
       label: "执行耗时",
@@ -76,20 +76,19 @@ export function useRole(tableRef: Ref) {
     {
       label: "开始时间",
       prop: "startTime",
-      minWidth: 180,
+      minWidth: 300,
       formatter: ({ startTime }) =>
         dayjs(startTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
       label: "结束时间",
       prop: "endTime",
-      minWidth: 180,
+      minWidth: 300,
       formatter: ({ endTime }) => dayjs(endTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
       label: "调用方法",
-      prop: "classMethod",
-      minWidth: 140
+      prop: "classMethod"
     },
     {
       label: "操作",

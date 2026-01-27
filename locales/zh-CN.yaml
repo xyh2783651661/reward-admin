@@ -71,7 +71,9 @@ menus:
   pureSysMonitor: 系统监控
   pureOnlineUser: 在线用户
   pureLoginLog: 邮件日志
+  pureTimer: 定时任务
   pureOperationLog: 任务日志
+  pureScheduling: 调度平台
   pureSystemLog: 系统日志
   pureVersionLog: 版本日志
   configManagement: 配置管理
