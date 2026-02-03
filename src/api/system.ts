@@ -70,6 +70,13 @@ export const exportRewardConfigList = (data?: object) => {
   });
 };
 
+export const exportAccessLogsList = (data?: object) => {
+  return http.request<Blob>("post", "/api/access-logs/export-excel", {
+    data,
+    responseType: "blob"
+  });
+};
+
 export const getRewardSubjectList = (data?: object) => {
   return http.request<ResultTable>("post", "/api/reward-subjects/page", {
     data

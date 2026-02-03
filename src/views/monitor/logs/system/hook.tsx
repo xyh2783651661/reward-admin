@@ -5,7 +5,11 @@ import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { getKeyList, useCopyToClipboard } from "@pureadmin/utils";
-import { getSystemLogsList, getSystemLogsDetail } from "@/api/system";
+import {
+  getSystemLogsList,
+  getSystemLogsDetail,
+  exportAccessLogsList
+} from "@/api/system";
 import Info from "~icons/ri/question-line";
 import { usePublicHooks } from "@/views/system/hooks";
 
@@ -13,12 +17,15 @@ export function useRole(tableRef: Ref) {
   const form = reactive({
     module: "",
     uri: "",
+    description: "",
+    success: "",
     requestTime: ["", ""],
     current: 1,
     size: 10
   });
   const dataList = ref([]);
   const loading = ref(true);
+  const exportLoading = ref(false);
   const selectedNum = ref(0);
   const { copied, update } = useCopyToClipboard();
   const { tagStyle } = usePublicHooks();
@@ -154,6 +161,34 @@ export function useRole(tableRef: Ref) {
     onSearch();
   }
 
+  const exportExcel = async () => {
+    if (exportLoading.value) return;
+
+    exportLoading.value = true;
+    try {
+      const blob = await exportAccessLogsList(toRaw(form));
+
+      const fileName = "系统日志.xlsx";
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      a.download = fileName;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("导出失败", e);
+      message("导出失败", {
+        type: "error"
+      });
+    } finally {
+      setTimeout(() => {
+        exportLoading.value = false;
+      }, 500);
+    }
+  };
+
   /** 当CheckBox选择项发生变化时会触发该事件 */
   function handleSelectionChange(val) {
     selectedNum.value = val.length;
@@ -249,6 +284,8 @@ export function useRole(tableRef: Ref) {
     clearAll,
     resetForm,
     onbatchDel,
+    exportExcel,
+    exportLoading,
     handleSizeChange,
     onSelectionCancel,
     handleCellDblclick,

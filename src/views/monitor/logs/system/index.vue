@@ -6,8 +6,8 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import View from "~icons/ep/view";
-import Delete from "~icons/ep/delete";
 import Refresh from "~icons/ep/refresh";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({
   name: "SystemLog"
@@ -27,6 +27,8 @@ const {
   onDetail,
   clearAll,
   resetForm,
+  exportExcel,
+  exportLoading,
   onbatchDel,
   handleSizeChange,
   onSelectionCancel,
@@ -60,6 +62,25 @@ const {
           class="w-[170px]!"
         />
       </el-form-item>
+      <el-form-item label="请求描述" prop="description">
+        <el-input
+          v-model="form.description"
+          placeholder="请输入请求描述"
+          clearable
+          class="w-[170px]!"
+        />
+      </el-form-item>
+      <el-form-item label="状态：" prop="success">
+        <el-select
+          v-model="form.success"
+          placeholder="请选择状态"
+          clearable
+          class="w-[120px]!"
+        >
+          <el-option label="成功" value="true" />
+          <el-option label="失败" value="false" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="请求时间" prop="requestTime">
         <el-date-picker
           v-model="form.requestTime"
@@ -86,6 +107,16 @@ const {
     </el-form>
 
     <PureTableBar :columns="columns" @refresh="onSearch">
+      <template #buttons>
+        <el-button
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
+        </el-button>
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <div
           v-if="selectedNum > 0"
