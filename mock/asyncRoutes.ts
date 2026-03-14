@@ -124,7 +124,7 @@ const timeManagementRouter = {
     },
     {
       path: "/scheduling",
-      name: "https://xxl-job.xiaoyihao.tech/",
+      name: "https://xxl-job.xiaoyh.top/",
       meta: {
         icon: "ri:git-merge-line",
         title: "menus.pureScheduling",
