@@ -6,7 +6,7 @@ import roleForm from "../role.vue";
 import { usePublicHooks } from "../../hooks";
 import { transformI18n } from "@/plugins/i18n";
 import { addDialog } from "@/components/ReDialog";
-import type { FormItemProps } from "../utils/types";
+import type { FormItemProps, RoleFormItemProps } from "../utils/types";
 import type { PaginationProps } from "@pureadmin/table";
 import { getKeyList, deviceDetection } from "@pureadmin/utils";
 import {
@@ -31,7 +31,6 @@ import {
 } from "vue";
 import userAvatar from "@/assets/user.jpg";
 import ReCropperPreview from "@/components/ReCropperPreview";
-import type { RoleFormItemProps } from "@/views/system/user/utils/types";
 import {
   ElForm,
   ElInput,

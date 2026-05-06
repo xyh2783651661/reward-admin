@@ -58,6 +58,8 @@ declare global {
     activePath?: string;
     /** 当前页面是否已经加载过 */
     loaded?: boolean;
+    saveScrollTop?: boolean;
+    saveSrollTop?: boolean;
   }
 
   /**

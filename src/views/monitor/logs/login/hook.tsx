@@ -1,24 +1,23 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
-import { getKeyList } from "@pureadmin/utils";
 import { getMailSendRecordsList } from "@/api/system";
 import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
-import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { reactive, ref, onMounted, toRaw } from "vue";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/login/detail.vue";
+import type { MailSendRecordItem } from "./types";
 
-export function useRole(tableRef: Ref) {
+export function useMailLog() {
   const form = reactive({
     subject: "",
-    status: "",
-    requestTime: ["", ""],
+    status: "" as number | "",
+    requestTime: [] as string[],
     current: 1,
     size: 10
   });
-  const dataList = ref([]);
+  const dataList = ref<MailSendRecordItem[]>([]);
   const loading = ref(true);
-  const selectedNum = ref(0);
   const { tagStyle } = usePublicHooks();
 
   const pagination = reactive<PaginationProps>({
@@ -28,12 +27,6 @@ export function useRole(tableRef: Ref) {
     background: true
   });
   const columns: TableColumnList = [
-    {
-      label: "勾选列", // 如果需要表格多选，此处label必须设置
-      type: "selection",
-      fixed: "left",
-      reserveSelection: true // 数据刷新后保留选项
-    },
     {
       label: "ID",
       prop: "id"
@@ -77,16 +70,21 @@ export function useRole(tableRef: Ref) {
     }
   ];
 
-  function onDetail(row) {
-    console.log("row", row);
-    console.log("row-content", row.content);
+  function onDetail(row: MailSendRecordItem) {
+    if (!row.content?.trim()) {
+      message("该邮件记录没有可预览的内容", {
+        type: "warning"
+      });
+      return;
+    }
+
     addDialog({
-      title: "邮件详情",
+      title: `邮件详情${row.subject ? ` - ${row.subject}` : ""}`,
       fullscreen: true,
       hideFooter: true,
       contentRenderer: () => Detail,
       props: {
-        content: row.content
+        record: row
       }
     });
   }
@@ -104,36 +102,12 @@ export function useRole(tableRef: Ref) {
     onSearch();
   }
 
-  /** 当CheckBox选择项发生变化时会触发该事件 */
-  function handleSelectionChange(val) {
-    selectedNum.value = val.length;
-    // 重置表格高度
-    tableRef.value.setAdaptive();
-  }
-
-  /** 取消选择 */
-  function onSelectionCancel() {
-    selectedNum.value = 0;
-    // 用于多选表格，清空用户的选择
-    tableRef.value.getTableRef().clearSelection();
-  }
-
-  /** 批量删除 */
-  function onbatchDel() {
-    // 返回当前选中的行
-    const curSelected = tableRef.value.getTableRef().getSelectionRows();
-    // 接下来根据实际业务，通过选中行的某项数据，比如下面的id，调用接口进行批量删除
-    message(`已删除序号为 ${getKeyList(curSelected, "id")} 的数据`, {
-      type: "success"
-    });
-    tableRef.value.getTableRef().clearSelection();
-    onSearch();
-  }
-
   async function onSearch() {
     loading.value = true;
-    const { data } = await getMailSendRecordsList(toRaw(form));
-    dataList.value = data.records;
+    const { data } = await getMailSendRecordsList<MailSendRecordItem>(
+      toRaw(form)
+    );
+    dataList.value = data.records ?? [];
     pagination.total = data.total;
     pagination.pageSize = data.size;
     pagination.currentPage = data.current;
@@ -159,14 +133,10 @@ export function useRole(tableRef: Ref) {
     columns,
     dataList,
     pagination,
-    selectedNum,
     onSearch,
     resetForm,
-    onbatchDel,
     handleSizeChange,
-    onSelectionCancel,
     handleCurrentChange,
-    handleSelectionChange,
     onDetail
   };
 }

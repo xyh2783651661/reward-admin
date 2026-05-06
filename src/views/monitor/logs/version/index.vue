@@ -6,10 +6,9 @@ import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Refresh from "~icons/ep/refresh";
-import AntDesignMailOutlined from "~icons/ant-design/mail-outlined";
 
 defineOptions({
-  name: "LoginLog"
+  name: "VersionLog"
 });
 
 const formRef = ref();
@@ -28,8 +27,7 @@ const {
   handleSizeChange,
   onSelectionCancel,
   handleCurrentChange,
-  handleSelectionChange,
-  onDetail
+  handleSelectionChange
 } = useRole(tableRef);
 </script>
 
@@ -44,7 +42,7 @@ const {
       <el-form-item label="Code" prop="versionCode">
         <el-input
           v-model="form.versionCode"
-          placeholder="请输入Code"
+          placeholder="请输入 Code"
           clearable
           class="w-[170px]!"
         />
@@ -125,21 +123,7 @@ const {
           @selection-change="handleSelectionChange"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
-        >
-          <template #operation="{ row }">
-            <el-button
-              v-if="!row.success"
-              class="reset-margin outline-hidden!"
-              link
-              type="primary"
-              :size="size"
-              :icon="useRenderIcon(AntDesignMailOutlined)"
-              @click="onDetail(row)"
-            >
-              邮件详情
-            </el-button>
-          </template>
-        </pure-table>
+        />
       </template>
     </PureTableBar>
   </div>

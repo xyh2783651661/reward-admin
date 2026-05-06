@@ -73,12 +73,12 @@ const systemMonitorRouter = {
       }
     },
     {
-      path: "/monitor/login-logs",
+      path: "/monitor/mail-logs",
       component: "monitor/logs/login/index",
-      name: "LoginLog",
+      name: "MailLog",
       meta: {
         icon: "ri:mail-send-line",
-        title: "menus.pureLoginLog",
+        title: "menus.pureMailLog",
         roles: ["admin"]
       }
     },
@@ -188,6 +188,16 @@ const configManagementRouter = {
       meta: {
         icon: "ri:money-cny-box-fill",
         title: "menus.configMoney",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/config/system-config",
+      component: "config/system-config/index",
+      name: "SystemConfig",
+      meta: {
+        icon: "ri:settings-5-fill",
+        title: "menus.configSystemConfig",
         roles: ["admin"]
       }
     }

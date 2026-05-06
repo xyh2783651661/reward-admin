@@ -70,7 +70,7 @@ menus:
   purePermission: 权限管理
   pureSysMonitor: 系统监控
   pureOnlineUser: 在线用户
-  pureLoginLog: 邮件日志
+  pureMailLog: 邮件日志
   pureTimer: 定时任务
   pureOperationLog: 任务日志
   pureScheduling: 调度平台
@@ -82,6 +82,7 @@ menus:
   configSubject: 科目配置
   configMail: 邮件配置
   configMoney: 零花钱配置
+  configSystemConfig: 系统配置
   purePermissionPage: 页面权限
   purePermissionButton: 按钮权限
   purePermissionButtonRouter: 路由返回按钮权限

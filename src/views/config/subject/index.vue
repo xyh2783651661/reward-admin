@@ -16,7 +16,7 @@ import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 
 defineOptions({
-  name: "SystemRole"
+  name: "Subject"
 });
 
 const iconClass = computed(() => {

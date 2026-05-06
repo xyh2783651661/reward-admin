@@ -20,7 +20,7 @@ import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 
 defineOptions({
-  nickName: "SystemRole"
+  name: "User"
 });
 
 const iconClass = computed(() => {

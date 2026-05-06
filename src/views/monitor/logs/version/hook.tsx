@@ -4,8 +4,6 @@ import { getKeyList } from "@pureadmin/utils";
 import { getRewardApkVersionsList } from "@/api/system";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
-import { addDialog } from "@/components/ReDialog/index";
-import Detail from "@/views/monitor/logs/login/detail.vue";
 
 export function useRole(tableRef: Ref) {
   const form = reactive({
@@ -25,12 +23,13 @@ export function useRole(tableRef: Ref) {
     currentPage: 1,
     background: true
   });
+
   const columns: TableColumnList = [
     {
-      label: "勾选列", // 如果需要表格多选，此处label必须设置
+      label: "勾选列",
       type: "selection",
       fixed: "left",
-      reserveSelection: true // 数据刷新后保留选项
+      reserveSelection: true
     },
     {
       label: "ID",
@@ -73,24 +72,10 @@ export function useRole(tableRef: Ref) {
     }
   ];
 
-  function onDetail(row) {
-    console.log("row", row);
-    console.log("row-content", row.content);
-    addDialog({
-      title: "邮件详情",
-      fullscreen: true,
-      hideFooter: true,
-      contentRenderer: () => Detail,
-      props: {
-        content: row.content
-      }
-    });
-  }
-
   function handleSizeChange(val: number) {
     console.log(`${val} items per page`);
     form.size = val;
-    form.current = 1; // 切换 pageSize 时重置到第一页
+    form.current = 1;
     onSearch();
   }
 
@@ -100,25 +85,18 @@ export function useRole(tableRef: Ref) {
     onSearch();
   }
 
-  /** 当CheckBox选择项发生变化时会触发该事件 */
   function handleSelectionChange(val) {
     selectedNum.value = val.length;
-    // 重置表格高度
     tableRef.value.setAdaptive();
   }
 
-  /** 取消选择 */
   function onSelectionCancel() {
     selectedNum.value = 0;
-    // 用于多选表格，清空用户的选择
     tableRef.value.getTableRef().clearSelection();
   }
 
-  /** 批量删除 */
   function onbatchDel() {
-    // 返回当前选中的行
     const curSelected = tableRef.value.getTableRef().getSelectionRows();
-    // 接下来根据实际业务，通过选中行的某项数据，比如下面的id，调用接口进行批量删除
     message(`已删除序号为 ${getKeyList(curSelected, "id")} 的数据`, {
       type: "success"
     });
@@ -162,7 +140,6 @@ export function useRole(tableRef: Ref) {
     handleSizeChange,
     onSelectionCancel,
     handleCurrentChange,
-    handleSelectionChange,
-    onDetail
+    handleSelectionChange
   };
 }

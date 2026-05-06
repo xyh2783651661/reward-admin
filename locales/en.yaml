@@ -70,9 +70,16 @@ menus:
   purePermission: Permission Manage
   pureSysMonitor: System Monitor
   pureOnlineUser: Online User
-  pureLoginLog: Login Log
+  pureMailLog: Mail Log
   pureOperationLog: Operation Log
   pureSystemLog: System Log
+  configManagement: Config Management
+  configUser: User Config
+  configReward: Reward Config
+  configSubject: Subject Config
+  configMail: Mail Config
+  configMoney: Pocket Money Config
+  configSystemConfig: System Config
   purePermissionPage: Page Permission
   purePermissionButton: Button Permission
   purePermissionButtonRouter: Route return button permission
