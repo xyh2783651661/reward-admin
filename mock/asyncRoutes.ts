@@ -1,23 +1,21 @@
-// 模拟后端动态生成路由
 import { defineFakeRoute } from "vite-plugin-fake-server/client";
 
-/**
- * roles：页面级别权限，这里模拟二种 "admin"、"common"
- * admin：管理员角色
- * common：普通角色
- */
+const title = (zh: string, en: string) => ({ zh, en });
+
 const permissionRouter = {
   path: "/permission",
   meta: {
-    title: "menus.purePermission",
-    icon: "ep:lollipop",
-    rank: 10
+    title: title("权限示例", "Permission Demo"),
+    icon: "ri:shield-keyhole-line",
+    rank: 90
   },
   children: [
     {
       path: "/permission/page/index",
+      component: "permission/page/index",
       name: "PermissionPage",
       meta: {
+        icon: "ri:pages-line",
         title: "menus.purePermissionPage",
         roles: ["admin", "common"]
       }
@@ -25,6 +23,7 @@ const permissionRouter = {
     {
       path: "/permission/button",
       meta: {
+        icon: "ri:cursor-line",
         title: "menus.purePermissionButton",
         roles: ["admin", "common"]
       },
@@ -34,6 +33,7 @@ const permissionRouter = {
           component: "permission/button/index",
           name: "PermissionButtonRouter",
           meta: {
+            icon: "ri:route-line",
             title: "menus.purePermissionButtonRouter",
             auths: [
               "permission:btn:add",
@@ -47,6 +47,7 @@ const permissionRouter = {
           component: "permission/button/perms",
           name: "PermissionButtonLogin",
           meta: {
+            icon: "ri:key-2-line",
             title: "menus.purePermissionButtonLogin"
           }
         }
@@ -55,21 +56,126 @@ const permissionRouter = {
   ]
 };
 
-const systemMonitorRouter = {
-  path: "/monitor",
+const businessConfigRouter = {
+  path: "/config",
   meta: {
-    icon: "ep:monitor",
-    title: "menus.pureSysMonitor"
+    icon: "ri:stack-line",
+    title: title("业务配置", "Business Config"),
+    rank: 10
   },
   children: [
     {
-      path: "/monitor/online-user",
-      component: "monitor/online/index",
-      name: "OnlineUser",
+      path: "/config/reward-suite",
       meta: {
-        icon: "ri:user-voice-line",
-        title: "menus.pureOnlineUser",
+        icon: "ri:medal-line",
+        title: title("奖励体系", "Reward Suite"),
         roles: ["admin"]
+      },
+      children: [
+        {
+          path: "/config/reward",
+          component: "config/reward/index",
+          name: "Reward",
+          meta: {
+            icon: "ri:medal-2-line",
+            title: "menus.configReward",
+            roles: ["admin"]
+          }
+        },
+        {
+          path: "/config/subject",
+          component: "config/subject/index",
+          name: "Subject",
+          meta: {
+            icon: "ri:book-open-line",
+            title: "menus.configSubject",
+            roles: ["admin"]
+          }
+        },
+        {
+          path: "/config/money",
+          component: "config/money/index",
+          name: "Money",
+          meta: {
+            icon: "ri:coins-line",
+            title: "menus.configMoney",
+            roles: ["admin"]
+          }
+        }
+      ]
+    },
+    {
+      path: "/config/delivery-suite",
+      meta: {
+        icon: "ri:team-line",
+        title: title("人员与通知", "People & Notify"),
+        roles: ["admin"]
+      },
+      children: [
+        {
+          path: "/config/user",
+          component: "config/user/index",
+          name: "User",
+          meta: {
+            icon: "ri:user-settings-line",
+            title: "menus.configUser",
+            roles: ["admin"]
+          }
+        },
+        {
+          path: "/config/mail",
+          component: "config/mail/index",
+          name: "Mail",
+          meta: {
+            icon: "ri:mail-settings-line",
+            title: "menus.configMail",
+            roles: ["admin"]
+          }
+        }
+      ]
+    },
+    {
+      path: "/config/platform-suite",
+      meta: {
+        icon: "ri:server-line",
+        title: title("平台参数", "Platform Settings"),
+        roles: ["admin"]
+      },
+      children: [
+        {
+          path: "/config/system-config",
+          component: "config/system-config/index",
+          name: "SystemConfig",
+          meta: {
+            icon: "ri:settings-5-line",
+            title: "menus.configSystemConfig",
+            roles: ["admin"],
+            showParent: true
+          }
+        }
+      ]
+    }
+  ]
+};
+
+const messageCenterRouter = {
+  path: "/message-center",
+  meta: {
+    icon: "ri:notification-4-line",
+    title: title("消息中心", "Message Center"),
+    rank: 20
+  },
+  children: [
+    {
+      path: "/notice/sysNotice",
+      component: "notice/sysNotice/index",
+      name: "SystemNotice",
+      meta: {
+        icon: "ri:notification-3-line",
+        title: title("系统通知", "System Notice"),
+        roles: ["admin", "common"],
+        keepAlive: true,
+        showParent: true
       }
     },
     {
@@ -77,8 +183,70 @@ const systemMonitorRouter = {
       component: "monitor/logs/login/index",
       name: "MailLog",
       meta: {
-        icon: "ri:mail-send-line",
+        icon: "ri:mail-open-line",
         title: "menus.pureMailLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/monitor/version-logs",
+      component: "monitor/logs/version/index",
+      name: "VersionLog",
+      meta: {
+        icon: "ri:git-commit-line",
+        title: "menus.pureVersionLog",
+        roles: ["admin"]
+      }
+    }
+  ]
+};
+
+const taskCenterRouter = {
+  path: "/task-center",
+  meta: {
+    icon: "ri:calendar-todo-line",
+    title: title("任务调度", "Task Center"),
+    rank: 30
+  },
+  children: [
+    {
+      path: "/timer/logs",
+      component: "monitor/logs/operation/index",
+      name: "OperationLog",
+      meta: {
+        icon: "ri:file-list-3-line",
+        title: "menus.pureOperationLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/timer/scheduling",
+      name: "https://xxl-job.xiaoyh.top/",
+      meta: {
+        icon: "ri:git-merge-line",
+        title: "menus.pureScheduling",
+        roles: ["admin", "common"],
+        showParent: true
+      }
+    }
+  ]
+};
+
+const runtimeAuditRouter = {
+  path: "/runtime-audit",
+  meta: {
+    icon: "ri:pulse-line",
+    title: title("运行审计", "Runtime Audit"),
+    rank: 40
+  },
+  children: [
+    {
+      path: "/monitor/online-user",
+      component: "monitor/online/index",
+      name: "OnlineUser",
+      meta: {
+        icon: "ri:user-shared-2-line",
+        title: "menus.pureOnlineUser",
         roles: ["admin"]
       }
     },
@@ -89,115 +257,6 @@ const systemMonitorRouter = {
       meta: {
         icon: "ri:file-search-line",
         title: "menus.pureSystemLog",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/monitor/version-logs",
-      component: "monitor/logs/version/index",
-      name: "VersionLog",
-      meta: {
-        icon: "ri:file-copy-2-line",
-        title: "menus.pureVersionLog",
-        roles: ["admin"]
-      }
-    }
-  ]
-};
-
-const timeManagementRouter = {
-  path: "/timer",
-  meta: {
-    icon: "ri:timer-line",
-    title: "menus.pureTimer"
-  },
-  children: [
-    {
-      path: "/logs",
-      component: "monitor/logs/operation/index",
-      name: "OperationLog",
-      meta: {
-        icon: "ri:file-text-line",
-        title: "menus.pureOperationLog",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/scheduling",
-      name: "https://xxl-job.xiaoyh.top/",
-      meta: {
-        icon: "ri:git-merge-line",
-        title: "menus.pureScheduling",
-        roles: ["admin", "common"]
-      }
-    }
-  ]
-};
-
-const configManagementRouter = {
-  path: "/config",
-  meta: {
-    icon: "ep:setting",
-    title: "menus.configManagement"
-  },
-  children: [
-    {
-      path: "/config/user",
-      component: "config/user/index",
-      name: "User",
-      meta: {
-        icon: "ri:user-settings-fill",
-        title: "menus.configUser",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/config/reward",
-      component: "config/reward/index",
-      name: "Reward",
-      meta: {
-        icon: "ri:medal-2-fill",
-        title: "menus.configReward",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/config/subject",
-      component: "config/subject/index",
-      name: "Subject",
-      meta: {
-        icon: "fa-solid:book-open",
-        title: "menus.configSubject",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/config/mail",
-      component: "config/mail/index",
-      name: "Mail",
-      meta: {
-        icon: "ri:mail-settings-fill",
-        title: "menus.configMail",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/config/money",
-      component: "config/money/index",
-      name: "Money",
-      meta: {
-        icon: "ri:money-cny-box-fill",
-        title: "menus.configMoney",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/config/system-config",
-      component: "config/system-config/index",
-      name: "SystemConfig",
-      meta: {
-        icon: "ri:settings-5-fill",
-        title: "menus.configSystemConfig",
         roles: ["admin"]
       }
     }
@@ -212,10 +271,11 @@ export default defineFakeRoute([
       return {
         success: true,
         data: [
-          permissionRouter,
-          systemMonitorRouter,
-          configManagementRouter,
-          timeManagementRouter
+          businessConfigRouter,
+          messageCenterRouter,
+          taskCenterRouter,
+          runtimeAuditRouter,
+          permissionRouter
         ]
       };
     }

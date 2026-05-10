@@ -84,6 +84,7 @@ menus:
   purePermissionButton: Button Permission
   purePermissionButtonRouter: Route return button permission
   purePermissionButtonLogin: Login interface return button permission
+  pureSystemNotice: System Notice
 status:
   pureLoad: Loading...
   pureMessage: Message

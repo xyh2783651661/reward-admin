@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { ListItem } from "../data";
+import type { NoticeListItem } from "../data";
 import { ref, PropType, nextTick } from "vue";
 import { useNav } from "@/layout/hooks/useNav";
 import { deviceDetection } from "@pureadmin/utils";
 
-defineProps({
+const emit = defineEmits<{
+  action: [item: NoticeListItem];
+}>();
+
+const props = defineProps({
   noticeItem: {
-    type: Object as PropType<ListItem>,
+    type: Object as PropType<NoticeListItem>,
     default: () => {}
   }
 });
 
-const titleRef = ref(null);
+const titleRef = ref<HTMLElement | null>(null);
 const titleTooltip = ref(false);
-const descriptionRef = ref(null);
+const descriptionRef = ref<HTMLElement | null>(null);
 const descriptionTooltip = ref(false);
 const { tooltipEffect } = useNav();
 const isMobile = deviceDetection();
@@ -45,11 +49,17 @@ function hoverDescription(event, description) {
     ? (descriptionTooltip.value = true)
     : (descriptionTooltip.value = false);
 }
+
+function handleAction() {
+  emit("action", props.noticeItem);
+}
 </script>
 
 <template>
   <div
     class="notice-container border-0 border-b-[1px] border-solid border-[#f0f0f0] dark:border-[#303030]"
+    :class="{ 'is-actionable': noticeItem.path }"
+    @click="handleAction"
   >
     <el-avatar
       v-if="noticeItem.avatar"
@@ -72,6 +82,7 @@ function hoverDescription(event, description) {
             class="notice-title-content"
             @mouseover="hoverTitle"
           >
+            <span v-if="noticeItem.read === false" class="notice-title-dot" />
             {{ noticeItem.title }}
           </div>
         </el-tooltip>
@@ -119,6 +130,10 @@ function hoverDescription(event, description) {
   justify-content: space-between;
   padding: 12px 0;
 
+  &.is-actionable {
+    cursor: pointer;
+  }
+
   // border-bottom: 1px solid #f0f0f0;
 
   .notice-container-avatar {
@@ -146,6 +161,16 @@ function hoverDescription(event, description) {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+
+        .notice-title-dot {
+          display: inline-block;
+          width: 8px;
+          height: 8px;
+          margin-right: 8px;
+          vertical-align: middle;
+          background: var(--el-color-danger);
+          border-radius: 50%;
+        }
       }
 
       .notice-title-extra {

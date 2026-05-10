@@ -434,11 +434,7 @@ const rawHtmlContent = computed(() => props.record.content || "");
 .mail-preview-shell {
   padding: 20px;
   background:
-    linear-gradient(
-      180deg,
-      rgb(246 248 251 / 96%),
-      rgb(234 238 243 / 96%)
-    ),
+    linear-gradient(180deg, rgb(246 248 251 / 96%), rgb(234 238 243 / 96%)),
     radial-gradient(circle at top, rgb(64 158 255 / 8%), transparent 36%);
   border-radius: 12px;
 }
