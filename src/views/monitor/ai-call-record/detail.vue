@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import dayjs from "dayjs";
-import { computed, ref, watch } from "vue";
+import MarkdownIt from "markdown-it";
+import { computed, reactive, ref, watch } from "vue";
 import VueJsonPretty from "vue-json-pretty";
 import "vue-json-pretty/lib/styles.css";
 import { useCopyToClipboard } from "@pureadmin/utils";
@@ -8,12 +9,17 @@ import type { JSONDataType } from "vue-json-pretty/types/utils";
 import { message } from "@/utils/message";
 import type { AiCallRecordDetail, AiCallRecordStatus } from "./types";
 
+type ContentViewMode = "raw" | "markdown";
+type TagType = "primary" | "success" | "warning" | "danger" | "info";
+
 interface ContentTab {
   name: string;
   label: string;
   content: string;
   jsonData: JSONDataType | null;
   isJson: boolean;
+  canPreviewMarkdown: boolean;
+  markdownHtml: string;
   emptyText: string;
 }
 
@@ -26,8 +32,41 @@ const props = withDefaults(
   }
 );
 
+const markdown = new MarkdownIt({
+  html: false,
+  breaks: true,
+  linkify: true,
+  typographer: false
+});
+
+const defaultLinkOpen =
+  markdown.renderer.rules.link_open ??
+  ((tokens, idx, options, _env, self) =>
+    self.renderToken(tokens, idx, options));
+
+markdown.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  const targetIndex = token.attrIndex("target");
+  const relIndex = token.attrIndex("rel");
+
+  if (targetIndex < 0) {
+    token.attrPush(["target", "_blank"]);
+  } else {
+    token.attrs![targetIndex][1] = "_blank";
+  }
+
+  if (relIndex < 0) {
+    token.attrPush(["rel", "noopener noreferrer"]);
+  } else {
+    token.attrs![relIndex][1] = "noopener noreferrer";
+  }
+
+  return defaultLinkOpen(tokens, idx, options, env, self);
+};
+
 const { copied, update } = useCopyToClipboard();
 const activeTab = ref("prompt");
+const contentViewModes = reactive<Record<string, ContentViewMode>>({});
 
 function normalizeContent(value?: string | null) {
   return typeof value === "string" ? value : "";
@@ -57,6 +96,11 @@ function toJsonData(value: string): JSONDataType | null {
   }
 }
 
+function renderMarkdown(value: string) {
+  if (!value.trim()) return "";
+  return markdown.render(value);
+}
+
 function createContentTab(
   name: string,
   label: string,
@@ -64,18 +108,21 @@ function createContentTab(
   emptyText: string
 ): ContentTab {
   const jsonData = toJsonData(content);
+  const isJson = jsonData !== null;
 
   return {
     name,
     label,
     content,
     jsonData,
-    isJson: jsonData !== null,
+    isJson,
+    canPreviewMarkdown: !isJson && !!content.trim(),
+    markdownHtml: isJson ? "" : renderMarkdown(content),
     emptyText
   };
 }
 
-function getStatusType(status?: AiCallRecordStatus) {
+function getStatusType(status?: AiCallRecordStatus): TagType {
   const normalized = `${status ?? ""}`.toUpperCase();
 
   if (normalized === "SUCCESS") return "success";
@@ -83,6 +130,25 @@ function getStatusType(status?: AiCallRecordStatus) {
   if (["RUNNING", "PROCESSING"].includes(normalized)) return "warning";
   if (["PENDING", "WAITING", "INIT"].includes(normalized)) return "info";
   return "primary";
+}
+
+function getViewMode(name: string): ContentViewMode {
+  return contentViewModes[name] ?? "raw";
+}
+
+function setViewMode(name: string, value: ContentViewMode) {
+  contentViewModes[name] = value;
+}
+
+function onViewModeChange(name: string, value: string | number | boolean) {
+  setViewMode(name, value === "markdown" ? "markdown" : "raw");
+}
+
+function getTabHint(tab: ContentTab) {
+  if (tab.isJson) return "已识别为 JSON 结构";
+  return getViewMode(tab.name) === "markdown"
+    ? "按 Markdown 预览显示"
+    : "按原始文本显示";
 }
 
 async function copyText(value: string, label: string) {
@@ -123,10 +189,15 @@ const detailRecord = computed<AiCallRecordDetail>(() => ({
   updatedTime: String(props.record?.updatedTime ?? "")
 }));
 
-const metrics = computed(() => {
+const summaryItems = computed(() => {
   const item = detailRecord.value;
 
   return [
+    {
+      label: "调用状态",
+      value: item.status || "UNKNOWN",
+      tagType: getStatusType(item.status)
+    },
     {
       label: "调用耗时",
       value: `${item.costTimeMs || 0} ms`
@@ -142,6 +213,10 @@ const metrics = computed(() => {
     {
       label: "总 Tokens",
       value: `${(item.promptTokens || 0) + (item.responseTokens || 0)}`
+    },
+    {
+      label: "调用模型",
+      value: item.model || "-"
     }
   ];
 });
@@ -226,6 +301,25 @@ watch(
     activeTab.value = tabs.some(item => item.name === "error")
       ? "error"
       : "prompt";
+
+    const currentKeys = new Set(tabs.map(item => item.name));
+
+    Object.keys(contentViewModes).forEach(key => {
+      if (!currentKeys.has(key)) {
+        delete contentViewModes[key];
+      }
+    });
+
+    tabs.forEach(tab => {
+      if (tab.isJson) {
+        contentViewModes[tab.name] = "raw";
+        return;
+      }
+
+      if (!contentViewModes[tab.name]) {
+        contentViewModes[tab.name] = "raw";
+      }
+    });
   },
   { immediate: true }
 );
@@ -233,23 +327,16 @@ watch(
 
 <template>
   <div class="ai-call-detail">
-    <div class="hero">
-      <div class="hero__main">
-        <div class="hero__eyebrow">AI 调用结果详情</div>
-        <h2 class="hero__title">{{ detailRecord.bizType || "未命名业务" }}</h2>
-        <div class="hero__meta">
-          <el-tag
-            :type="getStatusType(detailRecord.status)"
-            effect="dark"
-            round
-          >
-            {{ detailRecord.status || "UNKNOWN" }}
-          </el-tag>
-          <span>模型 {{ detailRecord.model || "-" }}</span>
-          <span>业务ID {{ detailRecord.bizId || "-" }}</span>
+    <div class="detail-toolbar">
+      <div class="detail-toolbar__main">
+        <div class="detail-toolbar__title">AI 调用详情</div>
+        <div class="detail-toolbar__subtitle">
+          {{ detailRecord.bizType || "-" }}
+          <span class="mx-2 text-[var(--el-border-color)]">/</span>
+          {{ detailRecord.bizId || "-" }}
         </div>
       </div>
-      <div class="hero__actions">
+      <div class="detail-toolbar__actions">
         <el-button
           size="small"
           @click="copyText(detailRecord.traceId, 'TraceId')"
@@ -272,10 +359,18 @@ watch(
       </div>
     </div>
 
-    <div class="metric-grid">
-      <div v-for="item in metrics" :key="item.label" class="metric-card">
-        <span class="metric-card__label">{{ item.label }}</span>
-        <strong class="metric-card__value">{{ item.value }}</strong>
+    <div class="summary-grid">
+      <div v-for="item in summaryItems" :key="item.label" class="summary-card">
+        <span class="summary-card__label">{{ item.label }}</span>
+        <el-tag
+          v-if="item.tagType"
+          :type="item.tagType"
+          effect="plain"
+          class="summary-card__tag"
+        >
+          {{ item.value }}
+        </el-tag>
+        <strong v-else class="summary-card__value">{{ item.value }}</strong>
       </div>
     </div>
 
@@ -304,19 +399,28 @@ watch(
         :label="tab.label"
       >
         <div class="tab-toolbar">
-          <span class="tab-toolbar__hint">
-            {{ tab.isJson ? "已识别为 JSON 结构" : "按纯文本展示" }}
-          </span>
-          <el-button size="small" @click="copyText(tab.content, tab.label)">
-            复制内容
-          </el-button>
+          <span class="tab-toolbar__hint">{{ getTabHint(tab) }}</span>
+          <div class="tab-toolbar__actions">
+            <el-radio-group
+              v-if="tab.canPreviewMarkdown"
+              :model-value="getViewMode(tab.name)"
+              size="small"
+              @update:model-value="onViewModeChange(tab.name, $event)"
+            >
+              <el-radio-button value="raw">原文</el-radio-button>
+              <el-radio-button value="markdown">Markdown</el-radio-button>
+            </el-radio-group>
+            <el-button size="small" @click="copyText(tab.content, tab.label)">
+              复制内容
+            </el-button>
+          </div>
         </div>
 
         <el-empty v-if="!tab.content.trim()" :description="tab.emptyText" />
 
         <el-scrollbar
           v-else
-          max-height="calc(100vh - 360px)"
+          max-height="calc(100vh - 320px)"
           class="content-scroll"
         >
           <vue-json-pretty
@@ -325,6 +429,11 @@ watch(
             :deep="3"
             :showLength="true"
             :showLine="true"
+          />
+          <div
+            v-else-if="getViewMode(tab.name) === 'markdown'"
+            class="markdown-body"
+            v-html="tab.markdownHtml"
           />
           <pre v-else class="content-block">{{ tab.content }}</pre>
         </el-scrollbar>
@@ -337,86 +446,77 @@ watch(
 .ai-call-detail {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
-.hero {
+.detail-toolbar {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 24px;
-  color: #eff6ff;
-  background:
-    radial-gradient(
-      circle at top right,
-      rgb(56 189 248 / 28%),
-      transparent 32%
-    ),
-    linear-gradient(135deg, #0f172a 0%, #1d4ed8 56%, #0ea5e9 100%);
-  border-radius: 24px;
+  padding: 18px 20px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
 }
 
-.hero__eyebrow {
+.detail-toolbar__title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
+}
+
+.detail-toolbar__subtitle {
+  margin-top: 6px;
   font-size: 13px;
-  letter-spacing: 0.08em;
-  opacity: 0.84;
+  color: var(--el-text-color-secondary);
+  word-break: break-all;
 }
 
-.hero__title {
-  margin: 10px 0 0;
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.hero__meta {
+.detail-toolbar__actions,
+.tab-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
+  gap: 8px;
   align-items: center;
-  margin-top: 16px;
-  font-size: 13px;
-  color: rgb(219 234 254 / 86%);
 }
 
-.hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.metric-grid {
+.summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.metric-card {
-  padding: 16px 18px;
-  background: linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%);
-  border: 1px solid #dbeafe;
-  border-radius: 18px;
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
 }
 
-.metric-card__label {
-  display: block;
-  font-size: 13px;
-  color: #64748b;
+.summary-card__label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
-.metric-card__value {
-  display: block;
-  margin-top: 8px;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: #0f172a;
+.summary-card__value {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--el-text-color-primary);
+  word-break: break-all;
+}
+
+.summary-card__tag {
+  width: fit-content;
 }
 
 .detail-tabs {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .tab-toolbar {
@@ -429,44 +529,143 @@ watch(
 
 .tab-toolbar__hint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--el-text-color-secondary);
 }
 
 .content-scroll {
   padding-right: 8px;
 }
 
+.content-block,
+.markdown-body {
+  padding: 16px;
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
 .content-block {
-  padding: 18px;
   margin: 0;
   font-size: 13px;
   line-height: 1.8;
   color: var(--el-text-color-primary);
   word-break: break-word;
   white-space: pre-wrap;
-  background: var(--el-fill-color-blank);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
 }
 
-@media (width <= 1280px) {
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--el-text-color-primary);
+  word-break: break-word;
+}
+
+.markdown-body :deep(*:first-child) {
+  margin-top: 0;
+}
+
+.markdown-body :deep(*:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+  margin: 1.1em 0 0.6em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.markdown-body :deep(p),
+.markdown-body :deep(ul),
+.markdown-body :deep(ol),
+.markdown-body :deep(blockquote),
+.markdown-body :deep(table) {
+  margin: 0 0 12px;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  padding-left: 22px;
+}
+
+.markdown-body :deep(li + li) {
+  margin-top: 4px;
+}
+
+.markdown-body :deep(code) {
+  padding: 2px 6px;
+  font-size: 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+}
+
+.markdown-body :deep(pre) {
+  padding: 14px 16px;
+  overflow: auto;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.markdown-body :deep(pre code) {
+  padding: 0;
+  color: #e2e8f0;
+  background: transparent;
+}
+
+.markdown-body :deep(blockquote) {
+  padding: 8px 0 8px 12px;
+  color: var(--el-text-color-secondary);
+  border-left: 4px solid var(--el-color-primary-light-5);
+}
+
+.markdown-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.markdown-body :deep(th) {
+  background: var(--el-fill-color-light);
+}
+
+.markdown-body :deep(a) {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
+@media (width <= 1400px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (width <= 768px) {
-  .hero,
+@media (width <= 900px) {
+  .detail-toolbar,
   .tab-toolbar {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .hero__actions {
-    justify-content: flex-start;
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .metric-grid {
+@media (width <= 640px) {
+  .summary-grid {
     grid-template-columns: 1fr;
   }
 }
