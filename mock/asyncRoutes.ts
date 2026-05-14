@@ -259,6 +259,17 @@ const runtimeAuditRouter = {
         title: "menus.pureSystemLog",
         roles: ["admin"]
       }
+    },
+    {
+      path: "/monitor/ai-call-records",
+      component: "monitor/ai-call-record/index",
+      name: "AiCallRecord",
+      meta: {
+        icon: "ri:robot-2-line",
+        title: title("AI调用记录", "AI Call Records"),
+        roles: ["admin"],
+        keepAlive: true
+      }
     }
   ]
 };
