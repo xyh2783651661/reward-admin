@@ -93,12 +93,12 @@ const businessConfigRouter = {
           }
         },
         {
-          path: "/config/money",
-          component: "config/money/index",
-          name: "Money",
+          path: "/config/pocket-money",
+          component: "config/pocket-money/index",
+          name: "PocketMoney",
           meta: {
-            icon: "ri:coins-line",
-            title: "menus.configMoney",
+            icon: "ri:money-cny-box-line",
+            title: title("零花钱规则", "Pocket Money Rule"),
             roles: ["admin"]
           }
         }

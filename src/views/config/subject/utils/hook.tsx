@@ -23,6 +23,7 @@ export function useRole(treeRef: Ref) {
   const form = reactive({
     name: "",
     type: "",
+    stage: "",
     status: "",
     current: 1,
     size: 10
@@ -65,6 +66,11 @@ export function useRole(treeRef: Ref) {
       label: "类型",
       prop: "type",
       minWidth: 100
+    },
+    {
+      label: "学段",
+      prop: "stage",
+      minWidth: 80
     },
     {
       label: "状态",
@@ -219,24 +225,27 @@ export function useRole(treeRef: Ref) {
   };
 
   function openDialog(title = "新增", row?: FormItemProps) {
+    const formInlineData = {
+      id: row?.id ?? "",
+      name: row?.name ?? "",
+      type: row?.type ?? "",
+      stage: row?.stage ?? "",
+      base: row?.base ?? "",
+      full: row?.full ?? "",
+      excellence: row?.excellence ?? ""
+    };
     addDialog({
       title: `${title}配置`,
       props: {
-        formInline: {
-          id: row?.id ?? "",
-          name: row?.name ?? "",
-          type: row?.type ?? "",
-          base: row?.base ?? "",
-          full: row?.full ?? "",
-          excellence: row?.excellence ?? ""
-        }
+        formInline: formInlineData
       },
       width: "40%",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
       closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
+      contentRenderer: () =>
+        h(editForm, { ref: formRef, formInline: formInlineData }),
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;

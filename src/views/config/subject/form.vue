@@ -8,6 +8,7 @@ const props = withDefaults(defineProps<FormProps>(), {
     id: "",
     name: "",
     type: "",
+    stage: "",
     base: "",
     full: "",
     excellence: ""
@@ -47,6 +48,19 @@ defineExpose({ getRef });
       >
         <el-option label="CORE" value="CORE" />
         <el-option label="GENERAL" value="GENERAL" />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="学段" prop="stage">
+      <el-select
+        v-model="newFormInline.stage"
+        placeholder="请选择学段"
+        clearable
+      >
+        <el-option label="小学" value="小学" />
+        <el-option label="初中" value="初中" />
+        <el-option label="高中" value="高中" />
+        <el-option label="大学" value="大学" />
       </el-select>
     </el-form-item>
 
