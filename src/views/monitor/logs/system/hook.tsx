@@ -13,7 +13,7 @@ import {
 import Info from "~icons/ri/question-line";
 import { usePublicHooks } from "@/views/system/hooks";
 
-export function useRole(tableRef: Ref) {
+export function useSystemLog(tableRef: Ref) {
   const form = reactive({
     module: "",
     uri: "",

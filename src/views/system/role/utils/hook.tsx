@@ -9,10 +9,14 @@ import { addDialog } from "@/components/ReDialog";
 import type { FormItemProps } from "../utils/types";
 import type { PaginationProps } from "@pureadmin/table";
 import { getKeyList, deviceDetection } from "@pureadmin/utils";
-import { getRoleList, getRoleMenu, getRoleMenuIds } from "@/api/system";
+import { getRoleList } from "@/api/system";
+import {
+  mockRoleMenuData,
+  mockRoleMenuCheckedIds
+} from "@/views/config/composables/mockData";
 import { type Ref, reactive, ref, onMounted, h, toRaw, watch } from "vue";
 
-export function useRole(treeRef: Ref) {
+export function useSystemRole(treeRef: Ref) {
   const form = reactive({
     name: "",
     code: "",
@@ -229,7 +233,8 @@ export function useRole(treeRef: Ref) {
     if (id) {
       curRow.value = row;
       isShow.value = true;
-      const { data } = await getRoleMenuIds({ id });
+      // Mock: backend API not ready yet
+      const { data } = await mockRoleMenuCheckedIds(row);
       treeRef.value.setCheckedKeys(data);
     } else {
       curRow.value = null;
@@ -268,7 +273,8 @@ export function useRole(treeRef: Ref) {
 
   onMounted(async () => {
     onSearch();
-    const { data } = await getRoleMenu();
+    // Mock: backend API not ready yet
+    const data = mockRoleMenuData;
     treeIds.value = getKeyList(data, "id");
     treeData.value = handleTree(data);
   });

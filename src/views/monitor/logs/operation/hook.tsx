@@ -8,7 +8,7 @@ import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/operation/detail.vue";
 
-export function useRole(tableRef: Ref) {
+export function useOperationLog(tableRef: Ref) {
   const form = reactive({
     taskName: "",
     success: "",

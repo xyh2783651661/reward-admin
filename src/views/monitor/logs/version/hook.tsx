@@ -5,7 +5,7 @@ import { getRewardApkVersionsList } from "@/api/system";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 
-export function useRole(tableRef: Ref) {
+export function useVersionLog(tableRef: Ref) {
   const form = reactive({
     versionName: "",
     versionCode: "",

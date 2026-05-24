@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRole } from "./utils/hook";
+import { useRewardUser as useRole } from "./utils/hook";
 import { ref, computed, nextTick, onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -54,7 +54,6 @@ const {
   rowStyle,
   dataList,
   pagination,
-  // buttonClass,
   onSearch,
   resetForm,
   openDialog,
@@ -64,7 +63,6 @@ const {
   handleUpload,
   handleReset,
   handleRole,
-  // handleDatabase,
   handleSizeChange,
   handleCurrentChange,
   handleSelectionChange

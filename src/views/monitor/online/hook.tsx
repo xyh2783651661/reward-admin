@@ -4,7 +4,7 @@ import { getOnlineLogsList } from "@/api/system";
 import { reactive, ref, onMounted, toRaw } from "vue";
 import type { PaginationProps } from "@pureadmin/table";
 
-export function useRole() {
+export function useOnlineLog() {
   const form = reactive({
     username: ""
   });

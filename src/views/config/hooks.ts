@@ -2,6 +2,25 @@
 import { computed } from "vue";
 import { useDark } from "@pureadmin/utils";
 
+export function useIconClass() {
+  return computed(() => {
+    return [
+      "w-[22px]",
+      "h-[22px]",
+      "flex",
+      "justify-center",
+      "items-center",
+      "outline-hidden",
+      "rounded-[4px]",
+      "cursor-pointer",
+      "transition-colors",
+      "hover:bg-[#0000000f]",
+      "dark:hover:bg-[#ffffff1f]",
+      "dark:hover:text-[#ffffffd9]"
+    ];
+  });
+}
+
 export function usePublicHooks() {
   const { isDark } = useDark();
 

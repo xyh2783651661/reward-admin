@@ -486,9 +486,7 @@ export function useSystemConfig() {
     onSearch();
   }
 
-  function handleSelectionChange(val: SystemConfigItem[]) {
-    console.log("handleSelectionChange", val);
-  }
+  function handleSelectionChange(_val: SystemConfigItem[]) {}
 
   void Promise.all([onSearch(), loadOptions()]);
 
