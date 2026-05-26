@@ -68,6 +68,39 @@ export {
 export { getAiCallRecordPage, getAiCallRecordDetail } from "./ai";
 
 export {
+  getSysNoticePage,
+  getSysNoticeDetail,
+  addSysNotice,
+  updateSysNotice,
+  deleteSysNotice,
+  publishSysNotice,
+  withdrawSysNotice,
+  markNoticeRead,
+  batchMarkNoticeRead,
+  markAllNoticeRead,
+  getUnreadCount
+} from "./notice";
+
+export {
+  getLoveRecordPage,
+  getLoveRecordByDate,
+  getLoveRecordDetail,
+  addLoveRecord,
+  updateLoveRecord,
+  deleteLoveRecord,
+  getAnniversaryList,
+  addAnniversary,
+  updateAnniversary,
+  deleteAnniversary,
+  uploadMedia,
+  deleteMedia,
+  getLoveStatistics,
+  getLoveCalendarStats,
+  getMemoryGallery,
+  getLoveOptions
+} from "./love";
+
+export {
   getAllRoleList,
   getRoleIds,
   getRoleList,

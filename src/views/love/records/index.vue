@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSysNotice } from "./hook";
 import { ref } from "vue";
+import { useLoveRecords } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
@@ -10,7 +10,7 @@ import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 
 defineOptions({
-  name: "SystemNotice"
+  name: "LoveRecords"
 });
 
 const formRef = ref();
@@ -26,12 +26,9 @@ const {
   resetForm,
   openDialog,
   handleDelete,
-  handlePublish,
-  handleWithdraw,
   handleSizeChange,
-  handleCurrentChange,
-  handleSelectionChange
-} = useSysNotice(tableRef);
+  handleCurrentChange
+} = useLoveRecords(tableRef);
 </script>
 
 <template>
@@ -42,41 +39,20 @@ const {
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
     >
-      <el-form-item label="关键词" prop="keyword">
-        <el-input
-          v-model="form.keyword"
-          placeholder="请输入标题关键词"
+      <el-form-item label="日期" prop="date">
+        <el-date-picker
+          v-model="form.date"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="请选择日期"
           clearable
           class="w-[180px]!"
         />
       </el-form-item>
-      <el-form-item label="类型" prop="filterNoticeType">
-        <el-select
-          v-model="form.filterNoticeType"
-          placeholder="请选择类型"
-          clearable
-          class="w-[150px]!"
-        >
-          <el-option label="功能更新" :value="1" />
-          <el-option label="系统公告" :value="2" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="请选择状态"
-          clearable
-          class="w-[150px]!"
-        >
-          <el-option label="草稿" :value="0" />
-          <el-option label="已发布" :value="1" />
-          <el-option label="已撤回" :value="2" />
-        </el-select>
-      </el-form-item>
       <el-form-item>
         <el-button
           type="primary"
-          :icon="useRenderIcon('ri/search-line')"
+          :icon="useRenderIcon('ri:search-line')"
           :loading="loading"
           @click="onSearch"
         >
@@ -88,14 +64,14 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar title="公告管理" :columns="columns" @refresh="onSearch">
+    <PureTableBar title="恋爱记录" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
         >
-          新增公告
+          新增记录
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
@@ -116,7 +92,6 @@ const {
             background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
           }"
-          @selection-change="handleSelectionChange"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
         >
@@ -131,28 +106,8 @@ const {
             >
               修改
             </el-button>
-            <el-button
-              v-if="row.status === 0"
-              class="reset-margin"
-              link
-              type="success"
-              :size="size"
-              @click="handlePublish(row)"
-            >
-              发布
-            </el-button>
-            <el-button
-              v-if="row.status === 1"
-              class="reset-margin"
-              link
-              type="warning"
-              :size="size"
-              @click="handleWithdraw(row)"
-            >
-              撤回
-            </el-button>
             <el-popconfirm
-              :title="`是否确认删除ID为${row.id}的公告`"
+              :title="`是否确认删除ID为${row.id}的记录`"
               @confirm="handleDelete(row)"
             >
               <template #reference>

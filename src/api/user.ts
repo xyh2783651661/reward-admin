@@ -1,4 +1,5 @@
 import { http } from "@/utils/http";
+import type { ApiResult } from "./types";
 
 export type UserResult = {
   success: boolean;
@@ -42,4 +43,19 @@ export const getLogin = (data?: object) => {
 /** 刷新`token` */
 export const refreshTokenApi = (data?: object) => {
   return http.request<RefreshTokenResult>("post", "/refresh-token", { data });
+};
+
+/** 登出 */
+export const logout = () => {
+  return http.request<ApiResult>("post", "/api/auth/logout");
+};
+
+/** 获取当前用户信息 */
+export const getCurrentUser = () => {
+  return http.request<ApiResult<Record<string, any>>>("get", "/api/auth/me");
+};
+
+/** 修改密码 */
+export const changePassword = (data?: object) => {
+  return http.request<ApiResult>("post", "/api/auth/change-password", { data });
 };

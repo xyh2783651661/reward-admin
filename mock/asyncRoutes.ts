@@ -201,6 +201,48 @@ const messageCenterRouter = {
   ]
 };
 
+const loveSpaceRouter = {
+  path: "/love",
+  meta: {
+    icon: "ri:heart-3-line",
+    title: title("恋爱空间", "Love Space"),
+    rank: 25
+  },
+  children: [
+    {
+      path: "/love/records",
+      component: "love/records/index",
+      name: "LoveRecords",
+      meta: {
+        icon: "ri:quill-pen-line",
+        title: title("恋爱记录", "Love Records"),
+        roles: ["admin"],
+        keepAlive: true
+      }
+    },
+    {
+      path: "/love/anniversaries",
+      component: "love/anniversaries/index",
+      name: "LoveAnniversaries",
+      meta: {
+        icon: "ri:calendar-heart-line",
+        title: title("纪念日管理", "Anniversaries"),
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/love/media",
+      component: "love/media/index",
+      name: "LoveMedia",
+      meta: {
+        icon: "ri:gallery-line",
+        title: title("媒体文件", "Media Gallery"),
+        roles: ["admin"]
+      }
+    }
+  ]
+};
+
 const taskCenterRouter = {
   path: "/task-center",
   meta: {
@@ -284,6 +326,7 @@ export default defineFakeRoute([
         data: [
           businessConfigRouter,
           messageCenterRouter,
+          loveSpaceRouter,
           taskCenterRouter,
           runtimeAuditRouter,
           permissionRouter
