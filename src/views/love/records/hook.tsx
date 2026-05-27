@@ -37,9 +37,9 @@ export function useLoveRecords(_tableRef?: Ref) {
     { label: "ID", prop: "id", minWidth: 80 },
     {
       label: "日期",
-      prop: "date",
+      prop: "recordDate",
       minWidth: 120,
-      formatter: ({ date }) => date || "-"
+      formatter: ({ recordDate }) => recordDate || "-"
     },
     { label: "内容", prop: "text", minWidth: 300 },
     { label: "心情", prop: "mood", minWidth: 100 },
@@ -51,17 +51,16 @@ export function useLoveRecords(_tableRef?: Ref) {
     },
     {
       label: "媒体数",
-      prop: "mediaIds",
+      prop: "media",
       minWidth: 90,
-      formatter: ({ mediaIds }) =>
-        Array.isArray(mediaIds) ? mediaIds.length : 0
+      formatter: ({ media }) => (Array.isArray(media) ? media.length : 0)
     },
     {
       label: "创建时间",
-      prop: "createdTime",
+      prop: "createdAt",
       minWidth: 160,
-      formatter: ({ createdTime }) =>
-        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+      formatter: ({ createdAt }) =>
+        createdAt ? dayjs(createdAt).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     { label: "操作", fixed: "right", width: 160, slot: "operation" }
   ];
@@ -117,7 +116,7 @@ export function useLoveRecords(_tableRef?: Ref) {
       props: {
         formInline: {
           id: row?.id ?? "",
-          date: row?.date ?? "",
+          date: row?.recordDate ?? "",
           text: row?.text ?? "",
           mood: row?.mood ?? "",
           location: row?.location ?? {
@@ -125,7 +124,7 @@ export function useLoveRecords(_tableRef?: Ref) {
             latitude: 0,
             longitude: 0
           },
-          mediaIds: row?.mediaIds ?? []
+          media: row?.media ?? []
         }
       },
       width: "50%",

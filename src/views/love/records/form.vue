@@ -6,11 +6,11 @@ import { FormProps } from "./utils/types";
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
     id: "",
-    date: "",
+    recordDate: "",
     text: "",
     mood: "",
     location: { name: "", latitude: 0, longitude: 0 },
-    mediaIds: []
+    media: []
   })
 });
 
@@ -31,10 +31,10 @@ defineExpose({ getRef });
     :rules="formRules"
     label-width="82px"
   >
-    <el-form-item label="日期" prop="date">
+    <el-form-item label="日期" prop="recordDate">
       <el-date-picker
-        v-model="newFormInline.date"
-        type="date"
+        v-model="newFormInline.recordDate"
+        type="recordDate"
         value-format="YYYY-MM-DD"
         placeholder="请选择日期"
         clearable

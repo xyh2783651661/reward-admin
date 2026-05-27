@@ -6,11 +6,11 @@ interface LocationItem {
 
 interface FormItemProps {
   id?: string | number;
-  date: string;
+  recordDate: string;
   text: string;
   mood: string;
   location: LocationItem;
-  mediaIds: string[];
+  media: string[];
 }
 
 interface FormProps {

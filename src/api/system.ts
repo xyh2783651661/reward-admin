@@ -108,6 +108,21 @@ export {
   getRoleMenuIds
 } from "./role";
 
+export {
+  getCacheInfo,
+  getCacheKeys,
+  getCacheValue,
+  deleteCacheKey,
+  clearAllCache,
+  getCacheStats,
+  getCacheStatsHistory,
+  getCacheHealth,
+  getCacheTopKeys,
+  getCacheBigKeys,
+  getCacheLogs,
+  getRedisInfo
+} from "./cache";
+
 import { http } from "@/utils/http";
 import type { ApiListResult, ApiPageResult } from "./types";
 

@@ -2,164 +2,107 @@ import { defineFakeRoute } from "vite-plugin-fake-server/client";
 
 const title = (zh: string, en: string) => ({ zh, en });
 
-const permissionRouter = {
-  path: "/permission",
-  meta: {
-    title: title("权限示例", "Permission Demo"),
-    icon: "ri:shield-keyhole-line",
-    rank: 90
-  },
-  children: [
-    {
-      path: "/permission/page/index",
-      component: "permission/page/index",
-      name: "PermissionPage",
-      meta: {
-        icon: "ri:pages-line",
-        title: "menus.purePermissionPage",
-        roles: ["admin", "common"]
-      }
-    },
-    {
-      path: "/permission/button",
-      meta: {
-        icon: "ri:cursor-line",
-        title: "menus.purePermissionButton",
-        roles: ["admin", "common"]
-      },
-      children: [
-        {
-          path: "/permission/button/router",
-          component: "permission/button/index",
-          name: "PermissionButtonRouter",
-          meta: {
-            icon: "ri:route-line",
-            title: "menus.purePermissionButtonRouter",
-            auths: [
-              "permission:btn:add",
-              "permission:btn:edit",
-              "permission:btn:delete"
-            ]
-          }
-        },
-        {
-          path: "/permission/button/login",
-          component: "permission/button/perms",
-          name: "PermissionButtonLogin",
-          meta: {
-            icon: "ri:key-2-line",
-            title: "menus.purePermissionButtonLogin"
-          }
-        }
-      ]
-    }
-  ]
-};
+/**
+ * 菜单结构设计：
+ *
+ * 1. 业务配置 (Business Config) - 核心业务配置
+ *    ├── 奖励体系 - 奖励、科目、零花钱规则
+ *    ├── 用户管理 - 用户配置
+ *    └── 通知配置 - 邮件、系统参数
+ *
+ * 2. 消息中心 (Message Center) - 消息通知
+ *    └── 系统通知
+ *
+ * 3. 恋爱空间 (Love Space) - 恋爱相关
+ *    ├── 恋爱记录
+ *    ├── 纪念日管理
+ *    └── 媒体文件
+ *
+ * 4. 系统监控 (System Monitor) - 运行状态和日志
+ *    ├── 运行状态 - 在线用户、缓存监控
+ *    ├── 日志管理 - 系统/登录/操作/邮件/版本日志
+ *    ├── 缓存管理 - 缓存Key管理
+ *    └── AI调用记录
+ *
+ * 5. 任务调度 (Task Center) - 定时任务
+ *    └── 定时调度
+ */
 
+// ==================== 业务配置 ====================
 const businessConfigRouter = {
   path: "/config",
   meta: {
-    icon: "ri:stack-line",
+    icon: "ri:settings-4-line",
     title: title("业务配置", "Business Config"),
     rank: 10
   },
   children: [
     {
-      path: "/config/reward-suite",
+      path: "/config/reward",
+      component: "config/reward/index",
+      name: "Reward",
       meta: {
-        icon: "ri:medal-line",
-        title: title("奖励体系", "Reward Suite"),
+        icon: "ri:medal-2-line",
+        title: "menus.configReward",
         roles: ["admin"]
-      },
-      children: [
-        {
-          path: "/config/reward",
-          component: "config/reward/index",
-          name: "Reward",
-          meta: {
-            icon: "ri:medal-2-line",
-            title: "menus.configReward",
-            roles: ["admin"]
-          }
-        },
-        {
-          path: "/config/subject",
-          component: "config/subject/index",
-          name: "Subject",
-          meta: {
-            icon: "ri:book-open-line",
-            title: "menus.configSubject",
-            roles: ["admin"]
-          }
-        },
-        {
-          path: "/config/pocket-money",
-          component: "config/pocket-money/index",
-          name: "PocketMoney",
-          meta: {
-            icon: "ri:money-cny-box-line",
-            title: title("零花钱规则", "Pocket Money Rule"),
-            roles: ["admin"]
-          }
-        }
-      ]
+      }
     },
     {
-      path: "/config/delivery-suite",
+      path: "/config/subject",
+      component: "config/subject/index",
+      name: "Subject",
       meta: {
-        icon: "ri:team-line",
-        title: title("人员与通知", "People & Notify"),
+        icon: "ri:book-open-line",
+        title: "menus.configSubject",
         roles: ["admin"]
-      },
-      children: [
-        {
-          path: "/config/user",
-          component: "config/user/index",
-          name: "User",
-          meta: {
-            icon: "ri:user-settings-line",
-            title: "menus.configUser",
-            roles: ["admin"]
-          }
-        },
-        {
-          path: "/config/mail",
-          component: "config/mail/index",
-          name: "Mail",
-          meta: {
-            icon: "ri:mail-settings-line",
-            title: "menus.configMail",
-            roles: ["admin"]
-          }
-        }
-      ]
+      }
     },
     {
-      path: "/config/platform-suite",
+      path: "/config/pocket-money",
+      component: "config/pocket-money/index",
+      name: "PocketMoney",
       meta: {
-        icon: "ri:server-line",
-        title: title("平台参数", "Platform Settings"),
+        icon: "ri:money-cny-box-line",
+        title: title("零花钱规则", "Pocket Money"),
         roles: ["admin"]
-      },
-      children: [
-        {
-          path: "/config/system-config",
-          component: "config/system-config/index",
-          name: "SystemConfig",
-          meta: {
-            icon: "ri:settings-5-line",
-            title: "menus.configSystemConfig",
-            roles: ["admin"],
-            showParent: true
-          }
-        }
-      ]
+      }
+    },
+    {
+      path: "/config/user",
+      component: "config/user/index",
+      name: "User",
+      meta: {
+        icon: "ri:user-settings-line",
+        title: "menus.configUser",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/config/mail",
+      component: "config/mail/index",
+      name: "Mail",
+      meta: {
+        icon: "ri:mail-settings-line",
+        title: "menus.configMail",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/config/system-config",
+      component: "config/system-config/index",
+      name: "SystemConfig",
+      meta: {
+        icon: "ri:settings-5-line",
+        title: "menus.configSystemConfig",
+        roles: ["admin"]
+      }
     }
   ]
 };
 
+// ==================== 消息中心 ====================
 const messageCenterRouter = {
-  path: "/message-center",
+  path: "/message",
   meta: {
     icon: "ri:notification-4-line",
     title: title("消息中心", "Message Center"),
@@ -174,33 +117,13 @@ const messageCenterRouter = {
         icon: "ri:notification-3-line",
         title: title("系统通知", "System Notice"),
         roles: ["admin", "common"],
-        keepAlive: true,
-        showParent: true
-      }
-    },
-    {
-      path: "/monitor/mail-logs",
-      component: "monitor/logs/login/index",
-      name: "MailLog",
-      meta: {
-        icon: "ri:mail-open-line",
-        title: "menus.pureMailLog",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/monitor/version-logs",
-      component: "monitor/logs/version/index",
-      name: "VersionLog",
-      meta: {
-        icon: "ri:git-commit-line",
-        title: "menus.pureVersionLog",
-        roles: ["admin"]
+        keepAlive: true
       }
     }
   ]
 };
 
+// ==================== 恋爱空间 ====================
 const loveSpaceRouter = {
   path: "/love",
   meta: {
@@ -225,7 +148,7 @@ const loveSpaceRouter = {
       component: "love/anniversaries/index",
       name: "LoveAnniversaries",
       meta: {
-        icon: "ri:calendar-heart-line",
+        icon: "ri:gift-line",
         title: title("纪念日管理", "Anniversaries"),
         roles: ["admin"]
       }
@@ -243,62 +166,43 @@ const loveSpaceRouter = {
   ]
 };
 
-const taskCenterRouter = {
-  path: "/task-center",
+// ==================== 系统监控 ====================
+const systemMonitorRouter = {
+  path: "/monitor",
   meta: {
-    icon: "ri:calendar-todo-line",
-    title: title("任务调度", "Task Center"),
+    icon: "ri:radar-line",
+    title: title("系统监控", "System Monitor"),
     rank: 30
   },
   children: [
     {
-      path: "/timer/logs",
-      component: "monitor/logs/operation/index",
-      name: "OperationLog",
-      meta: {
-        icon: "ri:file-list-3-line",
-        title: "menus.pureOperationLog",
-        roles: ["admin"]
-      }
-    },
-    {
-      path: "/timer/scheduling",
-      name: "https://xxl-job.xiaoyh.top/",
-      meta: {
-        icon: "ri:git-merge-line",
-        title: "menus.pureScheduling",
-        roles: ["admin", "common"],
-        showParent: true
-      }
-    }
-  ]
-};
-
-const runtimeAuditRouter = {
-  path: "/runtime-audit",
-  meta: {
-    icon: "ri:pulse-line",
-    title: title("运行审计", "Runtime Audit"),
-    rank: 40
-  },
-  children: [
-    {
-      path: "/monitor/online-user",
+      path: "/monitor/online",
       component: "monitor/online/index",
       name: "OnlineUser",
       meta: {
         icon: "ri:user-shared-2-line",
         title: "menus.pureOnlineUser",
+        roles: ["admin"],
+        showLink: false
+      }
+    },
+    {
+      path: "/monitor/cache-monitor",
+      component: "monitor/cache-monitor/index",
+      name: "CacheMonitor",
+      meta: {
+        icon: "ri:dashboard-3-line",
+        title: title("缓存监控", "Cache Monitor"),
         roles: ["admin"]
       }
     },
     {
-      path: "/monitor/system-logs",
-      component: "monitor/logs/system/index",
-      name: "SystemLog",
+      path: "/monitor/cache",
+      component: "monitor/cache/index",
+      name: "CacheManage",
       meta: {
-        icon: "ri:file-search-line",
-        title: "menus.pureSystemLog",
+        icon: "ri:database-2-line",
+        title: title("缓存管理", "Cache Manage"),
         roles: ["admin"]
       }
     },
@@ -316,6 +220,90 @@ const runtimeAuditRouter = {
   ]
 };
 
+// ==================== 日志管理 ====================
+const logManageRouter = {
+  path: "/log",
+  meta: {
+    icon: "ri:file-list-3-line",
+    title: title("日志管理", "Log Management"),
+    rank: 35
+  },
+  children: [
+    {
+      path: "/log/system",
+      component: "monitor/logs/system/index",
+      name: "SystemLog",
+      meta: {
+        icon: "ri:file-search-line",
+        title: "menus.pureSystemLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/log/login",
+      component: "monitor/logs/login-log/index",
+      name: "LoginLog",
+      meta: {
+        icon: "ri:login-box-line",
+        title: title("登录日志", "Login Logs"),
+        roles: ["admin"],
+        showLink: false
+      }
+    },
+    {
+      path: "/log/operation",
+      component: "monitor/logs/operation/index",
+      name: "OperationLog",
+      meta: {
+        icon: "ri:file-edit-line",
+        title: "menus.pureOperationLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/log/mail",
+      component: "monitor/logs/login/index",
+      name: "MailLog",
+      meta: {
+        icon: "ri:mail-open-line",
+        title: "menus.pureMailLog",
+        roles: ["admin"]
+      }
+    },
+    {
+      path: "/log/version",
+      component: "monitor/logs/version/index",
+      name: "VersionLog",
+      meta: {
+        icon: "ri:git-commit-line",
+        title: "menus.pureVersionLog",
+        roles: ["admin"]
+      }
+    }
+  ]
+};
+
+// ==================== 任务调度 ====================
+const taskCenterRouter = {
+  path: "/task",
+  meta: {
+    icon: "ri:calendar-todo-line",
+    title: title("任务调度", "Task Center"),
+    rank: 40
+  },
+  children: [
+    {
+      path: "/task/scheduling",
+      name: "https://xxl-job.xiaoyh.top/",
+      meta: {
+        icon: "ri:timer-line",
+        title: "menus.pureScheduling",
+        roles: ["admin", "common"]
+      }
+    }
+  ]
+};
+
 export default defineFakeRoute([
   {
     url: "/get-async-routes",
@@ -327,9 +315,9 @@ export default defineFakeRoute([
           businessConfigRouter,
           messageCenterRouter,
           loveSpaceRouter,
-          taskCenterRouter,
-          runtimeAuditRouter,
-          permissionRouter
+          systemMonitorRouter,
+          logManageRouter,
+          taskCenterRouter
         ]
       };
     }
