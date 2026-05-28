@@ -166,6 +166,28 @@ const loveSpaceRouter = {
   ]
 };
 
+// ==================== 每日图片 ====================
+const dailyImageRouter = {
+  path: "/daily-image",
+  meta: {
+    icon: "ri:image-line",
+    title: title("每日图片", "Daily Image"),
+    rank: 27
+  },
+  children: [
+    {
+      path: "/daily-image/manage",
+      component: "daily-image/manage/index",
+      name: "DailyImageManage",
+      meta: {
+        icon: "ri:gallery-line",
+        title: title("图片管理", "Image Manage"),
+        roles: ["admin"]
+      }
+    }
+  ]
+};
+
 // ==================== 系统监控 ====================
 const systemMonitorRouter = {
   path: "/monitor",
@@ -315,6 +337,7 @@ export default defineFakeRoute([
           businessConfigRouter,
           messageCenterRouter,
           loveSpaceRouter,
+          dailyImageRouter,
           systemMonitorRouter,
           logManageRouter,
           taskCenterRouter
