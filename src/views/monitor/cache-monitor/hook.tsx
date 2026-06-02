@@ -28,6 +28,9 @@ export function useCacheMonitor() {
   const logs = ref<CacheOperationLog[]>([]);
   const redisInfo = ref<Record<string, any> | null>(null);
 
+  // 组件卸载标志
+  let isUnmounted = false;
+
   // 趋势图相关
   const trendChartRef = ref<HTMLDivElement | null>(null);
   const trendLoading = ref(false);
@@ -97,7 +100,7 @@ export function useCacheMonitor() {
       width: 80,
       align: "center",
       cellRenderer: ({ row }) => {
-        if (!row.accessCount) return "-";
+        if (!row?.accessCount) return "-";
         const rate = ((row.hitCount / row.accessCount) * 100).toFixed(1);
         const color =
           Number(rate) >= 90
@@ -125,7 +128,7 @@ export function useCacheMonitor() {
       align: "center",
       cellRenderer: ({ row }) => (
         <el-tag size="small" type="info">
-          {emptyText(row.type)}
+          {emptyText(row?.type)}
         </el-tag>
       )
     },
@@ -134,7 +137,7 @@ export function useCacheMonitor() {
       prop: "sizeHuman",
       width: 90,
       align: "right",
-      formatter: ({ row }) => emptyText(row.sizeHuman)
+      formatter: ({ row }) => (row?.sizeHuman ? emptyText(row.sizeHuman) : "-")
     }
   ];
 
@@ -145,14 +148,18 @@ export function useCacheMonitor() {
       prop: "action",
       width: 70,
       cellRenderer: ({ row }) => {
+        if (!row?.action) return "-";
         const map: Record<string, { text: string; type: string }> = {
-          delete: { text: "删除", type: "danger" },
-          clear: { text: "清空", type: "danger" },
-          put: { text: "写入", type: "success" },
-          get: { text: "读取", type: "info" },
-          evict: { text: "驱逐", type: "warning" }
+          DELETE: { text: "删除", type: "danger" },
+          CLEAR: { text: "清空", type: "danger" },
+          PUT: { text: "写入", type: "success" },
+          GET: { text: "读取", type: "info" },
+          EVICT: { text: "驱逐", type: "warning" }
         };
-        const cfg = map[row.action] || { text: row.action, type: "info" };
+        const cfg = map[row.action] || {
+          text: row.action,
+          type: "info"
+        };
         return (
           <el-tag size="small" type={cfg.type as any}>
             {cfg.text}
@@ -164,15 +171,13 @@ export function useCacheMonitor() {
     {
       label: "时间",
       prop: "time",
-      width: 140,
-      formatter: ({ row }) => formatDate(row.time)
+      width: 200
     },
     {
       label: "描述",
       prop: "description",
       minWidth: 150,
-      showOverflowTooltip: true,
-      formatter: ({ row }) => emptyText(row.description)
+      showOverflowTooltip: true
     }
   ];
 
@@ -245,14 +250,16 @@ export function useCacheMonitor() {
 
   /** 初始化趋势图 */
   function initTrendChart() {
-    if (!trendChartRef.value) return;
+    if (!trendChartRef.value || isUnmounted) return;
+    // 确保 DOM 元素已挂载
+    if (!trendChartRef.value.isConnected) return;
     trendChart = echarts.init(trendChartRef.value);
     updateTrendChart([]);
   }
 
   /** 更新趋势图配置 */
   function updateTrendChart(data: any[]) {
-    if (!trendChart) return;
+    if (!trendChart || isUnmounted) return;
 
     const times = data.map(item => item.time);
     const hitRates = data.map(item => item.hitRate);
@@ -361,27 +368,33 @@ export function useCacheMonitor() {
 
   /** 刷新趋势图数据 */
   async function refreshTrend() {
-    if (!trendChart) return;
+    if (!trendChart || isUnmounted) return;
     trendLoading.value = true;
     try {
       const res = await getCacheStatsHistory({
         type: stats.value?.cacheType || "local",
         duration: trendDuration.value
       });
+      if (isUnmounted) return;
       if (res.code === 200) {
         updateTrendChart(res.data?.points || []);
       }
     } finally {
-      trendLoading.value = false;
+      if (!isUnmounted) {
+        trendLoading.value = false;
+      }
     }
   }
 
   /** 窗口 resize 处理 */
   function handleResize() {
-    trendChart?.resize();
+    if (!isUnmounted && trendChart) {
+      trendChart.resize();
+    }
   }
 
   async function loadData() {
+    if (isUnmounted) return;
     loading.value = true;
     try {
       const [statsRes, healthRes, topRes, bigRes, logsRes] = await Promise.all([
@@ -391,11 +404,14 @@ export function useCacheMonitor() {
         getCacheBigKeys(10),
         getCacheLogs(20)
       ]);
+
+      if (isUnmounted) return;
+
       if (statsRes.code === 200) stats.value = statsRes.data;
       if (healthRes.code === 200) health.value = healthRes.data;
-      if (topRes.code === 200) topKeys.value = topRes.data.keys;
-      if (bigRes.code === 200) bigKeys.value = bigRes.data.keys;
-      if (logsRes.code === 200) logs.value = logsRes.data.logs;
+      if (topRes.code === 200) topKeys.value = topRes.data?.keys ?? [];
+      if (bigRes.code === 200) bigKeys.value = bigRes.data?.keys ?? [];
+      if (logsRes.code === 200) logs.value = logsRes.data?.logs ?? [];
 
       // 仅 Redis 时加载 Redis 专属信息
       if (statsRes.code === 200) {
@@ -405,24 +421,32 @@ export function useCacheMonitor() {
         }
       }
 
+      if (isUnmounted) return;
+
       // 加载趋势数据
       await nextTick();
-      if (!trendChart) {
+      if (!trendChart && !isUnmounted) {
         initTrendChart();
       }
       await refreshTrend();
     } finally {
-      loading.value = false;
+      if (!isUnmounted) {
+        loading.value = false;
+      }
     }
   }
 
   async function loadRedisInfo() {
+    if (isUnmounted) return;
     redisLoading.value = true;
     try {
       const res = await getRedisInfo();
+      if (isUnmounted) return;
       if (res.code === 200) redisInfo.value = res.data;
     } finally {
-      redisLoading.value = false;
+      if (!isUnmounted) {
+        redisLoading.value = false;
+      }
     }
   }
 
@@ -432,8 +456,12 @@ export function useCacheMonitor() {
   });
 
   onUnmounted(() => {
+    isUnmounted = true;
     window.removeEventListener("resize", handleResize);
-    trendChart?.dispose();
+    if (trendChart) {
+      trendChart.dispose();
+      trendChart = null;
+    }
   });
 
   return {

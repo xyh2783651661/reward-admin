@@ -74,9 +74,7 @@ const {
       <div class="metric-card">
         <div
           class="metric-icon"
-          style="
-
---gradient: linear-gradient(135deg, #667eea, #764ba2)"
+          style="--gradient: linear-gradient(135deg, #667eea, #764ba2)"
         >
           <el-icon :size="20"><ri:key-2-line /></el-icon>
         </div>
@@ -89,9 +87,7 @@ const {
       <div class="metric-card">
         <div
           class="metric-icon"
-          style="
-
---gradient: linear-gradient(135deg, #f093fb, #f5576c)"
+          style="--gradient: linear-gradient(135deg, #f093fb, #f5576c)"
         >
           <el-icon :size="20"><ri:bar-chart-box-line /></el-icon>
         </div>
@@ -104,9 +100,7 @@ const {
       <div class="metric-card highlight">
         <div
           class="metric-icon"
-          style="
-
---gradient: linear-gradient(135deg, #4facfe, #00f2fe)"
+          style="--gradient: linear-gradient(135deg, #4facfe, #00f2fe)"
         >
           <el-icon :size="20"><ri:target-line /></el-icon>
         </div>
@@ -121,9 +115,7 @@ const {
       <div class="metric-card">
         <div
           class="metric-icon"
-          style="
-
---gradient: linear-gradient(135deg, #43e97b, #38f9d7)"
+          style="--gradient: linear-gradient(135deg, #43e97b, #38f9d7)"
         >
           <el-icon :size="20"><ri:database-line /></el-icon>
         </div>
@@ -138,9 +130,7 @@ const {
       <div class="metric-card">
         <div
           class="metric-icon"
-          style="
-
---gradient: linear-gradient(135deg, #fa709a, #fee140)"
+          style="--gradient: linear-gradient(135deg, #fa709a, #fee140)"
         >
           <el-icon :size="20"><ri:time-line /></el-icon>
         </div>
@@ -156,9 +146,7 @@ const {
       <div class="metric-card">
         <div
           class="metric-icon"
-          style="
-
---gradient: linear-gradient(135deg, #a18cd1, #fbc2eb)"
+          style="--gradient: linear-gradient(135deg, #a18cd1, #fbc2eb)"
         >
           <el-icon :size="20"><ri:shield-check-line /></el-icon>
         </div>
@@ -337,8 +325,6 @@ const {
 </template>
 
 <style lang="scss" scoped>
-
-
 @keyframes pulse {
   0%,
   100% {
