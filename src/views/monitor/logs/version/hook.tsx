@@ -1,11 +1,9 @@
 import dayjs from "dayjs";
-import { message } from "@/utils/message";
-import { getKeyList } from "@pureadmin/utils";
 import { getRewardApkVersionsList } from "@/api/system";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 
-export function useVersionLog(tableRef: Ref) {
+export function useVersionLog(_tableRef?: Ref) {
   const form = reactive({
     versionName: "",
     versionCode: "",
@@ -15,7 +13,6 @@ export function useVersionLog(tableRef: Ref) {
   });
   const dataList = ref([]);
   const loading = ref(true);
-  const selectedNum = ref(0);
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -25,12 +22,6 @@ export function useVersionLog(tableRef: Ref) {
   });
 
   const columns: TableColumnList = [
-    {
-      label: "勾选列",
-      type: "selection",
-      fixed: "left",
-      reserveSelection: true
-    },
     {
       label: "ID",
       prop: "id",
@@ -73,34 +64,13 @@ export function useVersionLog(tableRef: Ref) {
   ];
 
   function handleSizeChange(val: number) {
-    console.log(`${val} items per page`);
     form.size = val;
     form.current = 1;
     onSearch();
   }
 
   function handleCurrentChange(val: number) {
-    console.log(`current page: ${val}`);
     form.current = val;
-    onSearch();
-  }
-
-  function handleSelectionChange(val) {
-    selectedNum.value = val.length;
-    tableRef.value.setAdaptive();
-  }
-
-  function onSelectionCancel() {
-    selectedNum.value = 0;
-    tableRef.value.getTableRef().clearSelection();
-  }
-
-  function onbatchDel() {
-    const curSelected = tableRef.value.getTableRef().getSelectionRows();
-    message(`已删除序号为 ${getKeyList(curSelected, "id")} 的数据`, {
-      type: "success"
-    });
-    tableRef.value.getTableRef().clearSelection();
     onSearch();
   }
 
@@ -133,13 +103,9 @@ export function useVersionLog(tableRef: Ref) {
     columns,
     dataList,
     pagination,
-    selectedNum,
     onSearch,
     resetForm,
-    onbatchDel,
     handleSizeChange,
-    onSelectionCancel,
-    handleCurrentChange,
-    handleSelectionChange
+    handleCurrentChange
   };
 }

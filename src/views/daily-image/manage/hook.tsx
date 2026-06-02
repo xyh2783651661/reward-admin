@@ -116,11 +116,6 @@ export function useDailyImage() {
     window.open(url, "_blank");
   }
 
-  function handlePreview(item: any) {
-    const url = getDailyImageThumbnailUrl(item.id);
-    window.open(url, "_blank");
-  }
-
   function startRemarkEdit(item: any) {
     remarkEditId.value = item.id;
     remarkEditText.value = item.remark || "";
@@ -170,7 +165,6 @@ export function useDailyImage() {
     handleFileChange,
     handleDelete,
     handleDownload,
-    handlePreview,
     startRemarkEdit,
     cancelRemarkEdit,
     saveRemarkEdit,

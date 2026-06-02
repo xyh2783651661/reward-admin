@@ -22,19 +22,16 @@ const {
   columns,
   dataList,
   pagination,
-  selectedNum,
+  filterOptions,
   onSearch,
   onDetail,
   clearAll,
   resetForm,
   exportExcel,
   exportLoading,
-  onbatchDel,
   handleSizeChange,
-  onSelectionCancel,
   handleCellDblclick,
-  handleCurrentChange,
-  handleSelectionChange
+  handleCurrentChange
 } = useRole(tableRef);
 </script>
 
@@ -47,12 +44,20 @@ const {
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
     >
       <el-form-item label="所属模块" prop="module">
-        <el-input
+        <el-select
           v-model="form.module"
-          placeholder="请输入所属模块"
+          placeholder="请选择所属模块"
           clearable
+          filterable
           class="w-[170px]!"
-        />
+        >
+          <el-option
+            v-for="item in filterOptions.modules"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="请求接口" prop="uri">
         <el-input
@@ -61,6 +66,52 @@ const {
           clearable
           class="w-[170px]!"
         />
+      </el-form-item>
+      <el-form-item label="请求方法" prop="method">
+        <el-select
+          v-model="form.method"
+          placeholder="请选择请求方法"
+          clearable
+          class="w-[130px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.methods"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="浏览器类型" prop="browserType">
+        <el-select
+          v-model="form.browserType"
+          placeholder="请选择浏览器"
+          clearable
+          class="w-[140px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.browserTypes"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="IP 归属地" prop="ipLocation">
+        <el-select
+          v-model="form.ipLocation"
+          placeholder="请选择归属地"
+          clearable
+          filterable
+          class="w-[160px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.ipLocations"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="请求描述" prop="description">
         <el-input
@@ -118,28 +169,6 @@ const {
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
-        <div
-          v-if="selectedNum > 0"
-          v-motion-fade
-          class="bg-[var(--el-fill-color-light)] w-full h-[46px] mb-2 pl-4 flex items-center"
-        >
-          <div class="flex-auto">
-            <span
-              style="font-size: var(--el-font-size-base)"
-              class="text-[rgba(42,46,54,0.5)] dark:text-[rgba(220,220,242,0.5)]"
-            >
-              已选 {{ selectedNum }} 项
-            </span>
-            <el-button type="primary" text @click="onSelectionCancel">
-              取消选择
-            </el-button>
-          </div>
-          <el-popconfirm title="是否确认删除?" @confirm="onbatchDel">
-            <template #reference>
-              <el-button type="danger" text class="mr-1!"> 批量删除 </el-button>
-            </template>
-          </el-popconfirm>
-        </div>
         <pure-table
           ref="tableRef"
           row-key="id"
@@ -156,7 +185,6 @@ const {
             background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
           }"
-          @selection-change="handleSelectionChange"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
           @cell-dblclick="handleCellDblclick"

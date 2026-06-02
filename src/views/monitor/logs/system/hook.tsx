@@ -4,10 +4,11 @@ import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
-import { getKeyList, useCopyToClipboard } from "@pureadmin/utils";
+import { useCopyToClipboard } from "@pureadmin/utils";
 import {
   getSystemLogsList,
   getSystemLogsDetail,
+  getAccessLogsFilterOptions,
   exportAccessLogsList
 } from "@/api/system";
 import Info from "~icons/ri/question-line";
@@ -16,7 +17,10 @@ import { usePublicHooks } from "@/views/system/hooks";
 export function useSystemLog(tableRef: Ref) {
   const form = reactive({
     module: "",
+    method: "",
     uri: "",
+    ipLocation: "",
+    browserType: "",
     description: "",
     success: "",
     requestTime: ["", ""],
@@ -26,9 +30,15 @@ export function useSystemLog(tableRef: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
   const exportLoading = ref(false);
-  const selectedNum = ref(0);
   const { copied, update } = useCopyToClipboard();
   const { tagStyle } = usePublicHooks();
+
+  const filterOptions = ref({
+    modules: [] as string[],
+    methods: [] as string[],
+    ipLocations: [] as string[],
+    browserTypes: [] as string[]
+  });
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -38,12 +48,6 @@ export function useSystemLog(tableRef: Ref) {
   });
 
   const columns: TableColumnList = [
-    {
-      label: "勾选列", // 如果需要表格多选，此处label必须设置
-      type: "selection",
-      fixed: "left",
-      reserveSelection: true // 数据刷新后保留选项
-    },
     {
       label: "ID",
       prop: "id",
@@ -189,20 +193,6 @@ export function useSystemLog(tableRef: Ref) {
     }
   };
 
-  /** 当CheckBox选择项发生变化时会触发该事件 */
-  function handleSelectionChange(val) {
-    selectedNum.value = val.length;
-    // 重置表格高度
-    tableRef.value.setAdaptive();
-  }
-
-  /** 取消选择 */
-  function onSelectionCancel() {
-    selectedNum.value = 0;
-    // 用于多选表格，清空用户的选择
-    tableRef.value.getTableRef().clearSelection();
-  }
-
   /** 拷贝请求接口，表格单元格被双击时触发 */
   function handleCellDblclick({ url }, { property }) {
     if (property !== "url") return;
@@ -210,27 +200,6 @@ export function useSystemLog(tableRef: Ref) {
     copied.value
       ? message(`${url} 已拷贝`, { type: "success" })
       : message("拷贝失败", { type: "warning" });
-  }
-
-  /** 批量删除 */
-  function onbatchDel() {
-    // 返回当前选中的行
-    const curSelected = tableRef.value.getTableRef().getSelectionRows();
-    // 接下来根据实际业务，通过选中行的某项数据，比如下面的id，调用接口进行批量删除
-    message(`已删除序号为 ${getKeyList(curSelected, "id")} 的数据`, {
-      type: "success"
-    });
-    tableRef.value.getTableRef().clearSelection();
-    onSearch();
-  }
-
-  /** 清空日志 */
-  function clearAll() {
-    // 根据实际业务，调用接口删除所有日志数据
-    message("已删除所有日志数据", {
-      type: "success"
-    });
-    onSearch();
   }
 
   function onDetail(row) {
@@ -261,6 +230,20 @@ export function useSystemLog(tableRef: Ref) {
     }, 500);
   }
 
+  async function loadFilterOptions() {
+    try {
+      const { data } = await getAccessLogsFilterOptions();
+      filterOptions.value = {
+        modules: data?.modules ?? [],
+        methods: data?.methods ?? [],
+        ipLocations: data?.ipLocations ?? [],
+        browserTypes: data?.browserTypes ?? []
+      };
+    } catch (error) {
+      console.error("加载筛选选项失败", error);
+    }
+  }
+
   const resetForm = formEl => {
     if (!formEl) return;
     formEl.resetFields();
@@ -270,6 +253,7 @@ export function useSystemLog(tableRef: Ref) {
 
   onMounted(() => {
     onSearch();
+    loadFilterOptions();
   });
 
   return {
@@ -278,18 +262,14 @@ export function useSystemLog(tableRef: Ref) {
     columns,
     dataList,
     pagination,
-    selectedNum,
+    filterOptions,
     onSearch,
     onDetail,
-    clearAll,
     resetForm,
-    onbatchDel,
     exportExcel,
     exportLoading,
     handleSizeChange,
-    onSelectionCancel,
     handleCellDblclick,
-    handleCurrentChange,
-    handleSelectionChange
+    handleCurrentChange
   };
 }

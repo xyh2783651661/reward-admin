@@ -62,6 +62,7 @@ export {
   getOperationLogsList,
   getSystemLogsList,
   getSystemLogsDetail,
+  getAccessLogsFilterOptions,
   exportAccessLogsList
 } from "./logs";
 
@@ -99,6 +100,15 @@ export {
   getMemoryGallery,
   getLoveOptions
 } from "./love";
+
+export {
+  getHolidayConfigPage,
+  getHolidayConfigDetail,
+  getHolidayConfigOptions,
+  addHolidayConfig,
+  updateHolidayConfig,
+  deleteHolidayConfig
+} from "./holiday";
 
 export {
   getAllRoleList,

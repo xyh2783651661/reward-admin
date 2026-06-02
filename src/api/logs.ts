@@ -24,6 +24,18 @@ export const getSystemLogsDetail = (id: string | number) => {
   );
 };
 
+/** 获取访问日志筛选选项 */
+export const getAccessLogsFilterOptions = () => {
+  return http.request<
+    ApiResult<{
+      modules: string[];
+      methods: string[];
+      ipLocations: string[];
+      browserTypes: string[];
+    }>
+  >("get", "/api/access-logs/filter-options");
+};
+
 export const exportAccessLogsList = (data?: object) => {
   return http.request<Blob>("post", "/api/access-logs/export-excel", {
     data,

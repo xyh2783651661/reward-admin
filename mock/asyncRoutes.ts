@@ -96,6 +96,16 @@ const businessConfigRouter = {
         title: "menus.configSystemConfig",
         roles: ["admin"]
       }
+    },
+    {
+      path: "/config/holiday",
+      component: "config/holiday/index",
+      name: "HolidayConfig",
+      meta: {
+        icon: "ri:calendar-line",
+        title: title("节假日配置", "Holiday Config"),
+        roles: ["admin"]
+      }
     }
   ]
 };
@@ -308,6 +318,7 @@ const logManageRouter = {
 // ==================== 任务调度 ====================
 const taskCenterRouter = {
   path: "/task",
+  name: "TaskCenter",
   meta: {
     icon: "ri:calendar-todo-line",
     title: title("任务调度", "Task Center"),

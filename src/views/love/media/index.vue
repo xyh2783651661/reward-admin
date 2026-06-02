@@ -3,6 +3,7 @@ import { ref, reactive, onMounted } from "vue";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
 import { PureTableBar } from "@/components/RePureTableBar";
+import { ReImageViewer } from "@/components/ReImageViewer";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import {
   getMemoryGallery,
@@ -108,11 +109,6 @@ async function handleDelete(item: any) {
   }
 }
 
-function handlePreview(item: any) {
-  const url = getMediaViewUrl(item.id);
-  window.open(url, "_blank");
-}
-
 onMounted(() => {
   onSearch();
 });
@@ -150,21 +146,12 @@ onMounted(() => {
             :image-size="90"
           />
           <div v-else class="media-grid">
-            <div
-              v-for="item in dataList"
-              :key="item.id"
-              class="media-card"
-              @click="handlePreview(item)"
-            >
+            <div v-for="item in dataList" :key="item.id" class="media-card">
               <div class="media-card__image">
-                <img
+                <ReImageViewer
                   :src="getMediaThumbnailUrl(item.id)"
-                  :alt="item.fileName || 'media'"
-                  loading="lazy"
-                  @error="
-                    ($event.target as HTMLImageElement).src =
-                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5IiBmb250LXNpemU9IjE0Ij7lm77niYc8L3RleHQ+PC9zdmc+'
-                  "
+                  :preview-src-list="[getMediaViewUrl(item.id)]"
+                  fit="cover"
                 />
               </div>
               <div class="media-card__info">
@@ -218,7 +205,6 @@ onMounted(() => {
 
 .media-card {
   overflow: hidden;
-  cursor: pointer;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 12px;
@@ -240,12 +226,6 @@ onMounted(() => {
   width: 100%;
   height: 180px;
   overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
 }
 
 .media-card__info {

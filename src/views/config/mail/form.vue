@@ -57,9 +57,7 @@ defineExpose({ getRef });
         inactive-text="已禁用"
         class="ml-2"
         inline-prompt
-        style="
-
---el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+        style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
       />
     </el-form-item>
 

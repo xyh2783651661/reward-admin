@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useDailyImage } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import { ReImageViewer } from "@/components/ReImageViewer";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Refresh from "~icons/ep/refresh";
@@ -30,11 +31,11 @@ const {
   handleFileChange,
   handleDelete,
   handleDownload,
-  handlePreview,
   startRemarkEdit,
   cancelRemarkEdit,
   saveRemarkEdit,
-  getDailyImageThumbnailUrl
+  getDailyImageThumbnailUrl,
+  getDailyImageDownloadUrl
 } = useDailyImage();
 
 const sourceOptions = [
@@ -126,15 +127,11 @@ function getSourceType(type: string) {
           />
           <div v-else class="image-grid">
             <div v-for="item in dataList" :key="item.id" class="image-card">
-              <div class="image-card__preview" @click="handlePreview(item)">
-                <img
+              <div class="image-card__preview">
+                <ReImageViewer
                   :src="getDailyImageThumbnailUrl(item.id)"
-                  :alt="item.originalName"
-                  loading="lazy"
-                  @error="
-                    ($event.target as HTMLImageElement).src =
-                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOTk5IiBmb250LXNpemU9IjE0Ij7lm77niYc8L3RleHQ+PC9zdmc+'
-                  "
+                  :preview-src-list="[getDailyImageDownloadUrl(item.id)]"
+                  fit="cover"
                 />
               </div>
               <div class="image-card__info">
@@ -270,18 +267,6 @@ function getSourceType(type: string) {
   width: 100%;
   height: 180px;
   overflow: hidden;
-  cursor: pointer;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-
-    &:hover {
-      transform: scale(1.05);
-    }
-  }
 }
 
 .image-card__info {

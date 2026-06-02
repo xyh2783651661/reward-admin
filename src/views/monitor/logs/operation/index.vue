@@ -21,14 +21,10 @@ const {
   columns,
   dataList,
   pagination,
-  selectedNum,
   onSearch,
   resetForm,
-  onbatchDel,
   handleSizeChange,
-  onSelectionCancel,
   handleCurrentChange,
-  handleSelectionChange,
   onDetail
 } = useRole(tableRef);
 </script>
@@ -87,28 +83,6 @@ const {
 
     <PureTableBar :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
-        <div
-          v-if="selectedNum > 0"
-          v-motion-fade
-          class="bg-[var(--el-fill-color-light)] w-full h-[46px] mb-2 pl-4 flex items-center"
-        >
-          <div class="flex-auto">
-            <span
-              style="font-size: var(--el-font-size-base)"
-              class="text-[rgba(42,46,54,0.5)] dark:text-[rgba(220,220,242,0.5)]"
-            >
-              已选 {{ selectedNum }} 项
-            </span>
-            <el-button type="primary" text @click="onSelectionCancel">
-              取消选择
-            </el-button>
-          </div>
-          <el-popconfirm title="是否确认删除?" @confirm="onbatchDel">
-            <template #reference>
-              <el-button type="danger" text class="mr-1!"> 批量删除 </el-button>
-            </template>
-          </el-popconfirm>
-        </div>
         <pure-table
           ref="tableRef"
           row-key="id"
@@ -125,7 +99,6 @@ const {
             background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
           }"
-          @selection-change="handleSelectionChange"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
         >
