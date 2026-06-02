@@ -3,9 +3,11 @@ import { ref } from "vue";
 import { useLoveRecords } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import DetailDialog from "./detail.vue";
 
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
+import View from "~icons/ep/view";
 import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 
@@ -22,10 +24,13 @@ const {
   columns,
   dataList,
   pagination,
+  detailVisible,
+  currentDetailId,
   onSearch,
   resetForm,
   openDialog,
   handleDelete,
+  handleDetail,
   handleSizeChange,
   handleCurrentChange
 } = useLoveRecords(tableRef);
@@ -101,6 +106,16 @@ const {
               link
               type="primary"
               :size="size"
+              :icon="useRenderIcon(View)"
+              @click="handleDetail(row)"
+            >
+              详情
+            </el-button>
+            <el-button
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
               :icon="useRenderIcon(EditPen)"
               @click="openDialog('修改', row)"
             >
@@ -126,6 +141,9 @@ const {
         </pure-table>
       </template>
     </PureTableBar>
+
+    <!-- 详情对话框 -->
+    <DetailDialog :id="currentDetailId" v-model:visible="detailVisible" />
   </div>
 </template>
 

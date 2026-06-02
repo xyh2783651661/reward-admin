@@ -26,6 +26,10 @@ export function useLoveRecords(_tableRef?: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
 
+  // 详情相关
+  const detailVisible = ref(false);
+  const currentDetailId = ref<string | number>("");
+
   const pagination = reactive<PaginationProps>({
     total: 0,
     pageSize: 10,
@@ -62,7 +66,7 @@ export function useLoveRecords(_tableRef?: Ref) {
       formatter: ({ createdAt }) =>
         createdAt ? dayjs(createdAt).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
-    { label: "操作", fixed: "right", width: 160, slot: "operation" }
+    { label: "操作", fixed: "right", width: 220, slot: "operation" }
   ];
 
   async function onSearch() {
@@ -99,6 +103,11 @@ export function useLoveRecords(_tableRef?: Ref) {
       });
   }
 
+  function handleDetail(row: any) {
+    currentDetailId.value = row.id;
+    detailVisible.value = true;
+  }
+
   function handleSizeChange(val: number) {
     form.size = val;
     form.current = 1;
@@ -110,13 +119,13 @@ export function useLoveRecords(_tableRef?: Ref) {
     onSearch();
   }
 
-  function openDialog(title = "新增", row?: FormItemProps) {
+  function openDialog(title = "新增", row?: any) {
     addDialog({
       title: `${title}记录`,
       props: {
         formInline: {
           id: row?.id ?? "",
-          date: row?.recordDate ?? "",
+          recordDate: row?.recordDate ?? "",
           text: row?.text ?? "",
           mood: row?.mood ?? "",
           location: row?.location ?? {
@@ -168,10 +177,13 @@ export function useLoveRecords(_tableRef?: Ref) {
     columns,
     dataList,
     pagination,
+    detailVisible,
+    currentDetailId,
     onSearch,
     resetForm,
     openDialog,
     handleDelete,
+    handleDetail,
     handleSizeChange,
     handleCurrentChange
   };
