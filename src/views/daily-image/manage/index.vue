@@ -8,6 +8,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
 import Delete from "~icons/ep/delete";
+import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
 
 defineOptions({
   name: "DailyImageManage"
@@ -176,12 +177,14 @@ function getSourceType(type: string) {
               class="image-card"
               :class="{ 'is-selected': selectedIds.includes(item.id) }"
             >
-              <!-- 选择框 -->
-              <div class="image-card__checkbox" @click.stop>
-                <el-checkbox
-                  :model-value="selectedIds.includes(item.id)"
-                  @change="toggleSelect(item.id)"
-                />
+              <!-- 选择框 - 悬浮在右上角 -->
+              <div
+                class="image-card__check"
+                :class="{ 'is-checked': selectedIds.includes(item.id) }"
+                @click.stop="toggleSelect(item.id)"
+              >
+                <el-icon v-if="selectedIds.includes(item.id)"><CircleCheck /></el-icon>
+                <el-icon v-else><CircleClose /></el-icon>
               </div>
               <div class="image-card__preview">
                 <ReImageViewer
@@ -333,22 +336,52 @@ function getSourceType(type: string) {
     .image-card__actions {
       opacity: 1;
     }
+
+    .image-card__check {
+      opacity: 1;
+    }
   }
 
   &.is-selected {
     border-color: var(--el-color-primary);
-    background: var(--el-color-primary-light-9);
+
+    .image-card__check {
+      opacity: 1;
+    }
   }
 }
 
-.image-card__checkbox {
+.image-card__check {
   position: absolute;
   top: 8px;
-  left: 8px;
+  right: 8px;
   z-index: 10;
-  background: rgb(255 255 255 / 80%);
-  border-radius: 4px;
-  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+
+  .el-icon {
+    font-size: 28px;
+    color: rgb(255 255 255 / 80%);
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 30%));
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+  }
+
+  &.is-checked {
+    .el-icon {
+      color: var(--el-color-primary);
+      filter: drop-shadow(0 1px 3px rgb(64 158 255 / 40%));
+    }
+  }
 }
 
 .image-card__preview {
