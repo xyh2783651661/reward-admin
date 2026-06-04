@@ -35,6 +35,14 @@ export const deleteDailyImage = (id: number) => {
   return http.request<ApiResult>("delete", `/api/daily-images/${id}`);
 };
 
+/** 批量删除图片 */
+export const batchDeleteDailyImage = (ids: number[]) => {
+  return http.request<ApiResult<number>>("delete", "/api/daily-images/batch", {
+    data: ids,
+    headers: { "Content-Type": "application/json" }
+  });
+};
+
 /** 更新图片备注 */
 export const updateDailyImageRemark = (id: number, remark: string) => {
   return http.request<ApiResult>("put", `/api/daily-images/${id}/remark`, {

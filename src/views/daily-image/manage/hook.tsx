@@ -5,6 +5,7 @@ import {
   getDailyImagePage,
   uploadDailyImage,
   deleteDailyImage,
+  batchDeleteDailyImage,
   updateDailyImageRemark,
   getDailyImageThumbnailUrl,
   getDailyImageDownloadUrl
@@ -14,8 +15,12 @@ import type { PaginationProps } from "@pureadmin/table";
 export function useDailyImage() {
   const loading = ref(true);
   const uploadLoading = ref(false);
+  const batchDeleteLoading = ref(false);
   const dataList = ref<any[]>([]);
   const fileInputRef = ref<HTMLInputElement>();
+
+  // 批量选择相关
+  const selectedIds = ref<number[]>([]);
 
   // 备注编辑状态
   const remarkEditId = ref<number | null>(null);
@@ -111,6 +116,64 @@ export function useDailyImage() {
     }
   }
 
+  // 切换单个选中状态
+  function toggleSelect(id: number) {
+    const index = selectedIds.value.indexOf(id);
+    if (index > -1) {
+      selectedIds.value.splice(index, 1);
+    } else {
+      selectedIds.value.push(id);
+    }
+  }
+
+  // 切换全选
+  function toggleSelectAll() {
+    if (selectedIds.value.length === dataList.value.length) {
+      selectedIds.value = [];
+    } else {
+      selectedIds.value = dataList.value.map(item => item.id);
+    }
+  }
+
+  // 清空选择
+  function clearSelection() {
+    selectedIds.value = [];
+  }
+
+  // 批量删除
+  async function handleBatchDelete() {
+    if (selectedIds.value.length === 0) {
+      message("请先选择要删除的图片", { type: "warning" });
+      return;
+    }
+
+    try {
+      await ElMessageBox.confirm(
+        `是否确认删除选中的 ${selectedIds.value.length} 张图片？`,
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+
+      batchDeleteLoading.value = true;
+      const result = await batchDeleteDailyImage(selectedIds.value);
+      if (result.code === 200) {
+        message(`删除成功，共删除 ${result.data} 张图片`, { type: "success" });
+        selectedIds.value = [];
+        onSearch();
+      } else {
+        message(result.msg || "删除失败", { type: "error" });
+      }
+    } catch {
+      // cancelled
+    } finally {
+      batchDeleteLoading.value = false;
+    }
+  }
+
   function handleDownload(item: any) {
     const url = getDailyImageDownloadUrl(item.id);
     window.open(url, "_blank");
@@ -152,9 +215,11 @@ export function useDailyImage() {
     form,
     loading,
     uploadLoading,
+    batchDeleteLoading,
     dataList,
     pagination,
     fileInputRef,
+    selectedIds,
     remarkEditId,
     remarkEditText,
     onSearch,
@@ -164,7 +229,11 @@ export function useDailyImage() {
     triggerUpload,
     handleFileChange,
     handleDelete,
+    handleBatchDelete,
     handleDownload,
+    toggleSelect,
+    toggleSelectAll,
+    clearSelection,
     startRemarkEdit,
     cancelRemarkEdit,
     saveRemarkEdit,

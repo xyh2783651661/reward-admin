@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useDailyImage } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { ReImageViewer } from "@/components/ReImageViewer";
@@ -7,6 +7,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
+import Delete from "~icons/ep/delete";
 
 defineOptions({
   name: "DailyImageManage"
@@ -18,9 +19,11 @@ const {
   form,
   loading,
   uploadLoading,
+  batchDeleteLoading,
   dataList,
   pagination,
   fileInputRef,
+  selectedIds,
   remarkEditId,
   remarkEditText,
   onSearch,
@@ -30,13 +33,31 @@ const {
   triggerUpload,
   handleFileChange,
   handleDelete,
+  handleBatchDelete,
   handleDownload,
+  toggleSelect,
+  toggleSelectAll,
+  clearSelection,
   startRemarkEdit,
   cancelRemarkEdit,
   saveRemarkEdit,
   getDailyImageThumbnailUrl,
   getDailyImageDownloadUrl
 } = useDailyImage();
+
+// 是否全选
+const isAllSelected = computed(
+  () =>
+    dataList.value.length > 0 &&
+    selectedIds.value.length === dataList.value.length
+);
+
+// 是否部分选中
+const isIndeterminate = computed(
+  () =>
+    selectedIds.value.length > 0 &&
+    selectedIds.value.length < dataList.value.length
+);
 
 const sourceOptions = [
   { label: "全部", value: "" },
@@ -107,6 +128,15 @@ function getSourceType(type: string) {
         >
           上传图片
         </el-button>
+        <el-button
+          v-if="selectedIds.length > 0"
+          type="danger"
+          :loading="batchDeleteLoading"
+          :icon="useRenderIcon(Delete)"
+          @click="handleBatchDelete"
+        >
+          批量删除 ({{ selectedIds.length }})
+        </el-button>
         <el-button :icon="useRenderIcon(Refresh)" @click="onSearch">
           刷新
         </el-button>
@@ -119,6 +149,20 @@ function getSourceType(type: string) {
         />
       </template>
       <template v-slot="{ size }">
+        <!-- 全选控制栏 -->
+        <div v-if="dataList.length > 0" class="select-bar">
+          <el-checkbox
+            :model-value="isAllSelected"
+            :indeterminate="isIndeterminate"
+            @change="toggleSelectAll"
+          >
+            全选
+          </el-checkbox>
+          <span v-if="selectedIds.length > 0" class="select-count">
+            已选择 {{ selectedIds.length }} 项
+          </span>
+        </div>
+
         <div v-loading="loading" class="image-gallery">
           <el-empty
             v-if="!loading && dataList.length === 0"
@@ -126,7 +170,19 @@ function getSourceType(type: string) {
             :image-size="90"
           />
           <div v-else class="image-grid">
-            <div v-for="item in dataList" :key="item.id" class="image-card">
+            <div
+              v-for="item in dataList"
+              :key="item.id"
+              class="image-card"
+              :class="{ 'is-selected': selectedIds.includes(item.id) }"
+            >
+              <!-- 选择框 -->
+              <div class="image-card__checkbox" @click.stop>
+                <el-checkbox
+                  :model-value="selectedIds.includes(item.id)"
+                  @change="toggleSelect(item.id)"
+                />
+              </div>
               <div class="image-card__preview">
                 <ReImageViewer
                   :src="getDailyImageThumbnailUrl(item.id)"
@@ -234,6 +290,21 @@ function getSourceType(type: string) {
   margin-bottom: 16px;
 }
 
+.select-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
+}
+
+.select-count {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
 .image-gallery {
   min-height: 200px;
 }
@@ -245,13 +316,15 @@ function getSourceType(type: string) {
 }
 
 .image-card {
+  position: relative;
   overflow: hidden;
   background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-lighter);
+  border: 2px solid var(--el-border-color-lighter);
   border-radius: 12px;
   transition:
     transform 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 
   &:hover {
     box-shadow: 0 8px 24px rgb(0 0 0 / 10%);
@@ -261,6 +334,21 @@ function getSourceType(type: string) {
       opacity: 1;
     }
   }
+
+  &.is-selected {
+    border-color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+  }
+}
+
+.image-card__checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background: rgb(255 255 255 / 80%);
+  border-radius: 4px;
+  padding: 2px;
 }
 
 .image-card__preview {
