@@ -43,6 +43,7 @@ const {
   cancelRemarkEdit,
   saveRemarkEdit,
   getDailyImageThumbnailUrl,
+  getDailyImagePreviewUrl,
   getDailyImageDownloadUrl
 } = useDailyImage();
 
@@ -189,7 +190,7 @@ function getSourceType(type: string) {
               <div class="image-card__preview">
                 <ReImageViewer
                   :src="getDailyImageThumbnailUrl(item.id)"
-                  :preview-src-list="[getDailyImageDownloadUrl(item.id)]"
+                  :preview-src-list="[getDailyImagePreviewUrl(item.id)]"
                   fit="cover"
                 />
               </div>

@@ -8,6 +8,7 @@ import {
   batchDeleteDailyImage,
   updateDailyImageRemark,
   getDailyImageThumbnailUrl,
+  getDailyImagePreviewUrl,
   getDailyImageDownloadUrl
 } from "@/api/daily-image";
 import type { PaginationProps } from "@pureadmin/table";
@@ -238,6 +239,7 @@ export function useDailyImage() {
     cancelRemarkEdit,
     saveRemarkEdit,
     getDailyImageThumbnailUrl,
+    getDailyImagePreviewUrl,
     getDailyImageDownloadUrl
   };
 }

@@ -55,6 +55,11 @@ export const getDailyImageThumbnailUrl = (id: number) => {
   return `/api/daily-images/${id}/thumbnail`;
 };
 
+/** 获取预览链接（原图预览） */
+export const getDailyImagePreviewUrl = (id: number) => {
+  return `/api/daily-images/${id}/preview`;
+};
+
 /** 获取下载链接 */
 export const getDailyImageDownloadUrl = (id: number) => {
   return `/api/daily-images/${id}/download`;
