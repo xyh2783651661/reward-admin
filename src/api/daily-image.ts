@@ -64,3 +64,22 @@ export const getDailyImagePreviewUrl = (id: number) => {
 export const getDailyImageDownloadUrl = (id: number) => {
   return `/api/daily-images/${id}/download`;
 };
+
+/** 批量下载图片（ZIP打包） */
+export const batchDownloadDailyImages = (ids: number[]) => {
+  return http.request("post", "/api/daily-images/batch-download", {
+    data: ids,
+    headers: { "Content-Type": "application/json" },
+    responseType: "blob"
+  });
+};
+
+/** 批量获取下载链接 */
+export const getBatchDownloadLinks = (ids: number[]) => {
+  return http.request<
+    ApiResult<Array<{ id: number; name: string; size: number; url: string }>>
+  >("post", "/api/daily-images/batch-download-links", {
+    data: ids,
+    headers: { "Content-Type": "application/json" }
+  });
+};

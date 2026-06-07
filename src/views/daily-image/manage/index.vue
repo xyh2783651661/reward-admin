@@ -8,6 +8,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
 import Delete from "~icons/ep/delete";
+import Download from "~icons/ep/download";
 import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
 
 defineOptions({
@@ -21,6 +22,8 @@ const {
   loading,
   uploadLoading,
   batchDeleteLoading,
+  batchDownloadLoading,
+  isDownloading,
   dataList,
   pagination,
   fileInputRef,
@@ -35,6 +38,8 @@ const {
   handleFileChange,
   handleDelete,
   handleBatchDelete,
+  handleBatchDownload,
+  handleBatchDownloadLinks,
   handleDownload,
   toggleSelect,
   toggleSelectAll,
@@ -46,6 +51,15 @@ const {
   getDailyImagePreviewUrl,
   getDailyImageDownloadUrl
 } = useDailyImage();
+
+// 批量下载命令分发
+function handleDownloadCommand(command: string) {
+  if (command === "zip") {
+    handleBatchDownload();
+  } else if (command === "links") {
+    handleBatchDownloadLinks();
+  }
+}
 
 // 是否全选
 const isAllSelected = computed(
@@ -130,6 +144,24 @@ function getSourceType(type: string) {
         >
           上传图片
         </el-button>
+        <el-dropdown
+          v-if="selectedIds.length > 0"
+          @command="handleDownloadCommand"
+        >
+          <el-button
+            type="success"
+            :loading="batchDownloadLoading || isDownloading"
+            :icon="useRenderIcon(Download)"
+          >
+            批量下载 ({{ selectedIds.length }})
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="zip"> ZIP 打包下载 </el-dropdown-item>
+              <el-dropdown-item command="links"> 逐个下载 </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button
           v-if="selectedIds.length > 0"
           type="danger"
@@ -184,7 +216,9 @@ function getSourceType(type: string) {
                 :class="{ 'is-checked': selectedIds.includes(item.id) }"
                 @click.stop="toggleSelect(item.id)"
               >
-                <el-icon v-if="selectedIds.includes(item.id)"><CircleCheck /></el-icon>
+                <el-icon v-if="selectedIds.includes(item.id)"
+                  ><CircleCheck
+                /></el-icon>
                 <el-icon v-else><CircleClose /></el-icon>
               </div>
               <div class="image-card__preview">
@@ -296,10 +330,10 @@ function getSourceType(type: string) {
 
 .select-bar {
   display: flex;
-  align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  align-items: center;
   padding: 12px 16px;
+  margin-bottom: 16px;
   background: var(--el-fill-color-lighter);
   border-radius: 8px;
 }

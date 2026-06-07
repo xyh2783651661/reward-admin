@@ -1,11 +1,13 @@
 import { ref, reactive, onMounted, toRaw } from "vue";
 import { message } from "@/utils/message";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, ElNotification } from "element-plus";
 import {
   getDailyImagePage,
   uploadDailyImage,
   deleteDailyImage,
   batchDeleteDailyImage,
+  batchDownloadDailyImages,
+  getBatchDownloadLinks,
   updateDailyImageRemark,
   getDailyImageThumbnailUrl,
   getDailyImagePreviewUrl,
@@ -17,6 +19,8 @@ export function useDailyImage() {
   const loading = ref(true);
   const uploadLoading = ref(false);
   const batchDeleteLoading = ref(false);
+  const batchDownloadLoading = ref(false);
+  const isDownloading = ref(false);
   const dataList = ref<any[]>([]);
   const fileInputRef = ref<HTMLInputElement>();
 
@@ -175,6 +179,83 @@ export function useDailyImage() {
     }
   }
 
+  // 批量下载（ZIP打包）
+  async function handleBatchDownload() {
+    if (selectedIds.value.length === 0) {
+      message("请先选择要下载的图片", { type: "warning" });
+      return;
+    }
+
+    batchDownloadLoading.value = true;
+    try {
+      const blob: any = await batchDownloadDailyImages(selectedIds.value);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "图片打包下载.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      message("批量下载失败", { type: "error" });
+    } finally {
+      batchDownloadLoading.value = false;
+    }
+  }
+
+  // 批量逐个下载
+  async function handleBatchDownloadLinks() {
+    if (selectedIds.value.length === 0) {
+      message("请先选择要下载的图片", { type: "warning" });
+      return;
+    }
+
+    isDownloading.value = true;
+    try {
+      const result = await getBatchDownloadLinks(selectedIds.value);
+      if (result.code !== 200 || !result.data?.length) {
+        message(result.msg || "获取下载链接失败", { type: "error" });
+        return;
+      }
+
+      const links = result.data;
+      const total = links.length;
+
+      const notify = ElNotification({
+        title: "正在下载",
+        message: `0/${total}`,
+        type: "info",
+        duration: 0
+      });
+
+      for (let i = 0; i < links.length; i++) {
+        const item = links[i];
+        const a = document.createElement("a");
+        a.href = item.url;
+        a.download = item.name;
+        a.click();
+
+        // 更新通知
+        notify.message = `${i + 1}/${total}`;
+
+        // 间隔避免浏览器拦截
+        if (i < links.length - 1) {
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+
+      notify.close();
+      ElNotification({
+        title: "下载完成",
+        message: `共 ${total} 个文件`,
+        type: "success"
+      });
+    } catch {
+      message("批量下载失败", { type: "error" });
+    } finally {
+      isDownloading.value = false;
+    }
+  }
+
   function handleDownload(item: any) {
     const url = getDailyImageDownloadUrl(item.id);
     window.open(url, "_blank");
@@ -217,6 +298,8 @@ export function useDailyImage() {
     loading,
     uploadLoading,
     batchDeleteLoading,
+    batchDownloadLoading,
+    isDownloading,
     dataList,
     pagination,
     fileInputRef,
@@ -231,6 +314,8 @@ export function useDailyImage() {
     handleFileChange,
     handleDelete,
     handleBatchDelete,
+    handleBatchDownload,
+    handleBatchDownloadLinks,
     handleDownload,
     toggleSelect,
     toggleSelectAll,
