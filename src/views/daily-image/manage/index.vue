@@ -9,7 +9,7 @@ import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
 import Delete from "~icons/ep/delete";
 import Download from "~icons/ep/download";
-import { CircleCheck, CircleClose } from "@element-plus/icons-vue";
+import { Select } from "@element-plus/icons-vue";
 
 defineOptions({
   name: "DailyImageManage"
@@ -216,10 +216,9 @@ function getSourceType(type: string) {
                 :class="{ 'is-checked': selectedIds.includes(item.id) }"
                 @click.stop="toggleSelect(item.id)"
               >
-                <el-icon v-if="selectedIds.includes(item.id)"
-                  ><CircleCheck
-                /></el-icon>
-                <el-icon v-else><CircleClose /></el-icon>
+                <el-icon v-if="selectedIds.includes(item.id)">
+                  <Select />
+                </el-icon>
               </div>
               <div class="image-card__preview">
                 <ReImageViewer
@@ -394,27 +393,27 @@ function getSourceType(type: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
+  background: rgb(255 255 255 / 80%);
+  border: 2px solid var(--el-border-color);
+  border-radius: 50%;
   opacity: 0;
   transition: all 0.2s ease;
 
-  .el-icon {
-    font-size: 28px;
-    color: rgb(255 255 255 / 80%);
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 30%));
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: scale(1.1);
-    }
+  &:hover {
+    border-color: var(--el-color-primary);
   }
 
   &.is-checked {
+    background: var(--el-color-primary);
+    border-color: var(--el-color-primary);
+    opacity: 1;
+
     .el-icon {
-      color: var(--el-color-primary);
-      filter: drop-shadow(0 1px 3px rgb(64 158 255 / 40%));
+      font-size: 14px;
+      color: #fff;
     }
   }
 }
@@ -479,9 +478,9 @@ function getSourceType(type: string) {
 
 .image-card__actions {
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  justify-content: space-around;
   padding: 8px 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
