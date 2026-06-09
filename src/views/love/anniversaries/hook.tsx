@@ -11,9 +11,42 @@ import {
 } from "@/api/love";
 import { type Ref, ref, h, onMounted } from "vue";
 
+type AnniversaryRecord = FormItemProps & {
+  date?: string;
+  type?: string;
+  countdownDays?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  extra?: Record<string, any>;
+};
+
+function getAnniversaryRows(data: unknown): AnniversaryRecord[] {
+  if (Array.isArray(data)) return data as AnniversaryRecord[];
+  if (
+    data &&
+    typeof data === "object" &&
+    Array.isArray((data as { anniversaries?: unknown }).anniversaries)
+  ) {
+    return (data as { anniversaries: AnniversaryRecord[] }).anniversaries;
+  }
+
+  return [];
+}
+
+function normalizeAnniversary(row: AnniversaryRecord): AnniversaryRecord {
+  return {
+    ...row,
+    anniversaryDate: row.anniversaryDate ?? row.date ?? "",
+    anniversaryType: row.anniversaryType ?? row.type ?? "OTHER",
+    repeatType: row.repeatType ?? "yearly",
+    remindDays: row.remindDays ?? row.countdownDays ?? "",
+    status: row.status ?? 1
+  };
+}
+
 export function useAnniversaries(_tableRef?: Ref) {
   const formRef = ref();
-  const dataList = ref([]);
+  const dataList = ref<AnniversaryRecord[]>([]);
   const loading = ref(true);
 
   const columns: TableColumnList = [
@@ -50,9 +83,11 @@ export function useAnniversaries(_tableRef?: Ref) {
     loading.value = true;
     try {
       const { data } = await getAnniversaryList();
-      dataList.value = Array.isArray(data) ? data : [];
-    } catch {
+      dataList.value = getAnniversaryRows(data).map(normalizeAnniversary);
+    } catch (error) {
+      console.error(error);
       dataList.value = [];
+      message("加载纪念日列表失败", { type: "error" });
     } finally {
       loading.value = false;
     }
@@ -70,16 +105,16 @@ export function useAnniversaries(_tableRef?: Ref) {
       });
   }
 
-  function openDialog(title = "新增", row?: FormItemProps) {
+  function openDialog(title = "新增", row?: AnniversaryRecord) {
     addDialog({
       title: `${title}纪念日`,
       props: {
         formInline: {
           id: row?.id ?? "",
           title: row?.title ?? "",
-          anniversaryDate: row?.anniversaryDate ?? "",
-          anniversaryType: row?.anniversaryType ?? "DATE",
-          repeatType: row?.repeatType ?? "YEARLY",
+          anniversaryDate: row?.anniversaryDate ?? row?.date ?? "",
+          anniversaryType: row?.anniversaryType ?? row?.type ?? "DATE",
+          repeatType: row?.repeatType ?? "yearly",
           remark: row?.remark ?? "",
           remindDays: row?.remindDays ?? 3,
           status: row?.status ?? 1

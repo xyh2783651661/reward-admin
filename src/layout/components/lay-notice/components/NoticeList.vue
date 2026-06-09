@@ -6,6 +6,7 @@ import { transformI18n } from "@/plugins/i18n";
 
 defineEmits<{
   action: [item: NoticeListItem];
+  markRead: [item: NoticeListItem];
 }>();
 
 defineProps({
@@ -27,6 +28,7 @@ defineProps({
       :key="item.id"
       :noticeItem="item"
       @action="$emit('action', item)"
+      @mark-read="$emit('markRead', item)"
     />
   </div>
   <el-empty v-else :description="transformI18n(emptyText)" />

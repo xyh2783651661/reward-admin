@@ -4,6 +4,7 @@ import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import type { FormItemProps } from "./utils/types";
 import { deviceDetection } from "@pureadmin/utils";
+import { ElMessageBox } from "element-plus";
 import {
   getSysNoticePage,
   deleteSysNotice,
@@ -13,7 +14,106 @@ import {
   withdrawSysNotice
 } from "@/api/notice";
 import { useCrudTable } from "@/views/config/composables";
-import { type Ref, ref, h } from "vue";
+import { type Ref, ref, h, computed } from "vue";
+
+type TagType = "primary" | "success" | "warning" | "info" | "danger" | "";
+
+const noticeTypeMap: Record<number, { label: string; type: TagType }> = {
+  1: { label: "功能更新", type: "success" },
+  2: { label: "系统公告", type: "warning" }
+};
+
+const priorityMap: Record<
+  number,
+  { label: string; type: TagType; weight: string }
+> = {
+  4: { label: "信息", type: "info", weight: "低" },
+  5: { label: "普通", type: "primary", weight: "标准" },
+  7: { label: "警告", type: "warning", weight: "高" },
+  9: { label: "紧急", type: "danger", weight: "最高" }
+};
+
+const statusMap: Record<
+  number,
+  { label: string; type: TagType; hint: string }
+> = {
+  0: { label: "草稿", type: "info", hint: "待发布" },
+  1: { label: "已发布", type: "success", hint: "线上可见" },
+  2: { label: "已撤回", type: "danger", hint: "已停止展示" }
+};
+
+const platformOptions = [
+  { label: "Web", value: 1, type: "primary" },
+  { label: "Android", value: 2, type: "success" },
+  { label: "iOS", value: 4, type: "warning" }
+] as const;
+
+function toNumber(value: unknown, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function normalizePlatformMask(value: FormItemProps["platformMask"]) {
+  if (Array.isArray(value)) {
+    return value.reduce((acc, item) => acc | Number(item), 0);
+  }
+
+  return toNumber(value);
+}
+
+function decomposePlatformMask(mask: FormItemProps["platformMask"]): number[] {
+  const numericMask = normalizePlatformMask(mask);
+  return platformOptions
+    .filter(item => numericMask & item.value)
+    .map(item => item.value);
+}
+
+function formatDateTime(value?: string) {
+  return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
+}
+
+function getOnlineState(row: FormItemProps) {
+  const status = toNumber(row.status);
+  const publishTime = row.publishTime ? dayjs(row.publishTime) : null;
+  const offlineTime = row.offlineTime ? dayjs(row.offlineTime) : null;
+  const now = dayjs();
+
+  if (status !== 1) return statusMap[status] ?? statusMap[0];
+  if (publishTime?.isAfter(now)) {
+    return { label: "待生效", type: "warning" as TagType, hint: "定时发布" };
+  }
+  if (offlineTime?.isBefore(now)) {
+    return { label: "已下线", type: "info" as TagType, hint: "已过展示期" };
+  }
+
+  return statusMap[1];
+}
+
+function getPlatformLabels(mask: FormItemProps["platformMask"]) {
+  const numericMask = normalizePlatformMask(mask);
+  return platformOptions.filter(item => numericMask & item.value);
+}
+
+function getTimeRange(row: FormItemProps) {
+  const publishTime = row.publishTime
+    ? formatDateTime(row.publishTime)
+    : "立即/未设置";
+  const offlineTime = row.offlineTime
+    ? formatDateTime(row.offlineTime)
+    : "长期有效";
+
+  return `${publishTime} 至 ${offlineTime}`;
+}
+
+function getErrorMessage(error: unknown, fallback = "操作失败") {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
+function validateTimeRange(data: FormItemProps) {
+  if (!data.publishTime || !data.offlineTime) return true;
+  return dayjs(data.offlineTime).isAfter(dayjs(data.publishTime));
+}
 
 export function useSysNotice(_tableRef?: Ref) {
   const formRef = ref();
@@ -32,91 +132,145 @@ export function useSysNotice(_tableRef?: Ref) {
   } = useCrudTable({
     searchApi: getSysNoticePage,
     deleteApi: deleteSysNotice,
+    deleteMessage: row => `已删除公告「${row.title ?? row.id}」`,
     defaultForm: {
       keyword: "",
       filterNoticeType: "",
+      priority: "",
+      platformMask: "",
       status: "",
       current: 1,
       size: 10
     }
   });
 
+  const noticeStats = computed(() => {
+    const initialStats = {
+      total: dataList.value.length,
+      published: 0,
+      draft: 0,
+      withdrawn: 0,
+      urgent: 0
+    };
+
+    return dataList.value.reduce((stats, item) => {
+      const status = toNumber(item.status);
+      const priority = toNumber(item.priority);
+
+      if (status === 1) stats.published += 1;
+      if (status === 0) stats.draft += 1;
+      if (status === 2) stats.withdrawn += 1;
+      if (priority >= 7) stats.urgent += 1;
+
+      return stats;
+    }, initialStats);
+  });
+
   const columns: TableColumnList = [
-    { label: "ID", prop: "id", minWidth: 80 },
-    { label: "标题", prop: "title", minWidth: 200 },
     {
-      label: "类型",
-      prop: "noticeType",
-      minWidth: 100,
-      cellRenderer: ({ row, props }) => (
-        <el-tag
-          size={props.size}
-          type={row.noticeType === 1 ? "success" : "warning"}
-          effect="plain"
-        >
-          {row.noticeType === 1 ? "功能更新" : "系统公告"}
-        </el-tag>
-      )
-    },
-    {
-      label: "优先级",
-      prop: "priority",
-      minWidth: 90,
-      cellRenderer: ({ row, props }) => {
-        const map = { 4: "info", 5: "", 7: "warning", 9: "danger" };
-        const labelMap = { 4: "信息", 5: "普通", 7: "警告", 9: "紧急" };
+      label: "公告内容",
+      prop: "title",
+      minWidth: 280,
+      cellRenderer: ({ row }) => {
+        const typeMeta = noticeTypeMap[toNumber(row.noticeType)] ?? {
+          label: row.noticeType || "未知类型",
+          type: "info"
+        };
         return (
-          <el-tag
-            size={props.size}
-            type={map[row.priority] || ""}
-            effect="plain"
-          >
-            {labelMap[row.priority] || row.priority}
-          </el-tag>
+          <div class="notice-title-cell">
+            <div class="notice-title-line">
+              <span class="notice-title-text">{row.title || "未命名公告"}</span>
+              <el-tag size="small" type={typeMeta.type} effect="light" round>
+                {typeMeta.label}
+              </el-tag>
+            </div>
+            <div class="notice-content-preview">
+              {row.content || "暂无公告内容"}
+            </div>
+          </div>
         );
       }
     },
     {
-      label: "平台",
+      label: "优先级",
+      prop: "priority",
+      minWidth: 110,
+      cellRenderer: ({ row, props }) => {
+        const meta = priorityMap[toNumber(row.priority)] ?? {
+          label: row.priority || "-",
+          type: "info",
+          weight: "未知"
+        };
+        return (
+          <div class="notice-priority-cell">
+            <el-tag size={props.size} type={meta.type} effect="dark" round>
+              {meta.label}
+            </el-tag>
+            <span>{meta.weight}</span>
+          </div>
+        );
+      }
+    },
+    {
+      label: "目标平台",
       prop: "platformMask",
-      minWidth: 120,
-      formatter: ({ platformMask }) => {
-        const platforms = [];
-        if (platformMask & 1) platforms.push("Web");
-        if (platformMask & 2) platforms.push("Android");
-        if (platformMask & 4) platforms.push("iOS");
-        return platforms.join(", ") || "-";
+      minWidth: 160,
+      cellRenderer: ({ row }) => {
+        const platforms = getPlatformLabels(row.platformMask);
+        return platforms.length ? (
+          <div class="notice-platform-cell">
+            {platforms.map(item => (
+              <el-tag key={item.value} type={item.type} effect="plain" round>
+                {item.label}
+              </el-tag>
+            ))}
+          </div>
+        ) : (
+          <span class="notice-empty-text">未设置</span>
+        );
       }
     },
     {
       label: "状态",
       prop: "status",
-      minWidth: 100,
+      minWidth: 120,
       cellRenderer: ({ row, props }) => {
-        const map = { 0: "info", 1: "success", 2: "danger" };
-        const labelMap = { 0: "草稿", 1: "已发布", 2: "已撤回" };
+        const meta = getOnlineState(row);
         return (
-          <el-tag
-            size={props.size}
-            type={map[row.status] || "info"}
-            effect="plain"
-          >
-            {labelMap[row.status] || row.status}
-          </el-tag>
+          <div class="notice-status-cell">
+            <el-tag size={props.size} type={meta.type} effect="light" round>
+              {meta.label}
+            </el-tag>
+            <span>{meta.hint}</span>
+          </div>
         );
       }
     },
     {
-      label: "发布时间",
+      label: "展示周期",
       prop: "publishTime",
-      minWidth: 160,
-      formatter: ({ publishTime }) =>
-        publishTime ? dayjs(publishTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+      minWidth: 240,
+      cellRenderer: ({ row }) => (
+        <div class="notice-time-cell">
+          <span>{getTimeRange(row)}</span>
+          {row.minVersion ? (
+            <em>最低版本 {row.minVersion}</em>
+          ) : (
+            <em>全版本可见</em>
+          )}
+        </div>
+      )
+    },
+    {
+      label: "操作人",
+      prop: "operator",
+      minWidth: 110,
+      formatter: ({ operator }) => operator || "-"
     },
     {
       label: "操作",
       fixed: "right",
-      width: 280,
+      width: 250,
       slot: "operation"
     }
   ];
@@ -129,13 +283,11 @@ export function useSysNotice(_tableRef?: Ref) {
           id: row?.id ?? "",
           title: row?.title ?? "",
           content: row?.content ?? "",
-          noticeType: row?.noticeType ?? "",
-          priority: row?.priority ?? "",
+          noticeType: row?.noticeType ?? 2,
+          priority: row?.priority ?? 5,
           platformMask: row?.platformMask
-            ? typeof row.platformMask === "number"
-              ? decomposePlatformMask(row.platformMask)
-              : row.platformMask
-            : [],
+            ? decomposePlatformMask(row.platformMask)
+            : [1],
           minVersion: row?.minVersion ?? "",
           publishTime: row?.publishTime ?? "",
           offlineTime: row?.offlineTime ?? "",
@@ -143,66 +295,101 @@ export function useSysNotice(_tableRef?: Ref) {
           status: row?.status ?? 0
         }
       },
-      width: "50%",
+      width: "720px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
       closeOnClickModal: false,
       contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
+      beforeSure: async (done, { options, closeLoading }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        function chores() {
+
+        try {
+          const valid = await FormRef.validate().catch(() => false);
+          if (!valid) return;
+          if (!validateTimeRange(curData)) {
+            message("下线时间必须晚于发布时间", { type: "warning" });
+            return;
+          }
+
+          const submitData = {
+            ...curData,
+            platformMask: normalizePlatformMask(curData.platformMask)
+          };
+          const api = title === "新增" ? addSysNotice : updateSysNotice;
+          const result = await api(submitData);
+
+          message(result.msg || `${title}公告成功`, {
+            type: result.code === 200 ? "success" : "error"
+          });
           done();
           onSearch();
+        } catch (error) {
+          message(getErrorMessage(error, `${title}公告失败`), {
+            type: "error"
+          });
+        } finally {
+          closeLoading();
         }
-        FormRef.validate(valid => {
-          if (valid) {
-            // Combine platformMask array into a single number
-            const submitData = {
-              ...curData,
-              platformMask: Array.isArray(curData.platformMask)
-                ? curData.platformMask.reduce(
-                    (acc: number, val: number) => acc | val,
-                    0
-                  )
-                : curData.platformMask
-            };
-            const api = title === "新增" ? addSysNotice : updateSysNotice;
-            api(submitData)
-              .then(r => {
-                message(r.msg, { type: r.code === 200 ? "success" : "error" });
-              })
-              .finally(() => {
-                chores();
-              });
-          }
-        });
       }
     });
   }
 
-  /** Decompose platform mask number into an array of individual values */
-  function decomposePlatformMask(mask: number): number[] {
-    const result = [];
-    if (mask & 1) result.push(1);
-    if (mask & 2) result.push(2);
-    if (mask & 4) result.push(4);
-    return result;
+  async function handlePublish(row: FormItemProps) {
+    if (!row.id) {
+      message("缺少公告 ID，无法发布", { type: "warning" });
+      return;
+    }
+
+    try {
+      await ElMessageBox.confirm(
+        `发布后目标用户将在通知中心看到「${row.title}」，是否继续？`,
+        "发布公告",
+        {
+          confirmButtonText: "确认发布",
+          cancelButtonText: "取消",
+          type: "success"
+        }
+      );
+      const result = await publishSysNotice(row.id);
+      message(result.msg || "发布成功", {
+        type: result.code === 200 ? "success" : "error"
+      });
+      onSearch();
+    } catch (error) {
+      if (error !== "cancel" && error !== "close") {
+        message(getErrorMessage(error, "发布失败"), { type: "error" });
+      }
+    }
   }
 
-  function handlePublish(row: FormItemProps) {
-    publishSysNotice(row.id).then(r => {
-      message(r.msg, { type: r.code === 200 ? "success" : "error" });
-      onSearch();
-    });
-  }
+  async function handleWithdraw(row: FormItemProps) {
+    if (!row.id) {
+      message("缺少公告 ID，无法撤回", { type: "warning" });
+      return;
+    }
 
-  function handleWithdraw(row: FormItemProps) {
-    withdrawSysNotice(row.id).then(r => {
-      message(r.msg, { type: r.code === 200 ? "success" : "error" });
+    try {
+      await ElMessageBox.confirm(
+        `撤回后「${row.title}」将停止对用户展示，是否继续？`,
+        "撤回公告",
+        {
+          confirmButtonText: "确认撤回",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+      const result = await withdrawSysNotice(row.id);
+      message(result.msg || "撤回成功", {
+        type: result.code === 200 ? "success" : "error"
+      });
       onSearch();
-    });
+    } catch (error) {
+      if (error !== "cancel" && error !== "close") {
+        message(getErrorMessage(error, "撤回失败"), { type: "error" });
+      }
+    }
   }
 
   return {
@@ -211,6 +398,8 @@ export function useSysNotice(_tableRef?: Ref) {
     columns,
     dataList,
     pagination,
+    noticeStats,
+    platformOptions,
     onSearch,
     resetForm,
     openDialog,

@@ -40,11 +40,9 @@ export const deleteLoveRecord = (id: string | number) => {
 
 /** 纪念日列表 */
 export const getAnniversaryList = (params?: object) => {
-  return http.request<ApiResult<Record<string, any>[]>>(
-    "get",
-    "/api/anniversaries",
-    { params }
-  );
+  return http.request<
+    ApiResult<Record<string, any>[] | { anniversaries?: Record<string, any>[] }>
+  >("get", "/api/anniversaries", { params });
 };
 
 /** 新增纪念日 */

@@ -1,7 +1,8 @@
 export type NoticeTabKey = "notify" | "message" | "todo";
 
 export interface NoticeListItem {
-  id: string;
+  id: string | number;
+  noticeId?: string | number;
   avatar?: string;
   title: string;
   datetime: string;
@@ -11,6 +12,7 @@ export interface NoticeListItem {
   extra?: string;
   path?: string;
   read?: boolean;
+  actionText?: string;
 }
 
 export interface NoticeTabItem {

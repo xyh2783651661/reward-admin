@@ -1,202 +1,296 @@
 <script setup lang="ts">
-import type { NoticeListItem } from "../data";
-import { ref, PropType, nextTick } from "vue";
-import { useNav } from "@/layout/hooks/useNav";
-import { deviceDetection } from "@pureadmin/utils";
+import { computed, type Component } from "vue";
+import type { NoticeListItem, NoticeTabKey } from "../data";
+import TimeLine from "~icons/ri/time-line";
+import Message3Line from "~icons/ri/message-3-line";
+import Notification3Line from "~icons/ri/notification-3-line";
+import CheckboxCircleLine from "~icons/ri/checkbox-circle-line";
+
+const props = defineProps<{
+  noticeItem: NoticeListItem;
+}>();
 
 const emit = defineEmits<{
   action: [item: NoticeListItem];
+  markRead: [item: NoticeListItem];
 }>();
 
-const props = defineProps({
-  noticeItem: {
-    type: Object as PropType<NoticeListItem>,
-    default: () => {}
+const typeMetaMap: Record<
+  NoticeTabKey,
+  { icon: Component; className: string }
+> = {
+  notify: {
+    icon: Notification3Line,
+    className: "is-notify"
+  },
+  message: {
+    icon: Message3Line,
+    className: "is-message"
+  },
+  todo: {
+    icon: CheckboxCircleLine,
+    className: "is-todo"
   }
-});
+};
 
-const titleRef = ref<HTMLElement | null>(null);
-const titleTooltip = ref(false);
-const descriptionRef = ref<HTMLElement | null>(null);
-const descriptionTooltip = ref(false);
-const { tooltipEffect } = useNav();
-const isMobile = deviceDetection();
-
-function hoverTitle() {
-  nextTick(() => {
-    titleRef.value?.scrollWidth > titleRef.value?.clientWidth
-      ? (titleTooltip.value = true)
-      : (titleTooltip.value = false);
-  });
-}
-
-function hoverDescription(event, description) {
-  // currentWidth 为文本在页面中所占的宽度，创建标签，加入到页面，获取currentWidth ,最后在移除
-  const tempTag = document.createElement("span");
-  tempTag.innerText = description;
-  tempTag.className = "getDescriptionWidth";
-  document.querySelector("body").appendChild(tempTag);
-  const currentWidth = (
-    document.querySelector(".getDescriptionWidth") as HTMLSpanElement
-  ).offsetWidth;
-  document.querySelector(".getDescriptionWidth").remove();
-
-  // cellWidth为容器的宽度
-  const cellWidth = event.target.offsetWidth;
-
-  // 当文本宽度大于容器宽度两倍时，代表文本显示超过两行
-  currentWidth > 2 * cellWidth
-    ? (descriptionTooltip.value = true)
-    : (descriptionTooltip.value = false);
-}
+const isUnread = computed(() => props.noticeItem.read === false);
+const isActionable = computed(() => Boolean(props.noticeItem.path));
+const typeMeta = computed(
+  () => typeMetaMap[props.noticeItem.type] ?? typeMetaMap.notify
+);
 
 function handleAction() {
   emit("action", props.noticeItem);
 }
+
+function handleMarkRead() {
+  emit("markRead", props.noticeItem);
+}
 </script>
 
 <template>
-  <div
-    class="notice-container border-0 border-b-[1px] border-solid border-[#f0f0f0] dark:border-[#303030]"
-    :class="{ 'is-actionable': noticeItem.path }"
+  <article
+    class="notice-container"
+    :class="[
+      isUnread && 'is-unread',
+      isActionable && 'is-actionable',
+      typeMeta.className
+    ]"
     @click="handleAction"
   >
-    <el-avatar
-      v-if="noticeItem.avatar"
-      :size="30"
-      :src="noticeItem.avatar"
-      class="notice-container-avatar"
-    />
-    <div class="notice-container-text">
-      <div class="notice-text-title text-[#000000d9] dark:text-white">
-        <el-tooltip
-          popper-class="notice-title-popper"
-          :effect="tooltipEffect"
-          :disabled="!titleTooltip"
-          :content="noticeItem.title"
-          placement="top-start"
-          :enterable="!isMobile"
-        >
-          <div
-            ref="titleRef"
-            class="notice-title-content"
-            @mouseover="hoverTitle"
-          >
-            <span v-if="noticeItem.read === false" class="notice-title-dot" />
-            {{ noticeItem.title }}
-          </div>
-        </el-tooltip>
+    <div class="notice-icon-wrap">
+      <el-avatar
+        v-if="noticeItem.avatar"
+        :size="36"
+        :src="noticeItem.avatar"
+        class="notice-avatar"
+      />
+      <span v-else class="notice-type-icon">
+        <IconifyIconOffline :icon="typeMeta.icon" />
+      </span>
+      <span v-if="isUnread" class="notice-unread-dot" />
+    </div>
+
+    <div class="notice-content">
+      <div class="notice-header">
+        <div class="notice-title-group">
+          <span class="notice-title">{{ noticeItem.title }}</span>
+          <span v-if="isUnread" class="notice-unread-label">未读</span>
+        </div>
         <el-tag
-          v-if="noticeItem?.extra"
-          :type="noticeItem?.status"
+          v-if="noticeItem.extra"
+          :type="noticeItem.status"
           size="small"
-          class="notice-title-extra"
+          effect="light"
+          round
+          class="notice-extra"
         >
-          {{ noticeItem?.extra }}
+          {{ noticeItem.extra }}
         </el-tag>
       </div>
 
-      <el-tooltip
-        popper-class="notice-title-popper"
-        :effect="tooltipEffect"
-        :disabled="!descriptionTooltip"
-        :content="noticeItem.description"
-        placement="top-start"
-      >
-        <div
-          ref="descriptionRef"
-          class="notice-text-description"
-          @mouseover="hoverDescription($event, noticeItem.description)"
-        >
-          {{ noticeItem.description }}
+      <p class="notice-description">
+        {{ noticeItem.description || "暂无描述" }}
+      </p>
+
+      <div class="notice-footer">
+        <span class="notice-time">
+          <IconifyIconOffline :icon="TimeLine" />
+          {{ noticeItem.datetime || "刚刚" }}
+        </span>
+        <div class="notice-actions">
+          <button
+            v-if="isUnread"
+            type="button"
+            class="notice-link-button"
+            @click.stop="handleMarkRead"
+          >
+            标为已读
+          </button>
+          <span v-else class="notice-read-state">已读</span>
+          <span v-if="isActionable" class="notice-open-link">
+            {{ noticeItem.actionText || "查看详情" }}
+          </span>
         </div>
-      </el-tooltip>
-      <div class="notice-text-datetime text-[#00000073] dark:text-white">
-        {{ noticeItem.datetime }}
       </div>
     </div>
-  </div>
+  </article>
 </template>
 
-<style>
-.notice-title-popper {
-  max-width: 238px;
-}
-</style>
 <style lang="scss" scoped>
 .notice-container {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 12px 0;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+
+  &:not(:last-child) {
+    margin-bottom: 8px;
+  }
+
+  &.is-unread {
+    background: rgb(64 158 255 / 7%);
+    border-color: rgb(64 158 255 / 14%);
+  }
 
   &.is-actionable {
     cursor: pointer;
   }
 
-  // border-bottom: 1px solid #f0f0f0;
-
-  .notice-container-avatar {
-    margin-right: 16px;
-    background: #fff;
+  &.is-actionable:hover {
+    background: var(--el-fill-color-light);
+    border-color: var(--el-border-color);
+    transform: translateY(-1px);
   }
+}
 
-  .notice-container-text {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    justify-content: space-between;
+.notice-icon-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
 
-    .notice-text-title {
-      display: flex;
-      margin-bottom: 8px;
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 1.5715;
-      cursor: pointer;
+.notice-avatar,
+.notice-type-icon {
+  box-shadow: 0 6px 18px rgb(0 0 0 / 8%);
+}
 
-      .notice-title-content {
-        flex: 1;
-        width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+.notice-type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 12px;
+}
 
-        .notice-title-dot {
-          display: inline-block;
-          width: 8px;
-          height: 8px;
-          margin-right: 8px;
-          vertical-align: middle;
-          background: var(--el-color-danger);
-          border-radius: 50%;
-        }
-      }
+.is-message .notice-type-icon {
+  color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
+}
 
-      .notice-title-extra {
-        float: right;
-        margin-top: -1.5px;
-        font-weight: 400;
-      }
-    }
+.is-todo .notice-type-icon {
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-9);
+}
 
-    .notice-text-description,
-    .notice-text-datetime {
-      font-size: 12px;
-      line-height: 1.5715;
-    }
+.notice-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  background: var(--el-color-danger);
+  border: 2px solid var(--el-bg-color-overlay);
+  border-radius: 50%;
+}
 
-    .notice-text-description {
-      display: -webkit-box;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-    }
+.notice-content {
+  flex: 1;
+  min-width: 0;
+}
 
-    .notice-text-datetime {
-      margin-top: 4px;
-    }
-  }
+.notice-header,
+.notice-footer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notice-title-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.notice-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+}
+
+.notice-unread-label {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  border-radius: 999px;
+}
+
+.notice-extra {
+  flex: 0 0 auto;
+}
+
+.notice-description {
+  display: -webkit-box;
+  margin: 6px 0 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: 2;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--el-text-color-regular);
+  -webkit-box-orient: vertical;
+}
+
+.notice-time,
+.notice-read-state,
+.notice-open-link,
+.notice-link-button {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.notice-time {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+  color: var(--el-text-color-secondary);
+}
+
+.notice-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.notice-link-button {
+  padding: 0;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.notice-link-button:hover,
+.notice-open-link {
+  color: var(--el-color-primary);
+}
+
+.notice-read-state {
+  color: var(--el-text-color-placeholder);
+}
+
+.notice-open-link::after {
+  margin-left: 2px;
+  content: "›";
 }
 </style>
