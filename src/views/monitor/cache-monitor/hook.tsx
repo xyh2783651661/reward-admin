@@ -1,5 +1,6 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { emptyText, formatDate } from "@/utils/format";
+import { message } from "@/utils/message";
 import {
   getCacheStats,
   getCacheHealth,
@@ -15,8 +16,26 @@ import type {
   CacheHealth,
   CacheTopKey,
   CacheBigKey,
-  CacheOperationLog
+  CacheOperationLog,
+  CacheRedisInfo,
+  CacheMetricItem,
+  CacheInsight
 } from "../cache/utils/types";
+
+type CacheRequestResult<T> = PromiseSettledResult<{
+  code: number;
+  msg?: string;
+  data?: T;
+}>;
+
+type FeedbackOptions = {
+  silent?: boolean;
+};
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
 
 export function useCacheMonitor() {
   const loading = ref(true);
@@ -26,7 +45,9 @@ export function useCacheMonitor() {
   const topKeys = ref<CacheTopKey[]>([]);
   const bigKeys = ref<CacheBigKey[]>([]);
   const logs = ref<CacheOperationLog[]>([]);
-  const redisInfo = ref<Record<string, any> | null>(null);
+  const redisInfo = ref<CacheRedisInfo | null>(null);
+  const lastUpdatedAt = ref("");
+  const partialErrorText = ref("");
 
   // 组件卸载标志
   let isUnmounted = false;
@@ -45,13 +66,42 @@ export function useCacheMonitor() {
   ];
 
   const isRedis = computed(() => {
-    const t = stats.value?.cacheType?.toLowerCase();
-    return t === "redis";
+    const cacheType = stats.value?.cacheType?.toLowerCase();
+    return cacheType === "redis";
+  });
+
+  const statusMeta = computed(() => {
+    if (!health.value) {
+      return {
+        text: "检测中",
+        type: "info",
+        message: "正在读取缓存健康状态与运行指标"
+      };
+    }
+
+    if (health.value.available) {
+      return {
+        text: health.value.status || "运行中",
+        type: "success",
+        message: health.value.message || "缓存服务响应正常，监控数据可用"
+      };
+    }
+
+    return {
+      text: health.value.status || "异常",
+      type: "danger",
+      message: health.value.message || "缓存服务不可用，请检查连接或服务状态"
+    };
+  });
+
+  const lastUpdatedText = computed(() => {
+    return lastUpdatedAt.value
+      ? `更新于 ${lastUpdatedAt.value}`
+      : "等待首次刷新";
   });
 
   const hitRateDisplay = computed(() => {
-    const v = stats.value?.hitRate;
-    return v != null ? `${v}%` : "-";
+    return formatPercent(stats.value?.hitRate);
   });
 
   const hitRateColor = computed(() => {
@@ -64,8 +114,20 @@ export function useCacheMonitor() {
 
   const memoryPercent = computed(() => {
     const s = stats.value;
-    if (!s?.usedMemory || !s?.maxMemory) return 0;
+    if (s?.memoryUsageRate != null) return normalizePercent(s.memoryUsageRate);
+    if (s?.usedMemory == null || !s?.maxMemory) return 0;
     return Math.min(100, Math.round((s.usedMemory / s.maxMemory) * 100));
+  });
+
+  const memoryUsageDisplay = computed(() => {
+    if (stats.value?.memoryUsageRate != null) {
+      return formatPercent(stats.value.memoryUsageRate);
+    }
+    if (stats.value?.usedMemory != null && stats.value.maxMemory) {
+      return `${memoryPercent.value}%`;
+    }
+    if (stats.value?.usedMemory != null) return "无限制";
+    return "-";
   });
 
   const memoryColor = computed(() => {
@@ -75,6 +137,117 @@ export function useCacheMonitor() {
     return "#409eff";
   });
 
+  const metricCards = computed<CacheMetricItem[]>(() => [
+    {
+      label: "Key 总数",
+      value: formatNumber(stats.value?.keyCount),
+      icon: "ri:key-2-line",
+      gradient: "linear-gradient(135deg, #667eea, #764ba2)",
+      description: "当前缓存中可检索的键数量"
+    },
+    {
+      label: "请求次数",
+      value: formatNumber(stats.value?.requestCount),
+      icon: "ri:bar-chart-box-line",
+      gradient: "linear-gradient(135deg, #f093fb, #f5576c)",
+      description: "监控周期内累计缓存访问量"
+    },
+    {
+      label: "命中率",
+      value: hitRateDisplay.value,
+      color: hitRateColor.value,
+      highlight: true,
+      icon: "ri:target-line",
+      gradient: "linear-gradient(135deg, #4facfe, #00f2fe)",
+      description: getHitRateHint(stats.value?.hitRate)
+    },
+    {
+      label: "已用内存",
+      value: formatMemory(stats.value?.usedMemory ?? null),
+      sub: stats.value?.maxMemory
+        ? `上限 ${formatMemory(stats.value.maxMemory)}`
+        : "容量未限制",
+      icon: "ri:database-line",
+      gradient: "linear-gradient(135deg, #43e97b, #38f9d7)",
+      description: getMemoryHint()
+    },
+    {
+      label: "命中 / 未命中",
+      value: formatNumber(stats.value?.hitCount),
+      sub: `未命中 ${formatNumber(stats.value?.missCount)}`,
+      icon: "ri:time-line",
+      gradient: "linear-gradient(135deg, #fa709a, #fee140)",
+      description: "命中次数越高，说明缓存策略越有效"
+    },
+    {
+      label: "健康状态",
+      value: statusMeta.value.text,
+      color: health.value?.available ? "#67c23a" : "#f56c6c",
+      icon: "ri:shield-check-line",
+      gradient: "linear-gradient(135deg, #a18cd1, #fbc2eb)",
+      description: statusMeta.value.message
+    }
+  ]);
+
+  const insightCards = computed<CacheInsight[]>(() => {
+    const cards: CacheInsight[] = [];
+
+    if (health.value && !health.value.available) {
+      cards.push({
+        title: "服务异常",
+        description: statusMeta.value.message,
+        type: "danger",
+        icon: "ri:error-warning-line"
+      });
+    }
+
+    const hitRate = stats.value?.hitRate;
+    if (hitRate != null && hitRate < 70) {
+      cards.push({
+        title: "命中率偏低",
+        description: "建议检查热点数据是否正确写入缓存，或优化过期策略",
+        type: "warning",
+        icon: "ri:target-line"
+      });
+    }
+
+    if (memoryPercent.value >= 90) {
+      cards.push({
+        title: "内存压力较高",
+        description: "当前内存使用率接近上限，请关注大 Key 与淘汰策略",
+        type: "danger",
+        icon: "ri:database-2-line"
+      });
+    } else if (memoryPercent.value >= 70) {
+      cards.push({
+        title: "内存占用偏高",
+        description: "建议定期清理冷数据，避免高峰期触发频繁驱逐",
+        type: "warning",
+        icon: "ri:database-2-line"
+      });
+    }
+
+    if ((stats.value?.evictionCount ?? 0) > 0) {
+      cards.push({
+        title: "存在 Key 驱逐",
+        description: `累计驱逐 ${formatNumber(stats.value?.evictionCount)} 次，可结合大 Key 分析定位原因`,
+        type: "warning",
+        icon: "ri:delete-bin-line"
+      });
+    }
+
+    if (cards.length === 0) {
+      cards.push({
+        title: "运行表现稳定",
+        description: "当前健康状态、命中率与容量指标均处于可接受范围",
+        type: "success",
+        icon: "ri:checkbox-circle-line"
+      });
+    }
+
+    return cards.slice(0, 4);
+  });
+
   const topKeyColumns: TableColumnList = [
     {
       label: "排名",
@@ -82,18 +255,26 @@ export function useCacheMonitor() {
       width: 60,
       align: "center"
     },
-    { label: "Key", prop: "key", minWidth: 150 },
+    {
+      label: "Key",
+      prop: "key",
+      minWidth: 220,
+      showOverflowTooltip: true,
+      cellRenderer: ({ row }) => renderKeyCell(row?.key)
+    },
     {
       label: "访问次数",
       prop: "accessCount",
-      width: 90,
-      align: "right"
+      width: 110,
+      align: "right",
+      formatter: ({ row }) => formatNumber(row?.accessCount)
     },
     {
       label: "命中次数",
       prop: "hitCount",
-      width: 90,
-      align: "right"
+      width: 110,
+      align: "right",
+      formatter: ({ row }) => formatNumber(row?.hitCount)
     },
     {
       label: "命中率",
@@ -120,7 +301,13 @@ export function useCacheMonitor() {
       width: 60,
       align: "center"
     },
-    { label: "Key", prop: "key", minWidth: 150 },
+    {
+      label: "Key",
+      prop: "key",
+      minWidth: 220,
+      showOverflowTooltip: true,
+      cellRenderer: ({ row }) => renderKeyCell(row?.key)
+    },
     {
       label: "类型",
       prop: "type",
@@ -135,14 +322,19 @@ export function useCacheMonitor() {
     {
       label: "大小",
       prop: "sizeHuman",
-      width: 90,
+      width: 110,
       align: "right",
       formatter: ({ row }) => (row?.sizeHuman ? emptyText(row.sizeHuman) : "-")
     }
   ];
 
   const logColumns: TableColumnList = [
-    { label: "操作人", prop: "operator", width: 90 },
+    {
+      label: "操作人",
+      prop: "operator",
+      width: 100,
+      formatter: ({ row }) => emptyText(row?.operator)
+    },
     {
       label: "操作",
       prop: "action",
@@ -153,8 +345,10 @@ export function useCacheMonitor() {
           DELETE: { text: "删除", type: "danger" },
           CLEAR: { text: "清空", type: "danger" },
           PUT: { text: "写入", type: "success" },
+          SET: { text: "设置", type: "success" },
           GET: { text: "读取", type: "info" },
-          EVICT: { text: "驱逐", type: "warning" }
+          EVICT: { text: "驱逐", type: "warning" },
+          EXPIRE: { text: "过期", type: "warning" }
         };
         const cfg = map[row.action] || {
           text: row.action,
@@ -167,85 +361,167 @@ export function useCacheMonitor() {
         );
       }
     },
-    { label: "Key", prop: "key", minWidth: 150 },
+    {
+      label: "Key",
+      prop: "key",
+      minWidth: 220,
+      showOverflowTooltip: true,
+      cellRenderer: ({ row }) => renderKeyCell(row?.key)
+    },
     {
       label: "时间",
       prop: "time",
-      width: 200
+      width: 170,
+      formatter: ({ row }) => formatDate(row?.time)
     },
     {
       label: "描述",
       prop: "description",
       minWidth: 150,
-      showOverflowTooltip: true
+      showOverflowTooltip: true,
+      formatter: ({ row }) => emptyText(row?.description)
     }
   ];
 
   /** Redis 详情描述字段 */
   const redisDetailItems = computed(() => {
-    const r = redisInfo.value;
-    if (!r) return [];
+    const redis = redisInfo.value;
+    if (!redis) return [];
     return [
-      { label: "版本", value: r.version, icon: "ri:code-s-slash-line" },
+      { label: "版本", value: redis.version, icon: "ri:code-s-slash-line" },
       {
         label: "已用内存",
-        value: r.usedMemoryHuman || formatMemory(r.usedMemory),
+        value: redis.usedMemoryHuman || formatMemory(redis.usedMemory),
         icon: "ri:database-2-line"
       },
       {
         label: "最大内存",
-        value: r.maxMemory ? formatMemory(r.maxMemory) : "无限制",
+        value: redis.maxMemory ? formatMemory(redis.maxMemory) : "无限制",
         icon: "ri:hard-drive-2-line"
       },
       {
         label: "连接客户端",
-        value: r.connectedClients,
+        value: formatNumber(redis.connectedClients),
         icon: "ri:user-voice-line"
       },
-      { label: "QPS", value: r.opsPerSec, icon: "ri:speed-line" },
+      {
+        label: "QPS",
+        value: formatNumber(redis.opsPerSec),
+        icon: "ri:speed-line"
+      },
       {
         label: "已过期 Key",
-        value: r.expiredKeys,
+        value: formatNumber(redis.expiredKeys),
         icon: "ri:timer-line"
       },
       {
         label: "已驱逐 Key",
-        value: r.evictedKeys,
+        value: formatNumber(redis.evictedKeys),
         icon: "ri:delete-bin-line"
       },
       {
         label: "运行时长",
-        value: r.uptimeInSeconds ? formatUptime(r.uptimeInSeconds) : "-",
+        value: redis.uptimeInSeconds
+          ? formatUptime(redis.uptimeInSeconds)
+          : "-",
         icon: "ri:time-line"
       },
       {
         label: "命中次数",
-        value: r.keyspaceHits,
+        value: formatNumber(redis.keyspaceHits),
         icon: "ri:target-line"
       },
       {
         label: "未命中次数",
-        value: r.keyspaceMisses,
+        value: formatNumber(redis.keyspaceMisses),
         icon: "ri:error-warning-line"
       }
     ];
   });
 
+  function renderKeyCell(key: string | null | undefined) {
+    const displayKey = emptyText(key);
+    if (!key) return displayKey;
+
+    return (
+      <div class="cache-key-cell">
+        <span class="cache-key-text" title={key}>
+          {displayKey}
+        </span>
+        <button
+          class="cache-key-copy"
+          type="button"
+          title="复制 Key"
+          onClick={(event: MouseEvent) => {
+            event.stopPropagation();
+            copyCacheKey(key);
+          }}
+        >
+          复制
+        </button>
+      </div>
+    );
+  }
+
+  async function copyCacheKey(key: string) {
+    try {
+      await navigator.clipboard.writeText(key);
+      message("Key 已复制", { type: "success" });
+    } catch {
+      message("复制失败，请手动选择 Key", { type: "error" });
+    }
+  }
+
+  function formatNumber(value: number | null | undefined): string {
+    if (value == null) return "-";
+    return new Intl.NumberFormat("zh-CN").format(value);
+  }
+
+  function formatPercent(value: number | null | undefined): string {
+    if (value == null) return "-";
+    return `${Number(value.toFixed(2))}%`;
+  }
+
+  function normalizePercent(value: number): number {
+    return Math.max(0, Math.min(100, Math.round(value)));
+  }
+
+  function getHitRateHint(value: number | null | undefined): string {
+    if (value == null) return "暂无命中率数据，等待监控上报";
+    if (value >= 90) return "命中表现优秀，可继续保持当前缓存策略";
+    if (value >= 70) return "命中表现正常，仍可关注热点数据覆盖率";
+    return "命中率偏低，建议检查缓存预热和过期策略";
+  }
+
+  function getMemoryHint(): string {
+    if (stats.value?.usedMemory == null) return "当前缓存类型暂未上报内存指标";
+    if (!stats.value?.maxMemory)
+      return "当前未设置容量上限，请关注持续增长趋势";
+    if (memoryPercent.value >= 90) return "内存压力较高，建议及时清理或扩容";
+    if (memoryPercent.value >= 70)
+      return "内存使用偏高，建议关注大 Key 与淘汰策略";
+    return "内存使用处于安全区间";
+  }
+
   function formatMemory(bytes: number | null | undefined): string {
     if (bytes == null) return "-";
     if (bytes === 0) return "0 B";
-    const units = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    const unitIndex = Math.min(
+      Math.floor(Math.log(bytes) / Math.log(1024)),
+      units.length - 1
+    );
+    return `${(bytes / Math.pow(1024, unitIndex)).toFixed(1)} ${units[unitIndex]}`;
   }
 
   function formatUptime(seconds: number): string {
-    const d = Math.floor(seconds / 86400);
-    const h = Math.floor((seconds % 86400) / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (d > 0) return `${d}天${h}小时${m}分`;
-    if (h > 0) return `${h}小时${m}分`;
-    return `${m}分钟`;
+    if (!seconds || seconds < 60) return "小于 1 分钟";
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (days > 0) return `${days}天${hours}小时${minutes}分`;
+    if (hours > 0) return `${hours}小时${minutes}分`;
+    return `${minutes}分钟`;
   }
 
   /** 初始化趋势图 */
@@ -367,7 +643,7 @@ export function useCacheMonitor() {
   }
 
   /** 刷新趋势图数据 */
-  async function refreshTrend() {
+  async function refreshTrend(options: FeedbackOptions = {}) {
     if (!trendChart || isUnmounted) return;
     trendLoading.value = true;
     try {
@@ -378,6 +654,12 @@ export function useCacheMonitor() {
       if (isUnmounted) return;
       if (res.code === 200) {
         updateTrendChart(res.data?.points || []);
+      } else if (!options.silent) {
+        message(res.msg || "趋势数据刷新失败", { type: "error" });
+      }
+    } catch (error) {
+      if (!options.silent) {
+        message(getErrorMessage(error, "趋势数据刷新失败"), { type: "error" });
       }
     } finally {
       if (!isUnmounted) {
@@ -393,31 +675,66 @@ export function useCacheMonitor() {
     }
   }
 
-  async function loadData() {
+  async function loadData(options: FeedbackOptions = {}) {
     if (isUnmounted) return;
     loading.value = true;
+    partialErrorText.value = "";
     try {
-      const [statsRes, healthRes, topRes, bigRes, logsRes] = await Promise.all([
-        getCacheStats(),
-        getCacheHealth(),
-        getCacheTopKeys(10),
-        getCacheBigKeys(10),
-        getCacheLogs(20)
-      ]);
+      const [statsRes, healthRes, topRes, bigRes, logsRes] =
+        await Promise.allSettled([
+          getCacheStats(),
+          getCacheHealth(),
+          getCacheTopKeys(10),
+          getCacheBigKeys(10),
+          getCacheLogs(20)
+        ]);
 
       if (isUnmounted) return;
 
-      if (statsRes.code === 200) stats.value = statsRes.data;
-      if (healthRes.code === 200) health.value = healthRes.data;
-      if (topRes.code === 200) topKeys.value = topRes.data?.keys ?? [];
-      if (bigRes.code === 200) bigKeys.value = bigRes.data?.keys ?? [];
-      if (logsRes.code === 200) logs.value = logsRes.data?.logs ?? [];
+      const failedModules: string[] = [];
+      const nextStats = unwrapResult(
+        statsRes as CacheRequestResult<CacheStats>,
+        "统计概览",
+        failedModules
+      );
+      const nextHealth = unwrapResult(
+        healthRes as CacheRequestResult<CacheHealth>,
+        "健康状态",
+        failedModules
+      );
+      const nextTopKeys = unwrapResult(
+        topRes as CacheRequestResult<{ keys: CacheTopKey[] }>,
+        "热点 Key",
+        failedModules
+      );
+      const nextBigKeys = unwrapResult(
+        bigRes as CacheRequestResult<{ keys: CacheBigKey[] }>,
+        "大 Key",
+        failedModules
+      );
+      const nextLogs = unwrapResult(
+        logsRes as CacheRequestResult<{ logs: CacheOperationLog[] }>,
+        "操作日志",
+        failedModules
+      );
+
+      if (nextStats) stats.value = nextStats;
+      if (nextHealth) health.value = nextHealth;
+      if (nextTopKeys) topKeys.value = nextTopKeys.keys ?? [];
+      if (nextBigKeys) bigKeys.value = nextBigKeys.keys ?? [];
+      if (nextLogs) logs.value = nextLogs.logs ?? [];
+
+      partialErrorText.value = failedModules.length
+        ? `部分数据加载失败：${failedModules.join("、")}`
+        : "";
 
       // 仅 Redis 时加载 Redis 专属信息
-      if (statsRes.code === 200) {
-        const t = statsRes.data?.cacheType?.toLowerCase();
-        if (t === "redis") {
-          await loadRedisInfo();
+      if (nextStats) {
+        const cacheType = nextStats.cacheType?.toLowerCase();
+        if (cacheType === "redis") {
+          await loadRedisInfo(options);
+        } else {
+          redisInfo.value = null;
         }
       }
 
@@ -428,7 +745,19 @@ export function useCacheMonitor() {
       if (!trendChart && !isUnmounted) {
         initTrendChart();
       }
-      await refreshTrend();
+      await refreshTrend({ silent: true });
+      lastUpdatedAt.value = formatDate(new Date().toISOString());
+
+      if (!options.silent) {
+        message(partialErrorText.value || "缓存监控已刷新", {
+          type: partialErrorText.value ? "warning" : "success"
+        });
+      }
+    } catch (error) {
+      partialErrorText.value = getErrorMessage(error, "缓存监控加载失败");
+      if (!options.silent) {
+        message(partialErrorText.value, { type: "error" });
+      }
     } finally {
       if (!isUnmounted) {
         loading.value = false;
@@ -436,13 +765,37 @@ export function useCacheMonitor() {
     }
   }
 
-  async function loadRedisInfo() {
+  function unwrapResult<T>(
+    result: CacheRequestResult<T>,
+    label: string,
+    failedModules: string[]
+  ): T | null {
+    if (result.status === "fulfilled" && result.value.code === 200) {
+      return result.value.data ?? null;
+    }
+
+    failedModules.push(label);
+    return null;
+  }
+
+  async function loadRedisInfo(options: FeedbackOptions = {}) {
     if (isUnmounted) return;
     redisLoading.value = true;
     try {
       const res = await getRedisInfo();
       if (isUnmounted) return;
-      if (res.code === 200) redisInfo.value = res.data;
+      if (res.code === 200) {
+        redisInfo.value = res.data;
+      } else if (!options.silent) {
+        message(res.msg || "Redis 信息加载失败", { type: "error" });
+      }
+    } catch (error) {
+      redisInfo.value = null;
+      if (!options.silent) {
+        message(getErrorMessage(error, "Redis 信息加载失败"), {
+          type: "error"
+        });
+      }
     } finally {
       if (!isUnmounted) {
         redisLoading.value = false;
@@ -451,7 +804,7 @@ export function useCacheMonitor() {
   }
 
   onMounted(() => {
-    loadData();
+    loadData({ silent: true });
     window.addEventListener("resize", handleResize);
   });
 
@@ -474,10 +827,16 @@ export function useCacheMonitor() {
     logs,
     redisInfo,
     isRedis,
+    statusMeta,
+    lastUpdatedText,
+    partialErrorText,
     hitRateDisplay,
     hitRateColor,
     memoryPercent,
+    memoryUsageDisplay,
     memoryColor,
+    metricCards,
+    insightCards,
     topKeyColumns,
     bigKeyColumns,
     logColumns,

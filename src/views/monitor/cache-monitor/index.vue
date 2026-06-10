@@ -16,10 +16,16 @@ const {
   logs,
   redisInfo,
   isRedis,
+  statusMeta,
+  lastUpdatedText,
+  partialErrorText,
   hitRateDisplay,
   hitRateColor,
   memoryPercent,
+  memoryUsageDisplay,
   memoryColor,
+  metricCards,
+  insightCards,
   topKeyColumns,
   bigKeyColumns,
   logColumns,
@@ -43,12 +49,11 @@ const {
       <div class="control-left">
         <div
           class="status-indicator"
-          :class="{ 'is-active': health?.available }"
+          :class="[`is-${statusMeta.type}`, { 'is-active': health?.available }]"
+          :title="statusMeta.message"
         >
           <span class="pulse-dot" />
-          <span class="status-text">{{
-            health?.available ? "运行中" : "异常"
-          }}</span>
+          <span class="status-text">{{ statusMeta.text }}</span>
         </div>
         <div class="cache-type-badge">
           <el-icon :size="14"><ri:database-2-line /></el-icon>
@@ -58,106 +63,76 @@ const {
           <el-icon :size="12"><ri:time-line /></el-icon>
           运行 {{ formatUptime(stats.uptimeInSeconds) }}
         </div>
+        <div class="updated-info">
+          <el-icon :size="12"><ri:refresh-line /></el-icon>
+          {{ lastUpdatedText }}
+        </div>
       </div>
       <div class="control-right">
         <el-button
           :icon="useRenderIcon(Refresh)"
-          circle
+          :loading="loading"
           size="small"
-          @click="loadData"
-        />
+          type="primary"
+          plain
+          aria-label="刷新缓存监控数据"
+          @click="() => loadData()"
+        >
+          刷新
+        </el-button>
       </div>
     </div>
 
+    <el-alert
+      v-if="partialErrorText"
+      class="monitor-alert"
+      :title="partialErrorText"
+      type="warning"
+      show-icon
+      :closable="false"
+    />
+
     <!-- 核心指标卡片 -->
     <div class="metric-grid">
-      <div class="metric-card">
-        <div
-          class="metric-icon"
-          style="--gradient: linear-gradient(135deg, #667eea, #764ba2)"
-        >
-          <el-icon :size="20"><ri:key-2-line /></el-icon>
-        </div>
-        <div class="metric-content">
-          <div class="metric-value">{{ stats?.keyCount ?? "-" }}</div>
-          <div class="metric-label">Key 总数</div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div
-          class="metric-icon"
-          style="--gradient: linear-gradient(135deg, #f093fb, #f5576c)"
-        >
-          <el-icon :size="20"><ri:bar-chart-box-line /></el-icon>
-        </div>
-        <div class="metric-content">
-          <div class="metric-value">{{ stats?.requestCount ?? "-" }}</div>
-          <div class="metric-label">请求次数</div>
-        </div>
-      </div>
-
-      <div class="metric-card highlight">
-        <div
-          class="metric-icon"
-          style="--gradient: linear-gradient(135deg, #4facfe, #00f2fe)"
-        >
-          <el-icon :size="20"><ri:target-line /></el-icon>
-        </div>
-        <div class="metric-content">
-          <div class="metric-value" :style="{ color: hitRateColor }">
-            {{ hitRateDisplay }}
+      <el-tooltip
+        v-for="item in metricCards"
+        :key="item.label"
+        effect="dark"
+        placement="top"
+        :content="item.description"
+      >
+        <div class="metric-card" :class="{ highlight: item.highlight }">
+          <div class="metric-icon" :style="{ '--gradient': item.gradient }">
+            <el-icon :size="20">
+              <component :is="useRenderIcon(item.icon)" />
+            </el-icon>
           </div>
-          <div class="metric-label">命中率</div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div
-          class="metric-icon"
-          style="--gradient: linear-gradient(135deg, #43e97b, #38f9d7)"
-        >
-          <el-icon :size="20"><ri:database-line /></el-icon>
-        </div>
-        <div class="metric-content">
-          <div class="metric-value">
-            {{ formatMemory(stats?.usedMemory ?? null) }}
+          <div class="metric-content">
+            <div class="metric-value" :style="{ color: item.color }">
+              {{ item.value }}
+            </div>
+            <div v-if="item.sub" class="metric-sub">{{ item.sub }}</div>
+            <div class="metric-label">{{ item.label }}</div>
           </div>
-          <div class="metric-label">已用内存</div>
         </div>
-      </div>
+      </el-tooltip>
+    </div>
 
-      <div class="metric-card">
-        <div
-          class="metric-icon"
-          style="--gradient: linear-gradient(135deg, #fa709a, #fee140)"
-        >
-          <el-icon :size="20"><ri:time-line /></el-icon>
+    <div class="insight-row">
+      <div
+        v-for="item in insightCards"
+        :key="item.title"
+        class="insight-card"
+        :class="`is-${item.type}`"
+      >
+        <div class="insight-icon">
+          <el-icon :size="18">
+            <component :is="useRenderIcon(item.icon)" />
+          </el-icon>
         </div>
-        <div class="metric-content">
-          <div class="metric-value">
-            {{ stats?.hitCount ?? "-" }}
-            <span class="metric-sub">/ {{ stats?.missCount ?? "-" }}</span>
-          </div>
-          <div class="metric-label">命中 / 未命中</div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div
-          class="metric-icon"
-          style="--gradient: linear-gradient(135deg, #a18cd1, #fbc2eb)"
-        >
-          <el-icon :size="20"><ri:shield-check-line /></el-icon>
-        </div>
-        <div class="metric-content">
-          <div
-            class="metric-value"
-            :style="{ color: health?.available ? '#67c23a' : '#f56c6c' }"
-          >
-            {{ health?.status ?? "-" }}
-          </div>
-          <div class="metric-label">健康状态</div>
+        <div class="insight-body">
+          <div class="insight-title">{{ item.title }}</div>
+          <div class="insight-desc">{{ item.description }}</div>
         </div>
       </div>
     </div>
@@ -187,9 +162,7 @@ const {
         <div class="progress-header">
           <span class="progress-title">内存使用率</span>
           <span class="progress-value" :style="{ color: memoryColor }">
-            {{
-              stats?.memoryUsageRate != null ? `${stats.memoryUsageRate}%` : "-"
-            }}
+            {{ memoryUsageDisplay }}
           </span>
         </div>
         <el-progress
@@ -216,11 +189,12 @@ const {
         <div class="section-title">
           <el-icon :size="16"><ri:line-chart-line /></el-icon>
           <span>趋势监控</span>
+          <span class="section-subtitle">命中率、内存与请求量变化</span>
         </div>
         <el-radio-group
           v-model="trendDuration"
           size="small"
-          @change="refreshTrend"
+          @change="() => refreshTrend()"
         >
           <el-radio-button
             v-for="opt in durationOptions"
@@ -245,6 +219,7 @@ const {
           /></el-icon>
           <span>Redis 运行信息</span>
           <el-tag size="small" type="danger" effect="plain">Redis</el-tag>
+          <span class="section-subtitle">连接、容量与 Keyspace 指标</span>
         </div>
       </div>
       <div v-if="redisInfo" class="redis-grid">
@@ -274,11 +249,13 @@ const {
           <div class="section-title">
             <el-icon :size="16" class="fire-icon"><ri:fire-line /></el-icon>
             <span>热点 Key Top 10</span>
+            <el-tag size="small" effect="plain">{{ topKeys.length }} 个</el-tag>
           </div>
         </div>
         <pure-table
           :data="topKeys"
           :columns="topKeyColumns"
+          empty-text="暂无热点 Key 数据"
           :header-cell-style="{
             background: 'var(--el-fill-color-lighter)',
             color: 'var(--el-text-color-primary)'
@@ -291,11 +268,13 @@ const {
           <div class="section-title">
             <el-icon :size="16" class="inbox-icon"><ri:inbox-line /></el-icon>
             <span>大 Key Top 10</span>
+            <el-tag size="small" effect="plain">{{ bigKeys.length }} 个</el-tag>
           </div>
         </div>
         <pure-table
           :data="bigKeys"
           :columns="bigKeyColumns"
+          empty-text="暂无大 Key 数据"
           :header-cell-style="{
             background: 'var(--el-fill-color-lighter)',
             color: 'var(--el-text-color-primary)'
@@ -310,11 +289,13 @@ const {
         <div class="section-title">
           <el-icon :size="16"><ri:file-list-3-line /></el-icon>
           <span>最近操作日志</span>
+          <el-tag size="small" effect="plain">{{ logs.length }} 条</el-tag>
         </div>
       </div>
       <pure-table
         :data="logs"
         :columns="logColumns"
+        empty-text="暂无操作日志"
         :header-cell-style="{
           background: 'var(--el-fill-color-lighter)',
           color: 'var(--el-text-color-primary)'
@@ -344,6 +325,10 @@ const {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  .insight-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .redis-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -353,6 +338,28 @@ const {
   .progress-row,
   .tables-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (width <= 768px) {
+  .cache-monitor {
+    padding: 10px;
+  }
+
+  .control-bar,
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .metric-grid,
+  .insight-row,
+  .redis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-title {
+    flex-wrap: wrap;
   }
 }
 
@@ -375,8 +382,10 @@ const {
 
   .control-left {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
+    min-width: 0;
   }
 
   .control-right {
@@ -394,6 +403,42 @@ const {
   color: var(--el-color-danger);
   background: var(--el-color-danger-light-9);
   border-radius: 20px;
+
+  &.is-info {
+    color: var(--el-color-info);
+    background: var(--el-fill-color-light);
+
+    .pulse-dot {
+      background: var(--el-color-info);
+    }
+  }
+
+  &.is-success {
+    color: var(--el-color-success);
+    background: var(--el-color-success-light-9);
+
+    .pulse-dot {
+      background: var(--el-color-success);
+    }
+  }
+
+  &.is-warning {
+    color: var(--el-color-warning);
+    background: var(--el-color-warning-light-9);
+
+    .pulse-dot {
+      background: var(--el-color-warning);
+    }
+  }
+
+  &.is-danger {
+    color: var(--el-color-danger);
+    background: var(--el-color-danger-light-9);
+
+    .pulse-dot {
+      background: var(--el-color-danger);
+    }
+  }
 
   &.is-active {
     color: var(--el-color-success);
@@ -438,6 +483,18 @@ const {
   color: var(--el-text-color-secondary);
 }
 
+.updated-info {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.monitor-alert {
+  margin-bottom: 16px;
+}
+
 /* 指标卡片网格 */
 .metric-grid {
   display: grid;
@@ -451,6 +508,7 @@ const {
   gap: 12px;
   align-items: center;
   padding: 16px;
+  cursor: help;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
@@ -484,26 +542,109 @@ const {
 }
 
 .metric-content {
+  flex: 1;
   min-width: 0;
 }
 
 .metric-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   color: var(--el-text-color-primary);
+  white-space: nowrap;
 }
 
 .metric-sub {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   font-weight: 400;
   color: var(--el-text-color-secondary);
+  white-space: nowrap;
 }
 
 .metric-label {
   margin-top: 2px;
   font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.insight-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.insight-card {
+  --insight-color: var(--el-color-info);
+
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-lighter);
+  border-left: 3px solid var(--insight-color);
+  border-radius: 8px;
+
+  &.is-success {
+    --insight-color: var(--el-color-success);
+  }
+
+  &.is-warning {
+    --insight-color: var(--el-color-warning);
+  }
+
+  &.is-danger {
+    --insight-color: var(--el-color-danger);
+  }
+}
+
+.insight-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--insight-color);
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
+}
+
+.insight-card.is-success .insight-icon {
+  background: var(--el-color-success-light-9);
+}
+
+.insight-card.is-warning .insight-icon {
+  background: var(--el-color-warning-light-9);
+}
+
+.insight-card.is-danger .insight-icon {
+  background: var(--el-color-danger-light-9);
+}
+
+.insight-body {
+  min-width: 0;
+}
+
+.insight-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.insight-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
 
@@ -558,6 +699,7 @@ const {
 
 .section-header {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
@@ -575,6 +717,12 @@ const {
   .el-icon {
     color: var(--el-color-primary);
   }
+}
+
+.section-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--el-text-color-secondary);
 }
 
 .chart-container {
@@ -667,6 +815,39 @@ const {
   .inbox-icon {
     color: var(--el-color-primary) !important;
   }
+}
+
+:deep(.cache-key-cell) {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+:deep(.cache-key-text) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--el-font-family);
+  white-space: nowrap;
+}
+
+:deep(.cache-key-copy) {
+  flex-shrink: 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+
+  &:hover {
+    color: var(--el-color-primary-light-3);
+  }
+}
+
+:deep(.el-table__empty-text) {
+  color: var(--el-text-color-secondary);
 }
 
 /* 操作日志 */

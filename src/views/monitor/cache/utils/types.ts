@@ -49,3 +49,37 @@ export interface CacheOperationLog {
   time: string;
   description: string;
 }
+
+export interface CacheRedisInfo {
+  version: string;
+  usedMemory: number;
+  usedMemoryHuman: string;
+  maxMemory: number | null;
+  connectedClients: number;
+  opsPerSec: number;
+  expiredKeys: number;
+  evictedKeys: number;
+  uptimeInSeconds: number;
+  keyspaceHits: number;
+  keyspaceMisses: number;
+}
+
+export interface CacheMetricItem {
+  label: string;
+  value: string | number;
+  icon: string;
+  gradient: string;
+  description: string;
+  sub?: string;
+  color?: string;
+  highlight?: boolean;
+}
+
+export type CacheInsightType = "success" | "warning" | "danger" | "info";
+
+export interface CacheInsight {
+  title: string;
+  description: string;
+  type: CacheInsightType;
+  icon: string;
+}
