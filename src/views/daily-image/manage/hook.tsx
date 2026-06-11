@@ -15,13 +15,22 @@ import {
 } from "@/api/daily-image";
 import type { PaginationProps } from "@pureadmin/table";
 
+type DailyImageItem = {
+  id: number;
+  originalName?: string;
+  source?: string;
+  fileSize?: number;
+  extension?: string;
+  remark?: string;
+};
+
 export function useDailyImage() {
   const loading = ref(true);
   const uploadLoading = ref(false);
   const batchDeleteLoading = ref(false);
   const batchDownloadLoading = ref(false);
   const isDownloading = ref(false);
-  const dataList = ref<any[]>([]);
+  const dataList = ref<DailyImageItem[]>([]);
   const fileInputRef = ref<HTMLInputElement>();
 
   // 批量选择相关
@@ -49,11 +58,15 @@ export function useDailyImage() {
     try {
       const { data } = await getDailyImagePage(toRaw(form));
       dataList.value = data?.records ?? [];
+      selectedIds.value = selectedIds.value.filter(id =>
+        dataList.value.some(item => item.id === id)
+      );
       pagination.total = data?.total ?? 0;
       pagination.pageSize = data?.size ?? form.size;
       pagination.currentPage = data?.current ?? form.current;
     } catch {
       dataList.value = [];
+      selectedIds.value = [];
       pagination.total = 0;
     } finally {
       loading.value = false;
@@ -104,7 +117,7 @@ export function useDailyImage() {
     }
   }
 
-  async function handleDelete(item: any) {
+  async function handleDelete(item: DailyImageItem) {
     try {
       await ElMessageBox.confirm("是否确认删除该图片？", "提示", {
         confirmButtonText: "确定",
@@ -256,12 +269,12 @@ export function useDailyImage() {
     }
   }
 
-  function handleDownload(item: any) {
+  function handleDownload(item: DailyImageItem) {
     const url = getDailyImageDownloadUrl(item.id);
     window.open(url, "_blank");
   }
 
-  function startRemarkEdit(item: any) {
+  function startRemarkEdit(item: DailyImageItem) {
     remarkEditId.value = item.id;
     remarkEditText.value = item.remark || "";
   }
@@ -271,7 +284,7 @@ export function useDailyImage() {
     remarkEditText.value = "";
   }
 
-  async function saveRemarkEdit(item: any) {
+  async function saveRemarkEdit(item: DailyImageItem) {
     try {
       const result = await updateDailyImageRemark(
         item.id,

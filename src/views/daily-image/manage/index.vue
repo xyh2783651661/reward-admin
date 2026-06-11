@@ -9,13 +9,22 @@ import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
 import Delete from "~icons/ep/delete";
 import Download from "~icons/ep/download";
-import { Select } from "@element-plus/icons-vue";
+import { MoreFilled, Select } from "@element-plus/icons-vue";
 
 defineOptions({
   name: "DailyImageManage"
 });
 
 const formRef = ref();
+
+type DailyImageItem = {
+  id: number;
+  originalName?: string;
+  source?: string;
+  fileSize?: number;
+  extension?: string;
+  remark?: string;
+};
 
 const {
   form,
@@ -53,13 +62,37 @@ const {
 } = useDailyImage();
 
 // 批量下载命令分发
-function handleDownloadCommand(command: string) {
-  if (command === "zip") {
+function handleDownloadCommand(command: string | number | object) {
+  const action = String(command);
+  if (action === "zip") {
     handleBatchDownload();
-  } else if (command === "links") {
+  } else if (action === "links") {
     handleBatchDownloadLinks();
   }
 }
+
+function handleCardCommand(
+  command: string | number | object,
+  item: DailyImageItem
+) {
+  const action = String(command);
+  if (action === "remark") {
+    startRemarkEdit(item);
+  } else if (action === "delete") {
+    handleDelete(item);
+  }
+}
+
+const selectedCount = computed(() => selectedIds.value.length);
+const hasSelection = computed(() => selectedCount.value > 0);
+const pageTotal = computed(() => dataList.value.length);
+const downloadActionLoading = computed(
+  () => batchDownloadLoading.value || isDownloading.value
+);
+const selectionSummary = computed(() => {
+  if (!hasSelection.value) return "勾选图片后可批量下载或删除";
+  return `已选择 ${selectedCount.value} / ${pageTotal.value} 张图片`;
+});
 
 // 是否全选
 const isAllSelected = computed(
@@ -82,20 +115,29 @@ const sourceOptions = [
   { label: "上传", value: "upload" }
 ];
 
-function formatFileSize(bytes: number) {
+function formatFileSize(bytes?: number) {
   if (!bytes) return "-";
   const units = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
-function getSourceType(type: string) {
+function getSourceType(type?: string) {
   const map: Record<string, string> = {
     unsplash: "info",
     local: "warning",
     upload: "success"
   };
-  return map[type] || "info";
+  return type ? map[type] || "info" : "info";
+}
+
+function getSourceLabel(type?: string) {
+  const map: Record<string, string> = {
+    unsplash: "Unsplash",
+    local: "本地",
+    upload: "上传"
+  };
+  return type ? map[type] || type : "未知";
 }
 </script>
 
@@ -136,44 +178,19 @@ function getSourceType(type: string) {
 
     <PureTableBar title="每日图片" :columns="[]" @refresh="onSearch">
       <template #buttons>
-        <el-button
-          type="primary"
-          :loading="uploadLoading"
-          :icon="useRenderIcon(Upload)"
-          @click="triggerUpload"
-        >
-          上传图片
-        </el-button>
-        <el-dropdown
-          v-if="selectedIds.length > 0"
-          @command="handleDownloadCommand"
-        >
+        <div class="toolbar-actions">
           <el-button
-            type="success"
-            :loading="batchDownloadLoading || isDownloading"
-            :icon="useRenderIcon(Download)"
+            type="primary"
+            :loading="uploadLoading"
+            :icon="useRenderIcon(Upload)"
+            @click="triggerUpload"
           >
-            批量下载 ({{ selectedIds.length }})
+            上传图片
           </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="zip"> ZIP 打包下载 </el-dropdown-item>
-              <el-dropdown-item command="links"> 逐个下载 </el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <el-button
-          v-if="selectedIds.length > 0"
-          type="danger"
-          :loading="batchDeleteLoading"
-          :icon="useRenderIcon(Delete)"
-          @click="handleBatchDelete"
-        >
-          批量删除 ({{ selectedIds.length }})
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="onSearch">
-          刷新
-        </el-button>
+          <el-button :icon="useRenderIcon(Refresh)" @click="onSearch">
+            刷新
+          </el-button>
+        </div>
         <input
           ref="fileInputRef"
           type="file"
@@ -183,18 +200,59 @@ function getSourceType(type: string) {
         />
       </template>
       <template v-slot="{ size }">
-        <!-- 全选控制栏 -->
-        <div v-if="dataList.length > 0" class="select-bar">
-          <el-checkbox
-            :model-value="isAllSelected"
-            :indeterminate="isIndeterminate"
-            @change="toggleSelectAll"
-          >
-            全选
-          </el-checkbox>
-          <span v-if="selectedIds.length > 0" class="select-count">
-            已选择 {{ selectedIds.length }} 项
-          </span>
+        <div v-if="dataList.length > 0" class="selection-toolbar">
+          <div class="selection-toolbar__main">
+            <el-checkbox
+              :model-value="isAllSelected"
+              :indeterminate="isIndeterminate"
+              @change="toggleSelectAll"
+            >
+              选择本页
+            </el-checkbox>
+            <div class="selection-toolbar__copy">
+              <span class="selection-toolbar__count">
+                {{ selectionSummary }}
+              </span>
+              <span class="selection-toolbar__hint">
+                点击卡片可快速选择，点击图片可预览原图
+              </span>
+            </div>
+          </div>
+          <div class="selection-toolbar__actions">
+            <el-dropdown
+              :disabled="!hasSelection || downloadActionLoading"
+              @command="handleDownloadCommand"
+            >
+              <el-button
+                type="success"
+                :disabled="!hasSelection"
+                :loading="downloadActionLoading"
+                :icon="useRenderIcon(Download)"
+              >
+                下载选中
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="zip">
+                    ZIP 打包下载
+                  </el-dropdown-item>
+                  <el-dropdown-item command="links">逐个下载</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+            <el-button
+              type="danger"
+              :disabled="!hasSelection"
+              :loading="batchDeleteLoading"
+              :icon="useRenderIcon(Delete)"
+              @click="handleBatchDelete"
+            >
+              删除选中
+            </el-button>
+            <el-button text :disabled="!hasSelection" @click="clearSelection">
+              清空选择
+            </el-button>
+          </div>
         </div>
 
         <div v-loading="loading" class="image-gallery">
@@ -209,18 +267,23 @@ function getSourceType(type: string) {
               :key="item.id"
               class="image-card"
               :class="{ 'is-selected': selectedIds.includes(item.id) }"
+              @click="toggleSelect(item.id)"
             >
-              <!-- 选择框 - 悬浮在右上角 -->
               <div
                 class="image-card__check"
                 :class="{ 'is-checked': selectedIds.includes(item.id) }"
+                role="checkbox"
+                tabindex="0"
+                :aria-checked="selectedIds.includes(item.id)"
                 @click.stop="toggleSelect(item.id)"
+                @keydown.enter.stop="toggleSelect(item.id)"
+                @keydown.space.prevent.stop="toggleSelect(item.id)"
               >
                 <el-icon v-if="selectedIds.includes(item.id)">
                   <Select />
                 </el-icon>
               </div>
-              <div class="image-card__preview">
+              <div class="image-card__preview" @click.stop>
                 <ReImageViewer
                   :src="getDailyImageThumbnailUrl(item.id)"
                   :preview-src-list="[getDailyImagePreviewUrl(item.id)]"
@@ -237,14 +300,14 @@ function getSourceType(type: string) {
                     size="small"
                     effect="plain"
                   >
-                    {{ item.source }}
+                    {{ getSourceLabel(item.source) }}
                   </el-tag>
                 </div>
                 <div class="image-card__meta">
                   <span>{{ formatFileSize(item.fileSize) }}</span>
-                  <span>{{ item.extension?.toUpperCase() }}</span>
+                  <span>{{ item.extension?.toUpperCase() || "未知格式" }}</span>
                 </div>
-                <div class="image-card__remark">
+                <div class="image-card__remark" @click.stop>
                   <template v-if="remarkEditId === item.id">
                     <el-input
                       v-model="remarkEditText"
@@ -278,34 +341,39 @@ function getSourceType(type: string) {
               </div>
               <div class="image-card__actions" @click.stop>
                 <el-button
-                  link
-                  type="primary"
-                  :size="size"
-                  @click="startRemarkEdit(item)"
-                >
-                  备注
-                </el-button>
-                <el-button
-                  link
+                  plain
                   type="success"
                   :size="size"
+                  :icon="useRenderIcon(Download)"
                   @click="handleDownload(item)"
                 >
                   下载
                 </el-button>
-                <el-button
-                  link
-                  type="danger"
-                  :size="size"
-                  @click="handleDelete(item)"
+                <el-dropdown
+                  trigger="click"
+                  @command="command => handleCardCommand(command, item)"
                 >
-                  删除
-                </el-button>
+                  <el-button circle text :size="size" aria-label="更多操作">
+                    <el-icon>
+                      <MoreFilled />
+                    </el-icon>
+                  </el-button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="remark"
+                        >编辑备注</el-dropdown-item
+                      >
+                      <el-dropdown-item command="delete" divided>
+                        删除图片
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
               </div>
             </div>
           </div>
         </div>
-        <div v-if="pagination.total > 0" class="mt-4 flex justify-end">
+        <div v-if="pagination.total > 0" class="pagination-wrap">
           <el-pagination
             v-model:current-page="pagination.currentPage"
             v-model:page-size="pagination.pageSize"
@@ -327,19 +395,62 @@ function getSourceType(type: string) {
   margin-bottom: 16px;
 }
 
-.select-bar {
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.selection-toolbar {
   display: flex;
   gap: 16px;
   align-items: center;
+  justify-content: space-between;
   padding: 12px 16px;
   margin-bottom: 16px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    var(--el-fill-color-extra-light),
+    var(--el-bg-color)
+  );
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 12px;
 }
 
-.select-count {
+.selection-toolbar__main {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.selection-toolbar__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.selection-toolbar__count {
   font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.selection-toolbar__hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
   color: var(--el-text-color-secondary);
+  white-space: nowrap;
+}
+
+.selection-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .image-gallery {
@@ -348,40 +459,34 @@ function getSourceType(type: string) {
 
 .image-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
 
 .image-card {
   position: relative;
   overflow: hidden;
+  cursor: pointer;
   background: var(--el-bg-color);
-  border: 2px solid var(--el-border-color-lighter);
+  border: 1px solid var(--el-border-color-lighter);
   border-radius: 12px;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 4%);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 
   &:hover {
-    box-shadow: 0 8px 24px rgb(0 0 0 / 10%);
+    border-color: var(--el-color-primary-light-5);
+    box-shadow: 0 10px 28px rgb(15 23 42 / 10%);
     transform: translateY(-2px);
-
-    .image-card__actions {
-      opacity: 1;
-    }
-
-    .image-card__check {
-      opacity: 1;
-    }
   }
 
   &.is-selected {
+    background: var(--el-color-primary-light-9);
     border-color: var(--el-color-primary);
-
-    .image-card__check {
-      opacity: 1;
-    }
+    box-shadow: 0 0 0 3px var(--el-color-primary-light-8);
   }
 }
 
@@ -393,23 +498,31 @@ function getSourceType(type: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
-  background: rgb(255 255 255 / 80%);
-  border: 2px solid var(--el-border-color);
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--el-border-color);
   border-radius: 50%;
-  opacity: 0;
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 14%);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 
   &:hover {
     border-color: var(--el-color-primary);
+    transform: scale(1.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--el-color-primary-light-5);
+    outline-offset: 2px;
   }
 
   &.is-checked {
     background: var(--el-color-primary);
     border-color: var(--el-color-primary);
-    opacity: 1;
 
     .el-icon {
       font-size: 14px;
@@ -422,6 +535,8 @@ function getSourceType(type: string) {
   width: 100%;
   height: 180px;
   overflow: hidden;
+  cursor: zoom-in;
+  background: var(--el-fill-color-light);
 }
 
 .image-card__info {
@@ -439,6 +554,7 @@ function getSourceType(type: string) {
 }
 
 .image-card__name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 13px;
@@ -449,6 +565,7 @@ function getSourceType(type: string) {
 
 .image-card__meta {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
@@ -462,9 +579,14 @@ function getSourceType(type: string) {
 }
 
 .image-card__remark-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
   font-size: 12px;
+  line-height: 1.5;
   color: var(--el-text-color-placeholder);
   cursor: pointer;
+  -webkit-box-orient: vertical;
 
   &:hover {
     color: var(--el-color-primary);
@@ -478,10 +600,47 @@ function getSourceType(type: string) {
 
 .image-card__actions {
   display: flex;
-  justify-content: space-around;
-  padding: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-  opacity: 0;
-  transition: opacity 0.2s ease;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+@media (width <= 768px) {
+  .toolbar-actions,
+  .selection-toolbar,
+  .selection-toolbar__main,
+  .selection-toolbar__actions {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .toolbar-actions,
+  .selection-toolbar {
+    flex-direction: column;
+  }
+
+  .selection-toolbar__hint {
+    white-space: normal;
+  }
+
+  .selection-toolbar__actions > * {
+    flex: 1;
+  }
+
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .pagination-wrap {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
 }
 </style>
