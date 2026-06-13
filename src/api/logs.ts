@@ -17,6 +17,21 @@ export const getSystemLogsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/access-logs/page", { data });
 };
 
+export const getAccessLogsList = (params?: object) => {
+  return http.request<ApiResult<Record<string, any>[]>>(
+    "get",
+    "/api/access-logs/list",
+    { params }
+  );
+};
+
+export const getAccessLogDetail = (id: string | number) => {
+  return http.request<ApiResult<Record<string, any>>>(
+    "get",
+    `/api/access-logs/${id}`
+  );
+};
+
 export const getSystemLogsDetail = (id: string | number) => {
   return http.request<ApiResult<Record<string, any>>>(
     "get",
@@ -36,9 +51,37 @@ export const getAccessLogsFilterOptions = () => {
   >("get", "/api/access-logs/filter-options");
 };
 
+/** 删除单条访问日志 */
+export const deleteAccessLog = (id: string | number) => {
+  return http.request<ApiResult>("delete", `/api/access-logs/${id}`);
+};
+
+/** 批量删除访问日志 */
+export const batchDeleteAccessLogs = (ids: Array<string | number>) => {
+  return http.request<ApiResult>("delete", "/api/access-logs", {
+    data: { ids }
+  });
+};
+
 export const exportAccessLogsList = (data?: object) => {
   return http.request<Blob>("post", "/api/access-logs/export-excel", {
     data,
     responseType: "blob"
   });
+};
+
+/** 获取链路追踪详情 */
+export const getTraceDetail = (traceId: string | number) => {
+  return http.request<ApiResult<Record<string, any>>>(
+    "get",
+    `/api/traces/${traceId}`
+  );
+};
+
+/** 获取任务日志筛选选项 */
+export const getTaskLogsFilterOptions = () => {
+  return http.request<ApiResult<Record<string, string[]>>>(
+    "get",
+    "/api/task-logs/filter-options"
+  );
 };

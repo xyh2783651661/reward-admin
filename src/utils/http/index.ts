@@ -10,11 +10,38 @@ import type {
   PureHttpRequestConfig
 } from "./types.d";
 import { stringify } from "qs";
-import { getToken, formatToken } from "@/utils/auth";
+import { getToken, formatToken, userKey } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
 import { generateSignature } from "@/utils/http/sign";
+import { storageLocal } from "@pureadmin/utils";
 
-const appId = "wep-client";
+const appId = "LOVE_RECORD_WEB";
+const clientType = "web";
+const clientVersion = __APP_INFO__?.pkg?.version ?? "1.0";
+
+function getDeviceType() {
+  if (typeof window === "undefined") return "PC";
+  const width = window.innerWidth;
+  if (width < 768) return "MOBILE";
+  if (width < 1200) return "TABLET";
+  return "PC";
+}
+
+function getStoredUserId() {
+  const userInfo = storageLocal().getItem<Record<string, any>>(userKey) ?? {};
+  const tokenInfo = getToken() as Record<string, any> | undefined;
+  const userId =
+    userInfo.userId ??
+    userInfo.id ??
+    userInfo.externalUserId ??
+    tokenInfo?.userId ??
+    tokenInfo?.id ??
+    tokenInfo?.externalUserId;
+
+  return userId === undefined || userId === null || `${userId}`.trim() === ""
+    ? undefined
+    : String(userId);
+}
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -24,7 +51,9 @@ const defaultConfig: AxiosRequestConfig = {
     Accept: "application/json, text/plain, */*",
     "Content-Type": "application/json",
     "X-Requested-With": "XMLHttpRequest",
-    "X-App-Id": appId
+    "X-App-Id": appId,
+    "X-Client-Type": clientType,
+    "X-Client-Version": clientVersion
   },
   // 数组格式参数序列化（https://github.com/axios/axios/issues/5142）
   paramsSerializer: {
@@ -55,6 +84,7 @@ class PureHttp {
     return new Promise(resolve => {
       PureHttp.requests.push((token: string) => {
         config.headers["Authorization"] = formatToken(token);
+        config.headers["X-Token"] = token;
         resolve(config);
       });
     });
@@ -68,8 +98,17 @@ class PureHttp {
         const timestamp = Date.now();
         const signature = generateSignature(appId, timestamp);
 
+        config.headers["X-App-Id"] = appId;
         config.headers["X-Timestamp"] = timestamp;
         config.headers["X-Signature"] = signature;
+        config.headers["X-Device-Type"] = getDeviceType();
+        config.headers["X-Client-Type"] = clientType;
+        config.headers["X-Client-Version"] = clientVersion;
+
+        const userId = getStoredUserId();
+        if (userId) {
+          config.headers["X-User-Id"] = userId;
+        }
         /** ============================ */
 
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
@@ -99,6 +138,7 @@ class PureHttp {
                       .then(res => {
                         const token = res.data.accessToken;
                         config.headers["Authorization"] = formatToken(token);
+                        config.headers["X-Token"] = token;
                         PureHttp.requests.forEach(cb => cb(token));
                         PureHttp.requests = [];
                       })
@@ -111,6 +151,7 @@ class PureHttp {
                   config.headers["Authorization"] = formatToken(
                     data.accessToken
                   );
+                  config.headers["X-Token"] = data.accessToken;
                   resolve(config);
                 }
               } else {

@@ -111,11 +111,19 @@ const getWorkbenchActivities = () => {
   );
 };
 
+const completeWorkbenchTodo = (id: string | number) => {
+  return http.request<ApiResult<Record<string, any>>>(
+    "post",
+    `/api/workbench/todos/${id}/complete`
+  );
+};
+
 export {
   getWorkbenchSummary,
   getWorkbenchTrends,
   getWorkbenchTodos,
-  getWorkbenchActivities
+  getWorkbenchActivities,
+  completeWorkbenchTodo
 };
 
 export type {

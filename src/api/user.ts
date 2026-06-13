@@ -40,6 +40,11 @@ export const getLogin = (data?: object) => {
   return http.request<UserResult>("post", "/login", { data });
 };
 
+/** 文档认证登录路径（保留旧登录入口兼容现有流程） */
+export const authLogin = (data?: object) => {
+  return http.request<UserResult>("post", "/api/auth/login", { data });
+};
+
 /** 刷新`token` */
 export const refreshTokenApi = (data?: object) => {
   return http.request<RefreshTokenResult>("post", "/refresh-token", { data });

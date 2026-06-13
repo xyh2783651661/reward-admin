@@ -9,12 +9,35 @@ export type {
 } from "./types";
 
 export {
+  calculateReward,
+  getRewardResult,
+  getRewardCompare,
+  getRewardSubjects,
+  deleteRewardResult,
+  batchDeleteRewardResults,
+  getRewardDownloadUrl,
+  uploadRewardAvatar,
+  calculateRewardApk,
+  getRewardApkResult,
+  getRewardApkSubjects,
+  getRewardApkProfile,
+  updateRewardApkProfile,
+  uploadRewardApkAvatar,
+  deleteRewardApkResult,
+  getRewardApkDownloadUrl,
+  getRewardApkRuleDownloadUrl,
+  getLastRewardApkVersion,
+  getRewardApkWebLatestDownloadUrl,
+  getRewardApkAndroidLatestDownloadUrl,
+  saveRewardApkVersion,
   getRewardConfigList,
   addRewardConfig,
   updateRewardConfig,
   deleteRewardConfig,
   exportRewardConfigList,
+  getRewardConfigRuleDownloadUrl,
   getRewardSubjectList,
+  getRewardSubjectAllList,
   addRewardSubject,
   updateRewardSubject,
   deleteRewardSubject,
@@ -24,7 +47,8 @@ export {
   updateRewardUser,
   deleteRewardUser,
   resetPwdRewardUser,
-  getRewardApkVersionsList
+  getRewardApkVersionsList,
+  getRewardOptions
 } from "./reward";
 
 export {
@@ -61,9 +85,15 @@ export {
   getLoginLogsList,
   getOperationLogsList,
   getSystemLogsList,
+  getAccessLogsList,
+  getAccessLogDetail,
   getSystemLogsDetail,
   getAccessLogsFilterOptions,
-  exportAccessLogsList
+  deleteAccessLog,
+  batchDeleteAccessLogs,
+  exportAccessLogsList,
+  getTraceDetail,
+  getTaskLogsFilterOptions
 } from "./logs";
 
 export { getAiCallRecordPage, getAiCallRecordDetail } from "./ai";
@@ -83,6 +113,7 @@ export {
 } from "./notice";
 
 export {
+  initLoveUser,
   getLoveRecordPage,
   getLoveRecordByDate,
   getLoveRecordDetail,
@@ -95,10 +126,24 @@ export {
   deleteAnniversary,
   uploadMedia,
   deleteMedia,
+  reverseGeocode,
+  searchLocations,
   getLoveStatistics,
   getLoveCalendarStats,
   getMemoryGallery,
-  getLoveOptions
+  exportMemoriesPdf,
+  exportMemoriesImage,
+  reportLoveEvent,
+  getSyncBootstrap,
+  getSyncChanges,
+  pushSyncChanges,
+  getLoveOptions,
+  getCurrentRecordDraft,
+  saveRecordDraft,
+  deleteRecordDraft,
+  getCustomMoods,
+  addCustomMood,
+  deleteCustomMood
 } from "./love";
 
 export {

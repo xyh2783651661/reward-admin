@@ -42,6 +42,23 @@ const getNoticePanel = (options?: NoticePanelOptions) => {
   );
 };
 
+const markNotificationRead = (
+  id: string | number,
+  options?: NoticePanelOptions
+) => {
+  return http.request<ApiResult>("post", `/api/notifications/${id}/read`, {
+    headers: buildNoticeHeaders(options)
+  });
+};
+
+const markAllNotificationsRead = (options?: NoticePanelOptions) => {
+  return http.request<ApiResult<number>>(
+    "post",
+    "/api/notifications/read-all",
+    { headers: buildNoticeHeaders(options) }
+  );
+};
+
 // ==================== 公告 CRUD ====================
 
 /** 公告分页 */
@@ -130,5 +147,5 @@ export const getUnreadCount = () => {
   );
 };
 
-export { getNoticePanel };
+export { getNoticePanel, markNotificationRead, markAllNotificationsRead };
 export type { NoticeClientType, NoticePanelData, NoticePanelOptions };
