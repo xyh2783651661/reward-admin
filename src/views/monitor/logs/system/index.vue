@@ -59,6 +59,14 @@ const {
           />
         </el-select>
       </el-form-item>
+      <el-form-item label="TraceId" prop="traceId">
+        <el-input
+          v-model="form.traceId"
+          placeholder="请输入 TraceId"
+          clearable
+          class="w-[180px]!"
+        />
+      </el-form-item>
       <el-form-item label="请求接口" prop="uri">
         <el-input
           v-model="form.uri"
@@ -76,6 +84,96 @@ const {
         >
           <el-option
             v-for="item in filterOptions.methods"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="操作类型" prop="action">
+        <el-select
+          v-model="form.action"
+          placeholder="请选择操作类型"
+          clearable
+          filterable
+          class="w-[150px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.actions"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="资源类型" prop="resourceType">
+        <el-select
+          v-model="form.resourceType"
+          placeholder="请选择资源类型"
+          clearable
+          filterable
+          class="w-[150px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.resourceTypes"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="资源ID" prop="resourceId">
+        <el-input
+          v-model="form.resourceId"
+          placeholder="请输入资源ID"
+          clearable
+          class="w-[150px]!"
+        />
+      </el-form-item>
+      <el-form-item label="业务类型" prop="bizType">
+        <el-select
+          v-model="form.bizType"
+          placeholder="请选择业务类型"
+          clearable
+          filterable
+          class="w-[150px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.bizTypes"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="业务ID" prop="bizId">
+        <el-input
+          v-model="form.bizId"
+          placeholder="请输入业务ID"
+          clearable
+          class="w-[150px]!"
+        />
+      </el-form-item>
+      <el-form-item label="操作人ID" prop="operatorId">
+        <el-input
+          v-model="form.operatorId"
+          placeholder="请输入操作人ID"
+          clearable
+          class="w-[160px]!"
+        />
+      </el-form-item>
+      <el-form-item label="操作人" prop="operatorName">
+        <el-select
+          v-model="form.operatorName"
+          placeholder="请选择或输入操作人"
+          clearable
+          filterable
+          allow-create
+          default-first-option
+          class="w-[160px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.operatorNames"
             :key="item"
             :label="item"
             :value="item"

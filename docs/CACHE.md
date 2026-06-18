@@ -59,11 +59,11 @@
 
 **请求参数：**
 
-| 参数    | 类型   | 默认 | 说明                        |
-| ------- | ------ | ---- | --------------------------- |
-| current | number | 1    | 当前页                      |
-| size    | number | 20   | 每页数量                    |
-| pattern | string | \*   | key 匹配模式，如 `system:*` |
+| 参数    | 类型   | 默认 | 说明                                         |
+| ------- | ------ | ---- | -------------------------------------------- |
+| current | number | 1    | 当前页                                       |
+| size    | number | 20   | 每页数量                                     |
+| pattern | string | \*   | key 匹配模式，支持 `*` 和 `?`，如 `system:*` |
 
 **示例：**
 
@@ -98,6 +98,8 @@ GET /system/cache/keys?current=1&size=10&pattern=system:*
 | records[].ttl  | 剩余过期时间（秒），-1 表示永不过期         |
 | records[].type | 数据类型：string / hash / list / set / zset |
 | records[].size | 占用内存大小（字节）                        |
+
+`total` 表示当前 `pattern` 匹配到的 key 总数，不是全库 key 数。
 
 ---
 
@@ -177,7 +179,7 @@ GET /system/cache/keys?current=1&size=10&pattern=system:*
     "loadSuccessCount": 9988,
     "loadFailureCount": 12,
     "avgLoadTimeMs": 11.2,
-    "usedMemory": null,
+    "usedMemory": 28672,
     "maxMemory": null,
     "memoryUsageRate": null,
     "uptimeInSeconds": 86400
@@ -185,22 +187,22 @@ GET /system/cache/keys?current=1&size=10&pattern=system:*
 }
 ```
 
-| 字段             | 说明                             |
-| ---------------- | -------------------------------- |
-| cacheType        | 缓存类型：`local` / `redis`      |
-| keyCount         | 当前 key 数量                    |
-| requestCount     | 总请求次数                       |
-| hitCount         | 命中次数                         |
-| missCount        | 未命中次数                       |
-| hitRate          | 命中率（百分比）                 |
-| evictionCount    | 淘汰次数                         |
-| loadSuccessCount | 加载成功次数                     |
-| loadFailureCount | 加载失败次数                     |
-| avgLoadTimeMs    | 平均加载耗时（毫秒）             |
-| usedMemory       | 内存使用（字节），Redis 专用     |
-| maxMemory        | 最大内存（字节），Redis 专用     |
-| memoryUsageRate  | 内存使用率（百分比），Redis 专用 |
-| uptimeInSeconds  | 运行时间（秒）                   |
+| 字段             | 说明                                                |
+| ---------------- | --------------------------------------------------- |
+| cacheType        | 缓存类型：`local` / `redis`                         |
+| keyCount         | 当前 key 数量                                       |
+| requestCount     | 总请求次数                                          |
+| hitCount         | 命中次数                                            |
+| missCount        | 未命中次数                                          |
+| hitRate          | 命中率（百分比）                                    |
+| evictionCount    | 淘汰次数                                            |
+| loadSuccessCount | 加载成功次数                                        |
+| loadFailureCount | 加载失败次数                                        |
+| avgLoadTimeMs    | 平均加载耗时（毫秒）                                |
+| usedMemory       | 内存使用（字节）。Redis 来自 INFO，本地缓存为估算值 |
+| maxMemory        | 最大内存（字节），Redis 专用                        |
+| memoryUsageRate  | 内存使用率（百分比），Redis 专用                    |
+| uptimeInSeconds  | 运行时间（秒）                                      |
 
 **前端展示建议：**
 
@@ -244,27 +246,27 @@ GET /system/cache/stats/history?type=hitRate&duration=1h
         "hitRate": 98.1,
         "size": 1200,
         "requestCount": 5000,
-        "usedMemory": 0
+        "usedMemory": 28672
       },
       {
         "time": "10:01",
         "hitRate": 98.3,
         "size": 1215,
         "requestCount": 5200,
-        "usedMemory": 0
+        "usedMemory": 30720
       }
     ]
   }
 }
 ```
 
-| 字段                  | 说明                                       |
-| --------------------- | ------------------------------------------ |
-| points[].time         | 时间点（每分钟采集一次，最多保留 60 个点） |
-| points[].hitRate      | 命中率                                     |
-| points[].size         | key 数量                                   |
-| points[].requestCount | 请求次数                                   |
-| points[].usedMemory   | 内存使用（字节），Redis 专用               |
+| 字段                  | 说明                                                |
+| --------------------- | --------------------------------------------------- |
+| points[].time         | 时间点（每分钟采集一次，最多保留 60 个点）          |
+| points[].hitRate      | 命中率                                              |
+| points[].size         | key 数量                                            |
+| points[].requestCount | 请求次数                                            |
+| points[].usedMemory   | 内存使用（字节）。Redis 来自 INFO，本地缓存为估算值 |
 
 **前端展示建议：**
 
@@ -400,7 +402,7 @@ GET /system/cache/bigkeys?limit=5
 | keys[].sizeHuman | 可读的大小描述   |
 | keys[].type      | 数据类型         |
 
-> 注意：本地缓存（Caffeine）不支持精确的内存大小计算，返回空列表。
+> 注意：Redis 优先使用 `MEMORY USAGE` 返回真实内存占用，不可用时按类型降级估算；本地缓存（Caffeine）返回按 key/value 内容估算的大小，不是 JVM 精确对象占用。
 
 **前端展示建议：**
 
@@ -659,8 +661,9 @@ export const cacheApi = {
 ## 5. 联调注意事项
 
 1. 缓存类型由配置决定：`cache.type=local` 使用 Caffeine，`cache.type=redis` 使用 Redis
-2. 本地缓存（Caffeine）不支持：大 key 分析、Redis 运行信息
+2. 本地缓存（Caffeine）支持 key 大小估算和大 key 排序，但不支持 Redis 运行信息
 3. 趋势图数据每分钟采集一次，最多保留 60 个点（1 小时）
 4. 操作日志为内存存储，重启后清空
 5. 热点 key 统计需要在业务代码中调用 `recordAccess` 方法记录访问
-6. 清空缓存是危险操作，前端建议添加二次确认
+6. `/system/cache/keys` 和 `/system/cache/bigkeys` 在 Redis 下基于 SCAN 遍历，key 很多时有查询成本
+7. 清空缓存是危险操作，前端建议添加二次确认

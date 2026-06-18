@@ -1,14 +1,14 @@
-# System Config 前端联调文档
+# 系统配置
 
-本文档基于当前后端实际实现整理，供前端开发系统配置管理页面使用。
+> 通用约定见 [COMMON.md](COMMON.md)
 
-对应后端文件：
+本文档包含系统配置的增删改查接口和缓存管理接口。
 
-- [SystemConfigController.java](D:/Users/xyh/IdeaProjects/we-chat/src/main/java/org/xyh/modules/system/interfaces/controller/SystemConfigController.java)
+---
 
-## 1. 接口概览
+## 接口概览
 
-系统配置管理当前可用接口：
+### 系统配置管理
 
 | 场景                | 方法   | 路径                          |
 | ------------------- | ------ | ----------------------------- |
@@ -19,6 +19,10 @@
 | 新增配置            | POST   | `/system-configs/add`         |
 | 修改配置            | POST   | `/system-configs/update`      |
 | 删除配置            | DELETE | `/system-configs/{id}`        |
+
+### 缓存管理与监控
+
+> 缓存相关接口已独立为 [CACHE.md](CACHE.md)，包含缓存管理和缓存监控接口。
 
 推荐前端页面使用方式：
 
@@ -679,9 +683,21 @@ export const systemConfigApi = {
 ## 7. 联调注意事项
 
 1. 后台管理页详情查询，请优先使用 `GET /system-configs/detail/{id}`
-2. `GET /system-configs/{configKey}` 适合读取“当前生效配置”，不是后台详情接口
+2. `GET /system-configs/{configKey}` 适合读取”当前生效配置”，不是后台详情接口
 3. 修改 `configKey` 时，后端已做重复校验；前端仍建议在表单层做提示
 4. 新增、修改、删除后，建议刷新：
    - 当前列表
    - `GET /system-configs/options`
-5. 如果后续前端需要“批量删除 / 批量启停 / 配置历史”这类能力，当前后端还没有，需要再补
+5. 如果后续前端需要”批量删除 / 批量启停 / 配置历史”这类能力，当前后端还没有，需要再补
+
+---
+
+## 8. 联调注意事项
+
+1. 后台管理页详情查询，请优先使用 `GET /system-configs/detail/{id}`
+2. `GET /system-configs/{configKey}` 适合读取”当前生效配置”，不是后台详情接口
+3. 修改 `configKey` 时，后端已做重复校验；前端仍建议在表单层做提示
+4. 新增、修改、删除后，建议刷新：
+   - 当前列表
+   - `GET /system-configs/options`
+5. 如果后续前端需要”批量删除 / 批量启停 / 配置历史”这类能力，当前后端还没有，需要再补

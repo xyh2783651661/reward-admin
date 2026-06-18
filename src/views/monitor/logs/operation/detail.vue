@@ -4,36 +4,67 @@ import VueJsonPretty from "vue-json-pretty";
 import "vue-json-pretty/lib/styles.css";
 
 const props = defineProps<{
-  exception: string;
+  exception?: string;
+  detail?: string;
 }>();
+
+function parseJson(value?: string) {
+  if (!value) return null;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * 判断是否为合法 JSON 字符串
  */
 const isJson = computed(() => {
-  if (!props.exception) return false;
-  try {
-    JSON.parse(props.exception);
-    return true;
-  } catch {
-    return false;
-  }
+  return parseJson(props.exception) !== null;
 });
 
 /**
  * 解析后的 JSON 数据
  */
 const jsonData = computed(() => {
-  if (!isJson.value) return null;
-  return JSON.parse(props.exception);
+  return parseJson(props.exception);
 });
+
+const detailData = computed(() => parseJson(props.detail));
 </script>
 
 <template>
   <div class="exception-viewer">
+    <el-alert
+      v-if="detailData"
+      title="执行步骤详情"
+      type="info"
+      show-icon
+      :closable="false"
+      class="mb-3"
+    />
+    <vue-json-pretty
+      v-if="detailData"
+      :data="detailData"
+      :deep="4"
+      :showLength="true"
+      :showLine="true"
+      class="mb-4"
+    />
+
+    <el-alert
+      v-if="exception"
+      title="异常信息"
+      type="error"
+      show-icon
+      :closable="false"
+      class="mb-3"
+    />
     <!-- JSON 异常 -->
     <vue-json-pretty
-      v-if="isJson"
+      v-if="exception && isJson"
       :data="jsonData"
       :deep="4"
       :showLength="true"
@@ -41,9 +72,8 @@ const jsonData = computed(() => {
     />
 
     <!-- 普通文本异常 -->
-    <pre v-else class="plain-text"
-      >{{ exception }}
-    </pre>
+    <pre v-else-if="exception" class="plain-text">{{ exception }}</pre>
+    <el-empty v-else-if="!detailData" description="暂无执行详情" />
   </div>
 </template>
 

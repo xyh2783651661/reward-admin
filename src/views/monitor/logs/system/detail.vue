@@ -10,6 +10,13 @@ interface SystemLogDetailItem {
   osType?: string;
   browserType?: string;
   module?: string;
+  action?: string;
+  resourceType?: string;
+  resourceId?: string;
+  bizType?: string;
+  bizId?: string;
+  operatorId?: string;
+  operatorName?: string;
   createdTime?: string;
   method?: string;
   timeCost?: number;
@@ -70,6 +77,34 @@ const columns = [
   {
     label: "所属模块",
     prop: "module"
+  },
+  {
+    label: "操作类型",
+    prop: "action"
+  },
+  {
+    label: "资源类型",
+    prop: "resourceType"
+  },
+  {
+    label: "资源ID",
+    prop: "resourceId"
+  },
+  {
+    label: "业务类型",
+    prop: "bizType"
+  },
+  {
+    label: "业务ID",
+    prop: "bizId"
+  },
+  {
+    label: "操作人ID",
+    prop: "operatorId"
+  },
+  {
+    label: "操作人",
+    prop: "operatorName"
   },
   {
     label: "请求时间",

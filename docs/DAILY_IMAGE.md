@@ -20,8 +20,8 @@
 | source        | string         | 来源：`unsplash` / `local` / `upload` / `sync` |
 | remark        | string \| null | 备注                                           |
 | status        | byte           | 状态：`0`=已删除，`1`=正常                     |
-| createdTime   | string         | 创建时间，格式 `yyyyMMdd HHmmss`               |
-| updatedTime   | string         | 更新时间，格式 `yyyyMMdd HHmmss`               |
+| createdTime   | string         | 创建时间，格式 `yyyy-MM-dd HH:mm:ss`           |
+| updatedTime   | string         | 更新时间，格式 `yyyy-MM-dd HH:mm:ss`           |
 
 ---
 

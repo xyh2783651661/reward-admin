@@ -21,6 +21,7 @@ const {
   columns,
   dataList,
   pagination,
+  filterOptions,
   onSearch,
   resetForm,
   handleSizeChange,
@@ -38,12 +39,40 @@ const {
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
     >
       <el-form-item label="任务名" prop="taskName">
-        <el-input
+        <el-select
           v-model="form.taskName"
-          placeholder="请输入任务名"
+          placeholder="请选择或输入任务名"
           clearable
+          filterable
+          allow-create
+          default-first-option
           class="w-[170px]!"
-        />
+        >
+          <el-option
+            v-for="item in filterOptions.taskNames"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="调用方法" prop="classMethod">
+        <el-select
+          v-model="form.classMethod"
+          placeholder="请选择或输入调用方法"
+          clearable
+          filterable
+          allow-create
+          default-first-option
+          class="w-[260px]!"
+        >
+          <el-option
+            v-for="item in filterOptions.classMethods"
+            :key="item"
+            :label="item"
+            :value="item"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="success">
         <el-select
@@ -104,7 +133,7 @@ const {
         >
           <template #operation="{ row }">
             <el-button
-              v-if="!row.success"
+              v-if="!row.success || row.detail"
               class="reset-margin outline-hidden!"
               link
               type="primary"
@@ -112,7 +141,7 @@ const {
               :icon="useRenderIcon(AntDesignExceptionOutlined)"
               @click="onDetail(row)"
             >
-              异常详情
+              {{ row.success ? "执行详情" : "异常详情" }}
             </el-button>
           </template>
         </pure-table>

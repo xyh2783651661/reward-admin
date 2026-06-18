@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { getOperationLogsList } from "@/api/system";
+import { getOperationLogsList, getTaskLogsFilterOptions } from "@/api/system";
 import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
@@ -9,6 +9,7 @@ import Detail from "@/views/monitor/logs/operation/detail.vue";
 export function useOperationLog(_tableRef?: Ref) {
   const form = reactive({
     taskName: "",
+    classMethod: "",
     success: "",
     requestTime: ["", ""],
     current: 1,
@@ -17,6 +18,11 @@ export function useOperationLog(_tableRef?: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
   const { tagStyle } = usePublicHooks();
+
+  const filterOptions = ref({
+    taskNames: [] as string[],
+    classMethods: [] as string[]
+  });
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -79,7 +85,18 @@ export function useOperationLog(_tableRef?: Ref) {
     },
     {
       label: "调用方法",
-      prop: "classMethod"
+      prop: "classMethod",
+      minWidth: 260
+    },
+    {
+      label: "执行详情",
+      prop: "detail",
+      minWidth: 120,
+      cellRenderer: ({ row, props }) => (
+        <el-tag size={props.size} type={row.detail ? "primary" : "info"}>
+          {row.detail ? "有步骤" : "无"}
+        </el-tag>
+      )
     },
     {
       label: "操作",
@@ -90,12 +107,13 @@ export function useOperationLog(_tableRef?: Ref) {
 
   function onDetail(row) {
     addDialog({
-      title: "异常信息详情",
+      title: row.success ? "执行详情" : "异常信息详情",
       fullscreen: true,
       hideFooter: true,
       contentRenderer: () => Detail,
       props: {
-        exception: row.exception
+        exception: row.exception,
+        detail: row.detail
       }
     });
   }
@@ -124,6 +142,18 @@ export function useOperationLog(_tableRef?: Ref) {
     }, 500);
   }
 
+  async function loadFilterOptions() {
+    try {
+      const { data } = await getTaskLogsFilterOptions();
+      filterOptions.value = {
+        taskNames: data?.taskNames ?? [],
+        classMethods: data?.classMethods ?? []
+      };
+    } catch (error) {
+      console.error("加载任务日志筛选选项失败", error);
+    }
+  }
+
   const resetForm = formEl => {
     if (!formEl) return;
     formEl.resetFields();
@@ -132,6 +162,7 @@ export function useOperationLog(_tableRef?: Ref) {
 
   onMounted(() => {
     onSearch();
+    loadFilterOptions();
   });
 
   return {
@@ -140,6 +171,7 @@ export function useOperationLog(_tableRef?: Ref) {
     columns,
     dataList,
     pagination,
+    filterOptions,
     onSearch,
     resetForm,
     handleSizeChange,

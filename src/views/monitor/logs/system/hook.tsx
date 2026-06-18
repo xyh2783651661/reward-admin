@@ -14,8 +14,9 @@ import {
 import Info from "~icons/ri/question-line";
 import { usePublicHooks } from "@/views/system/hooks";
 
-export function useSystemLog(tableRef: Ref) {
+export function useSystemLog(_tableRef: Ref) {
   const form = reactive({
+    traceId: "",
     module: "",
     method: "",
     uri: "",
@@ -23,6 +24,13 @@ export function useSystemLog(tableRef: Ref) {
     browserType: "",
     description: "",
     success: "",
+    action: "",
+    resourceType: "",
+    resourceId: "",
+    bizType: "",
+    bizId: "",
+    operatorId: "",
+    operatorName: "",
     requestTime: ["", ""],
     current: 1,
     size: 10
@@ -36,6 +44,10 @@ export function useSystemLog(tableRef: Ref) {
   const filterOptions = ref({
     modules: [] as string[],
     methods: [] as string[],
+    actions: [] as string[],
+    resourceTypes: [] as string[],
+    bizTypes: [] as string[],
+    operatorNames: [] as string[],
     ipLocations: [] as string[],
     browserTypes: [] as string[]
   });
@@ -57,6 +69,11 @@ export function useSystemLog(tableRef: Ref) {
       label: "所属模块",
       prop: "module",
       minWidth: 100
+    },
+    {
+      label: "TraceId",
+      prop: "traceId",
+      minWidth: 180
     },
     {
       headerRenderer: () => (
@@ -95,6 +112,36 @@ export function useSystemLog(tableRef: Ref) {
       label: "请求描述",
       prop: "description",
       minWidth: 140
+    },
+    {
+      label: "操作类型",
+      prop: "action",
+      minWidth: 120
+    },
+    {
+      label: "资源类型",
+      prop: "resourceType",
+      minWidth: 120
+    },
+    {
+      label: "资源ID",
+      prop: "resourceId",
+      minWidth: 120
+    },
+    {
+      label: "业务类型",
+      prop: "bizType",
+      minWidth: 120
+    },
+    {
+      label: "业务ID",
+      prop: "bizId",
+      minWidth: 120
+    },
+    {
+      label: "操作人",
+      prop: "operatorName",
+      minWidth: 120
     },
     {
       label: "请求方法",
@@ -194,11 +241,12 @@ export function useSystemLog(tableRef: Ref) {
   };
 
   /** 拷贝请求接口，表格单元格被双击时触发 */
-  function handleCellDblclick({ url }, { property }) {
-    if (property !== "url") return;
-    update(url);
+  function handleCellDblclick(row, { property }) {
+    if (property !== "uri") return;
+    const uri = row?.uri ?? "";
+    update(uri);
     copied.value
-      ? message(`${url} 已拷贝`, { type: "success" })
+      ? message(`${uri} 已拷贝`, { type: "success" })
       : message("拷贝失败", { type: "warning" });
   }
 
@@ -236,6 +284,10 @@ export function useSystemLog(tableRef: Ref) {
       filterOptions.value = {
         modules: data?.modules ?? [],
         methods: data?.methods ?? [],
+        actions: data?.actions ?? [],
+        resourceTypes: data?.resourceTypes ?? [],
+        bizTypes: data?.bizTypes ?? [],
+        operatorNames: data?.operatorNames ?? [],
         ipLocations: data?.ipLocations ?? [],
         browserTypes: data?.browserTypes ?? []
       };

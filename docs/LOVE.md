@@ -380,6 +380,13 @@ GET /media/{id}/view
 
 响应：文件二进制流，`Content-Disposition: inline`。
 
+支持 HTTP 缓存：
+
+- `Cache-Control: public, max-age=604800`（7 天）
+- `ETag` 基于文件修改时间和大小
+- `Last-Modified` 文件最后修改时间
+- 浏览器会自动处理 304 Not Modified
+
 ### 6.3 查看缩略图
 
 ```text
@@ -387,6 +394,8 @@ GET /media/{id}/thumbnail
 ```
 
 响应：缩略图二进制流，`Content-Disposition: inline`。如果缩略图不存在，后端会回退返回原图。
+
+支持 HTTP 缓存（同 6.2）。
 
 ## 7. 位置接口
 

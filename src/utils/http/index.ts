@@ -15,7 +15,7 @@ import { useUserStoreHook } from "@/store/modules/user";
 import { generateSignature } from "@/utils/http/sign";
 import { storageLocal } from "@pureadmin/utils";
 
-const appId = "LOVE_RECORD_WEB";
+const appId = "wep-client";
 const clientType = "web";
 const clientVersion = __APP_INFO__?.pkg?.version ?? "1.0";
 

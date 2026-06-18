@@ -45,6 +45,10 @@ export const getAccessLogsFilterOptions = () => {
     ApiResult<{
       modules: string[];
       methods: string[];
+      actions: string[];
+      resourceTypes: string[];
+      bizTypes: string[];
+      operatorNames: string[];
       ipLocations: string[];
       browserTypes: string[];
     }>
@@ -80,8 +84,10 @@ export const getTraceDetail = (traceId: string | number) => {
 
 /** 获取任务日志筛选选项 */
 export const getTaskLogsFilterOptions = () => {
-  return http.request<ApiResult<Record<string, string[]>>>(
-    "get",
-    "/api/task-logs/filter-options"
-  );
+  return http.request<
+    ApiResult<{
+      taskNames: string[];
+      classMethods: string[];
+    }>
+  >("get", "/api/task-logs/filter-options");
 };

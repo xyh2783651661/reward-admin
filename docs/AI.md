@@ -1,15 +1,12 @@
-# AI Call Record 接口文档
+# AI 调用记录
 
-本文档基于当前后端实际实现整理，供后台前端对接 `ai_call_record` 查看类接口使用。
+> 通用约定见 [COMMON.md](COMMON.md)
 
-对应后端文件：
+本文档包含 AI 调用记录的查询接口。
 
-- [AiCallRecordController.java](D:/Users/xyh/IdeaProjects/we-chat/src/main/java/org/xyh/modules/ai/interfaces/controller/AiCallRecordController.java)
-- [AiCallRecordApplicationService.java](D:/Users/xyh/IdeaProjects/we-chat/src/main/java/org/xyh/modules/ai/application/service/AiCallRecordApplicationService.java)
-- [AiCallRecordPageReq.java](D:/Users/xyh/IdeaProjects/we-chat/src/main/java/org/xyh/modules/ai/interfaces/dto/AiCallRecordPageReq.java)
-- [AiCallRecordPageVo.java](D:/Users/xyh/IdeaProjects/we-chat/src/main/java/org/xyh/modules/ai/interfaces/vo/AiCallRecordPageVo.java)
+---
 
-## 1. 接口概览
+## 接口概览
 
 | 场景                 | 方法 | 路径                    |
 | -------------------- | ---- | ----------------------- |

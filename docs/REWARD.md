@@ -114,53 +114,28 @@
 | file | File   | 是   | 头像文件 |
 | id   | number | 是   | 用户 ID  |
 
-### GET /reward/generate-apk-link — 生成 APK 下载链接
-
-**安全：** @Encrypted
-
-**响应：**
-
-```json
-{
-  "code": 200,
-  "data": {
-    "url": "/reward/download-apk?expire=1715702700&sign=xxx",
-    "expire": "1715702700",
-    "sign": "xxx"
-  }
-}
-```
-
-### GET /reward/download-apk — 下载 APK
-
-**安全：** @RateLimit（60秒内最多5次）
-
-| 参数   | 类型   | 必填 | 说明                 |
-| ------ | ------ | ---- | -------------------- |
-| expire | number | 是   | 链接过期时间戳（秒） |
-| sign   | string | 是   | HMAC 签名            |
-
 ---
 
 ## 奖励计算 (APK 端)
 
 APK 端接口与 Web 端功能相同，路径前缀为 `/reward-apk`。
 
-| 方法   | 路径                                  | 安全          | 说明           |
-| ------ | ------------------------------------- | ------------- | -------------- |
-| POST   | `/reward-apk/calculate`               | @Encrypted    | 计算奖励       |
-| GET    | `/reward-apk/result`                  | @Encrypted    | 获取结果       |
-| GET    | `/reward-apk/subjects`                | @Encrypted    | 科目列表       |
-| GET    | `/reward-apk/profile`                 | @Encrypted    | 用户信息       |
-| POST   | `/reward-apk/profile`                 | @Encrypted    | 更新用户信息   |
-| POST   | `/reward-apk/avatar`                  | @Encrypted    | 上传头像       |
-| DELETE | `/reward-apk/{id}`                    | @Encrypted    | 删除结果       |
-| GET    | `/reward-apk/download/{id}`           | @Encrypted    | 下载 PDF       |
-| GET    | `/reward-apk/download/rule`           | —             | 下载规则 PDF   |
-| GET    | `/reward-apk/last-version`            | @Encrypted    | 最新 APK 版本  |
-| GET    | `/reward-apk/android/download-latest` | @RateLimit    | 下载最新 APK   |
-| POST   | `/reward-apk/versions-page`           | —             | 版本分页       |
-| POST   | `/reward-apk/version-apk`             | @GithubCiAuth | 持久化版本信息 |
+| 方法   | 路径                                  | 安全          | 说明                                      |
+| ------ | ------------------------------------- | ------------- | ----------------------------------------- |
+| POST   | `/reward-apk/calculate`               | @Encrypted    | 计算奖励                                  |
+| GET    | `/reward-apk/result`                  | @Encrypted    | 获取结果                                  |
+| GET    | `/reward-apk/subjects`                | @Encrypted    | 科目列表                                  |
+| GET    | `/reward-apk/profile`                 | @Encrypted    | 用户信息                                  |
+| POST   | `/reward-apk/profile`                 | @Encrypted    | 更新用户信息                              |
+| POST   | `/reward-apk/avatar`                  | @Encrypted    | 上传头像                                  |
+| DELETE | `/reward-apk/{id}`                    | @Encrypted    | 删除结果                                  |
+| GET    | `/reward-apk/download/{id}`           | @Encrypted    | 下载 PDF                                  |
+| GET    | `/reward-apk/download/rule`           | —             | 下载规则 PDF                              |
+| GET    | `/reward-apk/last-version`            | @Encrypted    | 最新 APK 版本                             |
+| GET    | `/reward-apk/web/download-latest`     | @RateLimit    | Web 端下载最新 APK（二维码扫描/点击下载） |
+| GET    | `/reward-apk/android/download-latest` | @RateLimit    | Android 端下载最新 APK                    |
+| POST   | `/reward-apk/versions-page`           | —             | 版本分页                                  |
+| POST   | `/reward-apk/version-apk`             | @GithubCiAuth | 持久化版本信息                            |
 
 ### POST /reward-apk/profile — 更新用户信息
 
