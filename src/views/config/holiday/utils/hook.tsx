@@ -90,6 +90,7 @@ function normalizeFormOptions(
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getOptionLabel<T>(
   options: Array<OptionItem<T>>,
   value: T | string | number | ""
@@ -128,6 +129,17 @@ function buildSubmitPayload(formInline: SysHolidayConfig) {
 
   if (!payload.holidayType) {
     throw new Error("节假日类型为必选项");
+  }
+
+  const hasHolidayDate = !!payload.holidayDate;
+  const hasLunarDate =
+    payload.lunarMonth !== null &&
+    payload.lunarMonth !== undefined &&
+    payload.lunarDay !== null &&
+    payload.lunarDay !== undefined;
+
+  if (!hasHolidayDate && !hasLunarDate) {
+    throw new Error("公历日期和农历日期至少填写一项");
   }
 
   return payload;
