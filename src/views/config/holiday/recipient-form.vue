@@ -58,16 +58,20 @@ defineExpose({ getRecipientIds });
 
 <style lang="scss" scoped>
 .recipient-transfer {
+  display: flex;
+  justify-content: center;
+
   :deep(.el-transfer-panel) {
-    width: 280px;
+    flex: 1;
+    max-width: 340px;
   }
 
   :deep(.el-transfer-panel__body) {
-    height: 300px;
+    height: 320px;
   }
 
   :deep(.el-transfer-panel__list) {
-    height: 250px;
+    height: 270px;
   }
 }
 </style>

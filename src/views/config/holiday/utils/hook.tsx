@@ -464,7 +464,7 @@ export function useHolidayConfig() {
         recipientOptions: recipientOptions.value,
         selectedRecipientIds: selectedIds
       },
-      width: "680px",
+      width: "800px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
