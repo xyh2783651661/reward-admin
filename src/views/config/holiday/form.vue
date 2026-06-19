@@ -149,7 +149,7 @@ defineExpose({ getRef, getRecipientIds });
       />
     </el-form-item>
 
-    <el-form-item label="指定收件人">
+    <el-form-item label="指定收件人" class="transfer-form-item">
       <div class="w-full">
         <el-transfer
           v-model="recipientIds"
@@ -158,7 +158,7 @@ defineExpose({ getRef, getRecipientIds });
           :button-texts="['移到左边', '移到右边']"
           filterable
           filter-placeholder="请输入姓名或邮箱"
-          class="w-full!"
+          class="recipient-transfer"
           @change="handleRecipientChange"
         />
         <div class="mt-2 text-sm text-gray-500">
@@ -173,3 +173,26 @@ defineExpose({ getRef, getRecipientIds });
     </el-form-item>
   </el-form>
 </template>
+
+<style lang="scss" scoped>
+.transfer-form-item {
+  :deep(.el-form-item__content) {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.recipient-transfer {
+  :deep(.el-transfer-panel) {
+    width: 280px;
+  }
+
+  :deep(.el-transfer-panel__body) {
+    height: 260px;
+  }
+
+  :deep(.el-transfer-panel__list) {
+    height: 210px;
+  }
+}
+</style>

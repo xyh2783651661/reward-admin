@@ -115,10 +115,10 @@ function buildSubmitPayload(formInline: SysHolidayConfig) {
     payload.id = formInline.id;
   }
 
-  if (formInline.holidayDate) {
-    payload.holidayDate = formInline.holidayDate;
-  }
+  // holidayDate: 有值传值，无值传 null（告知后端清空）
+  payload.holidayDate = formInline.holidayDate || null;
 
+  // lunarMonth/lunarDay: 有值传值，无值不传（保持原值）
   if (formInline.lunarMonth !== null && formInline.lunarMonth !== undefined) {
     payload.lunarMonth = formInline.lunarMonth;
   }
@@ -389,7 +389,7 @@ export function useHolidayConfig() {
         recipientOptions: recipientOptions.value,
         selectedRecipientIds: selectedRecipientIds.value
       },
-      width: "780px",
+      width: "900px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
