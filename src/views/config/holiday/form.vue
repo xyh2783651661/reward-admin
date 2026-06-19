@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
 
@@ -18,17 +18,41 @@ const props = withDefaults(defineProps<FormProps>(), {
   formOptions: () => ({
     holidayTypes: [],
     statusOptions: []
-  })
+  }),
+  recipientOptions: () => [],
+  selectedRecipientIds: () => []
 });
+
+const emit = defineEmits<{
+  (e: "update:selectedRecipientIds", value: number[]): void;
+}>();
 
 const ruleFormRef = ref();
 const newFormInline = ref(props.formInline);
+const recipientIds = ref<number[]>([...props.selectedRecipientIds]);
+
+const transferData = computed(() => {
+  return props.recipientOptions.map(item => ({
+    key: item.id,
+    label: `${item.name} (${item.email})`,
+    disabled: false
+  }));
+});
+
+function handleRecipientChange(value: number[]) {
+  recipientIds.value = value;
+  emit("update:selectedRecipientIds", value);
+}
 
 function getRef() {
   return ruleFormRef.value;
 }
 
-defineExpose({ getRef });
+function getRecipientIds() {
+  return recipientIds.value;
+}
+
+defineExpose({ getRef, getRecipientIds });
 </script>
 
 <template>
@@ -123,6 +147,29 @@ defineExpose({ getRef });
         show-word-limit
         type="textarea"
       />
+    </el-form-item>
+
+    <el-form-item label="指定收件人">
+      <div class="w-full">
+        <el-transfer
+          v-model="recipientIds"
+          :data="transferData"
+          :titles="['可选收件人', '已选收件人']"
+          :button-texts="['移到左边', '移到右边']"
+          filterable
+          filter-placeholder="请输入姓名或邮箱"
+          class="w-full!"
+          @change="handleRecipientChange"
+        />
+        <div class="mt-2 text-sm text-gray-500">
+          <template v-if="recipientIds.length === 0">
+            未指定收件人，将发送给所有用户
+          </template>
+          <template v-else>
+            仅发送给 {{ recipientIds.length }} 位指定收件人
+          </template>
+        </div>
+      </div>
     </el-form-item>
   </el-form>
 </template>

@@ -11,15 +11,19 @@ import {
   getHolidayConfigOptions,
   addHolidayConfig,
   updateHolidayConfig,
-  deleteHolidayConfig
+  deleteHolidayConfig,
+  getHolidayRecipientList,
+  updateHolidayRecipient
 } from "@/api/system";
+import { getMailRecipientList } from "@/api/mail";
 import { computed, h, reactive, ref, toRaw } from "vue";
 import type {
   ToggleValue,
   OptionItem,
   SysHolidayConfig,
   SysHolidayConfigPageReq,
-  SysHolidayOptions
+  SysHolidayOptions,
+  RecipientOption
 } from "./types";
 
 const DEFAULT_FORM_INLINE: SysHolidayConfig = {
@@ -171,6 +175,9 @@ export function useHolidayConfig() {
     background: true
   });
 
+  const recipientOptions = ref<RecipientOption[]>([]);
+  const selectedRecipientIds = ref<number[]>([]);
+
   const holidayTypeLabelMap = computed(() => {
     return new Map(
       formOptions.value.holidayTypes.map(item => [item.value, item.label])
@@ -288,6 +295,33 @@ export function useHolidayConfig() {
     }
   }
 
+  async function loadRecipientOptions() {
+    try {
+      const { data } = await getMailRecipientList({ current: 1, size: 1000 });
+      recipientOptions.value = (data?.records ?? []).map(item => ({
+        id: item.id,
+        name: item.name,
+        email: item.email
+      }));
+    } catch (error) {
+      message(getErrorMessage(error, "加载收件人列表失败"), {
+        type: "error"
+      });
+    }
+  }
+
+  async function loadHolidayRecipients(holidayId: number) {
+    try {
+      const { data } = await getHolidayRecipientList(holidayId);
+      selectedRecipientIds.value = (data ?? []).map(item => item.recipientId);
+    } catch (error) {
+      selectedRecipientIds.value = [];
+      message(getErrorMessage(error, "加载收件人关联失败"), {
+        type: "error"
+      });
+    }
+  }
+
   async function onSearch() {
     loading.value = true;
 
@@ -322,7 +356,10 @@ export function useHolidayConfig() {
     let currentRow = cloneDefaultFormInline();
 
     try {
-      const tasks: Array<Promise<unknown>> = [loadOptions()];
+      const tasks: Array<Promise<unknown>> = [
+        loadOptions(),
+        loadRecipientOptions()
+      ];
 
       if (isEdit && row?.id !== undefined) {
         tasks.push(
@@ -330,11 +367,12 @@ export function useHolidayConfig() {
             result => result.data
           )
         );
+        tasks.push(loadHolidayRecipients(row.id));
       }
 
       const result = await Promise.all(tasks);
       currentRow = normalizeFormInline(
-        isEdit ? (result[1] as SysHolidayConfig) : row
+        isEdit ? (result[2] as SysHolidayConfig) : row
       );
     } catch (error) {
       message(getErrorMessage(error, `${title}数据加载失败`), {
@@ -347,9 +385,11 @@ export function useHolidayConfig() {
       title: `${title}节假日配置`,
       props: {
         formInline: currentRow,
-        formOptions: formOptions.value
+        formOptions: formOptions.value,
+        recipientOptions: recipientOptions.value,
+        selectedRecipientIds: selectedRecipientIds.value
       },
-      width: "680px",
+      width: "780px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -359,11 +399,14 @@ export function useHolidayConfig() {
         h(editForm, {
           ref: formRef,
           formInline: currentRow,
-          formOptions: formOptions.value
+          formOptions: formOptions.value,
+          recipientOptions: recipientOptions.value,
+          selectedRecipientIds: selectedRecipientIds.value
         }),
       beforeSure: async (done, { options, closeLoading }) => {
         const FormRef = formRef.value?.getRef();
         const curData = options.props.formInline as SysHolidayConfig;
+        const curRecipientIds = formRef.value?.getRecipientIds() ?? [];
 
         if (!FormRef) {
           closeLoading();
@@ -395,6 +438,15 @@ export function useHolidayConfig() {
 
             if (result.code !== 200) {
               throw new Error(result.msg || `${title}失败`);
+            }
+
+            // 更新收件人关联
+            const holidayId = result.data?.id;
+            if (holidayId) {
+              await updateHolidayRecipient({
+                holidayId,
+                recipientIds: curRecipientIds ?? []
+              });
             }
 
             message(`${title}节假日配置成功`, {
@@ -516,6 +568,8 @@ export function useHolidayConfig() {
     columns,
     dataList,
     pagination,
+    recipientOptions,
+    selectedRecipientIds,
     onSearch,
     resetForm,
     openDialog,

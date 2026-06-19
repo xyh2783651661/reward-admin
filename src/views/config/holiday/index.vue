@@ -21,6 +21,8 @@ const {
   columns,
   dataList,
   pagination,
+  recipientOptions,
+  selectedRecipientIds,
   onSearch,
   resetForm,
   openDialog,

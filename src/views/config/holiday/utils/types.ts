@@ -38,9 +38,33 @@ interface SysHolidayOptions {
   statusOptions: Array<OptionItem<ToggleValue>>;
 }
 
+interface SysHolidayRecipient {
+  id: number;
+  holidayId: number;
+  recipientId: number;
+  remark: string;
+  createdTime?: string;
+  updatedTime?: string;
+  deleted?: number;
+}
+
+interface SysHolidayRecipientReq {
+  holidayId: number;
+  recipientIds?: number[];
+  remark?: string;
+}
+
+interface RecipientOption {
+  id: number;
+  name: string;
+  email: string;
+}
+
 interface FormProps {
   formInline: SysHolidayConfig;
   formOptions: SysHolidayOptions;
+  recipientOptions?: RecipientOption[];
+  selectedRecipientIds?: number[];
 }
 
 export type {
@@ -49,5 +73,8 @@ export type {
   OptionItem,
   SysHolidayConfig,
   SysHolidayConfigPageReq,
-  SysHolidayOptions
+  SysHolidayOptions,
+  SysHolidayRecipient,
+  SysHolidayRecipientReq,
+  RecipientOption
 };

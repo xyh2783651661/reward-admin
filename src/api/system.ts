@@ -152,7 +152,9 @@ export {
   getHolidayConfigOptions,
   addHolidayConfig,
   updateHolidayConfig,
-  deleteHolidayConfig
+  deleteHolidayConfig,
+  getHolidayRecipientList,
+  updateHolidayRecipient
 } from "./holiday";
 
 export {

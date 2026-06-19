@@ -84,3 +84,47 @@ export const deleteHolidayConfig = <T = SysHolidayConfig>(
 ) => {
   return http.request<ApiResult<T>>("delete", `/api/sys-holidays/${id}`);
 };
+
+/** 节假日收件人关联项 */
+export interface SysHolidayRecipient {
+  id: number;
+  holidayId: number;
+  recipientId: number;
+  remark: string;
+  createdTime: string;
+  updatedTime: string;
+  deleted: number;
+}
+
+/** 节假日收件人关联请求参数 */
+export interface SysHolidayRecipientReq {
+  holidayId: number;
+  recipientIds?: number[];
+  remark?: string;
+}
+
+/** 查询节假日收件人关联列表 */
+export const getHolidayRecipientList = <T = SysHolidayRecipient>(
+  holidayId: number
+) => {
+  return http.request<ApiResult<T[]>>(
+    "post",
+    "/api/sys-holiday-recipients/list",
+    {
+      data: { holidayId }
+    }
+  );
+};
+
+/** 批量更新节假日收件人关联 */
+export const updateHolidayRecipient = <T = null>(
+  data?: SysHolidayRecipientReq
+) => {
+  return http.request<ApiResult<T>>(
+    "post",
+    "/api/sys-holiday-recipients/update",
+    {
+      data
+    }
+  );
+};
