@@ -76,6 +76,29 @@ export const batchDisableProviders = <T = Record<string, any>>(
   );
 };
 
+/** 查询供应商余额 */
+export const queryProviderBalance = <T = Record<string, any>>(
+  provider: string
+) => {
+  return http.request<ApiResult<T>>(
+    "post",
+    `/api/ai/provider-health/${provider}/balance`
+  );
+};
+
+/** 批量查询余额 */
+export const batchQueryBalance = <T = Record<string, any>>(
+  providers: string[]
+) => {
+  return http.request<ApiResult<T>>(
+    "post",
+    "/api/ai/provider-health/batch/balance",
+    {
+      data: { providers }
+    }
+  );
+};
+
 // ==================== 检测流水 ====================
 
 /** 检测流水分页查询 */

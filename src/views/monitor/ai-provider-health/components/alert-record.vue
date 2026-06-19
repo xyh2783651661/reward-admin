@@ -23,6 +23,8 @@ const {
   dropdownOptions,
   onSearch,
   onExport,
+  onResolve,
+  onBatchResolve,
   resetForm,
   handleSizeChange,
   handleCurrentChange

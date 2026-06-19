@@ -8,20 +8,22 @@
   - [3.1 供应商健康分页查询](#31-供应商健康分页查询)
   - [3.2 供应商健康详情](#32-供应商健康详情)
   - [3.3 手动探测供应商](#33-手动探测供应商)
-  - [3.4 启用供应商健康路由](#34-启用供应商健康路由)
-  - [3.5 禁用供应商健康路由](#35-禁用供应商健康路由)
-  - [3.6 检测流水分页查询](#36-检测流水分页查询)
-  - [3.7 告警记录分页查询](#37-告警记录分页查询)
-  - [3.8 统计概览](#38-统计概览)
-  - [3.9 趋势统计](#39-趋势统计)
-  - [3.10 供应商列表（下拉框）](#310-供应商列表下拉框)
-  - [3.11 所有下拉选项](#311-所有下拉选项)
-  - [3.12 批量启用](#312-批量启用)
-  - [3.13 批量禁用](#313-批量禁用)
-  - [3.14 解决告警](#314-解决告警)
-  - [3.15 批量解决告警](#315-批量解决告警)
-  - [3.16 导出检测流水](#316-导出检测流水)
-  - [3.17 导出告警记录](#317-导出告警记录)
+  - [3.4 查询供应商余额](#34-查询供应商余额)
+  - [3.5 启用供应商健康路由](#35-启用供应商健康路由)
+  - [3.6 禁用供应商健康路由](#36-禁用供应商健康路由)
+  - [3.7 检测流水分页查询](#37-检测流水分页查询)
+  - [3.8 告警记录分页查询](#38-告警记录分页查询)
+  - [3.9 统计概览](#39-统计概览)
+  - [3.10 趋势统计](#310-趋势统计)
+  - [3.11 供应商列表（下拉框）](#311-供应商列表下拉框)
+  - [3.12 所有下拉选项](#312-所有下拉选项)
+  - [3.13 批量启用](#313-批量启用)
+  - [3.14 批量禁用](#314-批量禁用)
+  - [3.15 批量查询余额](#315-批量查询余额)
+  - [3.16 解决告警](#316-解决告警)
+  - [3.17 批量解决告警](#317-批量解决告警)
+  - [3.18 导出检测流水](#318-导出检测流水)
+  - [3.19 导出告警记录](#319-导出告警记录)
 - [4. 枚举值说明](#4-枚举值说明)
 - [5. 页面设计建议](#5-页面设计建议)
 
@@ -137,6 +139,10 @@ AI 供应商健康管理系统用于监控各个 AI 服务提供商（如 DeepSe
 }
 ```
 
+**余额字段来源：** `balanceAmount`、`balanceCurrency`、`quotaRemaining` 是供应商状态列表已有字段，前端页面展示余额时仍以本接口为准。后端定时心跳任务 `aiProviderHealthCheckTask` 会在余额查询开关开启且供应商凭证已配置时自动刷新这些字段。
+
+**推荐刷新方式：** 页面初始化和普通刷新只调用本分页接口；点击“查余额”或“批量查余额”后，再重新调用本分页接口刷新表格数据。
+
 ---
 
 ### 3.2 供应商健康详情
@@ -182,7 +188,31 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.4 启用供应商健康路由
+### 3.4 查询供应商余额
+
+**接口地址：** `POST /ai/provider-health/{provider}/balance`
+
+**接口描述：** 手动触发指定供应商余额查询，写入当前健康状态表和检测流水表，并返回最新供应商健康状态。
+
+**路径参数：**
+
+| 参数     | 类型   | 必填 | 说明       |
+| -------- | ------ | ---- | ---------- |
+| provider | String | 是   | 供应商标识 |
+
+**响应数据：** 同 3.1 的单条记录格式，重点刷新 `balanceAmount`、`balanceCurrency`、`quotaRemaining`。
+
+**注意事项：**
+
+- 本接口用于“立即触发一次余额查询并写库”，不是供应商状态列表的替代接口。
+- 查询成功后建议重新调用 `POST /ai/provider-health/page`，用列表接口返回的 `balanceAmount`、`balanceCurrency`、`quotaRemaining` 展示最新余额。
+- 默认已支持 DeepSeek 的余额接口。
+- 通义千问/阿里云、豆包/火山引擎、混元/腾讯云需要先配置云账号 AK/SK；智谱和讯飞星火暂无通用公开余额接口。
+- 如果余额接口返回账户不可用，会记录 `BALANCE_QUERY` 失败流水，并将健康状态置为 `SUSPENDED`。
+
+---
+
+### 3.5 启用供应商健康路由
 
 **接口地址：** `POST /ai/provider-health/{provider}/enable`
 
@@ -203,7 +233,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.5 禁用供应商健康路由
+### 3.6 禁用供应商健康路由
 
 **接口地址：** `POST /ai/provider-health/{provider}/disable`
 
@@ -224,7 +254,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.6 检测流水分页查询
+### 3.7 检测流水分页查询
 
 **接口地址：** `POST /ai/provider-health/check-record/page`
 
@@ -279,7 +309,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.7 告警记录分页查询
+### 3.8 告警记录分页查询
 
 **接口地址：** `POST /ai/provider-health/alert-record/page`
 
@@ -333,7 +363,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.8 统计概览
+### 3.9 统计概览
 
 **接口地址：** `GET /ai/provider-health/stats/overview`
 
@@ -362,7 +392,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.9 趋势统计
+### 3.10 趋势统计
 
 **接口地址：** `POST /ai/provider-health/stats/trend`
 
@@ -407,7 +437,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.10 供应商列表（下拉框）
+### 3.11 供应商列表（下拉框）
 
 **接口地址：** `GET /ai/provider-health/providers`
 
@@ -448,7 +478,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.11 所有下拉选项
+### 3.12 所有下拉选项
 
 **接口地址：** `GET /ai/provider-health/dropdown-options`
 
@@ -524,7 +554,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.12 批量启用
+### 3.13 批量启用
 
 **接口地址：** `POST /ai/provider-health/batch/enable`
 
@@ -558,7 +588,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.13 批量禁用
+### 3.14 批量禁用
 
 **接口地址：** `POST /ai/provider-health/batch/disable`
 
@@ -576,7 +606,29 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.14 解决告警
+### 3.15 批量查询余额
+
+**接口地址：** `POST /ai/provider-health/batch/balance`
+
+**接口描述：** 批量触发多个 AI 供应商余额查询，并返回刷新后的供应商健康状态列表。
+
+**请求参数（Body）：**
+
+```json
+{
+  "providers": ["DEEP_SEEK", "QIAN_WEN"]
+}
+```
+
+**响应数据：** 返回查询后的供应商健康状态列表。
+
+**注意事项：** 批量查询会跳过未配置余额接口的供应商；单个查询未配置时会返回业务错误。批量接口返回的是刷新后的状态列表，但页面仍建议统一重新调用 `POST /ai/provider-health/page`，避免分页、筛选和排序状态与当前列表不一致。
+
+**当前可配置供应商：** DeepSeek 使用模型 API Key；通义千问/阿里云、豆包/火山引擎、混元/腾讯云使用云账号 AK/SK 签名查询；智谱和讯飞星火暂无通用公开余额接口，保留通用配置入口。
+
+---
+
+### 3.16 解决告警
 
 **接口地址：** `POST /ai/provider-health/alert-record/{id}/resolve`
 
@@ -615,7 +667,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.15 批量解决告警
+### 3.17 批量解决告警
 
 **接口地址：** `POST /ai/provider-health/alert-record/batch-resolve`
 
@@ -641,7 +693,7 @@ GET /ai/provider-health/deepseek
 
 ---
 
-### 3.16 导出检测流水
+### 3.18 导出检测流水
 
 **接口地址：** `POST /ai/provider-health/check-record/export`
 
@@ -680,7 +732,7 @@ link.click();
 
 ---
 
-### 3.17 导出告警记录
+### 3.19 导出告警记录
 
 **接口地址：** `POST /ai/provider-health/alert-record/export`
 
@@ -816,8 +868,17 @@ link.click();
 **操作按钮：**
 
 - **探测**：调用 `/probe` 接口，显示 Loading，完成后刷新行数据
+- **查余额**：调用 `/balance` 接口，刷新余额、币种、剩余配额和余额检测流水
 - **启用/禁用**：调用 `/enable` 或 `/disable` 接口
 - **详情**：展开详情抽屉或跳转详情页
+
+**余额接入建议：**
+
+- 页面列表只依赖 `POST /ai/provider-health/page` 的 `balanceAmount`、`balanceCurrency`、`quotaRemaining` 字段展示余额。
+- 后端 `aiProviderHealthCheckTask` 会自动随心跳查询已配置供应商余额，前端不需要额外轮询余额接口。
+- “查余额”按钮只做手动刷新：调用 `POST /ai/provider-health/{provider}/balance`，成功后重新拉取分页列表。
+- “批量查余额”适合工具栏操作：调用 `POST /ai/provider-health/batch/balance`，成功后重新拉取分页列表。
+- 未配置凭证时，批量查询会跳过；单个查询返回业务错误，前端直接提示即可。
 
 ### 5.3 检测流水页面
 

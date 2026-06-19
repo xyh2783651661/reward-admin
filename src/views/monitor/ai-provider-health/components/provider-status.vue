@@ -23,6 +23,8 @@ const {
   onToggleEnable,
   onBatchEnable,
   onBatchDisable,
+  onQueryBalance,
+  onBatchQueryBalance,
   resetForm,
   handleSizeChange,
   handleCurrentChange
@@ -85,6 +87,13 @@ onMounted(() => {
         >
           批量禁用
         </el-button>
+        <el-button
+          type="warning"
+          :icon="useRenderIcon('ep:wallet')"
+          @click="onBatchQueryBalance"
+        >
+          批量查余额
+        </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
@@ -121,6 +130,16 @@ onMounted(() => {
               @click="onProbe(row)"
             >
               探测
+            </el-button>
+            <el-button
+              class="reset-margin outline-hidden!"
+              link
+              type="warning"
+              :size="size"
+              :loading="row._queryingBalance"
+              @click="onQueryBalance(row)"
+            >
+              查余额
             </el-button>
             <el-button
               class="reset-margin outline-hidden!"

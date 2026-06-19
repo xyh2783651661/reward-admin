@@ -10,7 +10,9 @@ import {
   enableProvider,
   disableProvider,
   batchEnableProviders,
-  batchDisableProviders
+  batchDisableProviders,
+  queryProviderBalance,
+  batchQueryBalance
 } from "@/api/ai-provider-health";
 import type { ProviderHealthItem, StatsOverview } from "../types";
 
@@ -190,7 +192,7 @@ export function useProviderStatus(_tableRef?: Ref) {
     {
       label: "操作",
       fixed: "right",
-      width: 150,
+      width: 210,
       slot: "operation"
     }
   ];
@@ -313,6 +315,38 @@ export function useProviderStatus(_tableRef?: Ref) {
     }
   }
 
+  async function onQueryBalance(
+    row: ProviderHealthItem & { _queryingBalance?: boolean }
+  ) {
+    row._queryingBalance = true;
+    try {
+      await queryProviderBalance(row.provider);
+      message("余额查询完成", { type: "success" });
+      onSearch();
+    } catch (error) {
+      console.error("查询余额失败", error);
+      message("查询余额失败", { type: "error" });
+    } finally {
+      row._queryingBalance = false;
+    }
+  }
+
+  async function onBatchQueryBalance() {
+    if (!selectedRows.value.length) {
+      message("请先选择要查询余额的供应商", { type: "warning" });
+      return;
+    }
+    try {
+      const providers = selectedRows.value.map(row => row.provider);
+      await batchQueryBalance(providers);
+      message("批量查询余额成功", { type: "success" });
+      onSearch();
+    } catch (error) {
+      console.error("批量查询余额失败", error);
+      message("批量查询余额失败", { type: "error" });
+    }
+  }
+
   function resetForm() {
     onSearch();
   }
@@ -329,6 +363,8 @@ export function useProviderStatus(_tableRef?: Ref) {
     onToggleEnable,
     onBatchEnable,
     onBatchDisable,
+    onQueryBalance,
+    onBatchQueryBalance,
     resetForm,
     handleSizeChange,
     handleCurrentChange
