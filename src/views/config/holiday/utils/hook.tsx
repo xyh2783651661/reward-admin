@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import editForm from "../form.vue";
+import recipientForm from "../recipient-form.vue";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
 import { addDialog } from "@/components/ReDialog";
@@ -163,6 +164,7 @@ export function useHolidayConfig() {
     description: ""
   });
   const formRef = ref();
+  const recipientFormRef = ref();
   const dataList = ref<SysHolidayConfig[]>([]);
   const loading = ref(true);
   const optionsLoading = ref(false);
@@ -176,7 +178,6 @@ export function useHolidayConfig() {
   });
 
   const recipientOptions = ref<RecipientOption[]>([]);
-  const selectedRecipientIds = ref<number[]>([]);
 
   const holidayTypeLabelMap = computed(() => {
     return new Map(
@@ -275,7 +276,7 @@ export function useHolidayConfig() {
     {
       label: "操作",
       fixed: "right",
-      width: 140,
+      width: 200,
       slot: "operation"
     }
   ];
@@ -305,18 +306,6 @@ export function useHolidayConfig() {
       }));
     } catch (error) {
       message(getErrorMessage(error, "加载收件人列表失败"), {
-        type: "error"
-      });
-    }
-  }
-
-  async function loadHolidayRecipients(holidayId: number) {
-    try {
-      const { data } = await getHolidayRecipientList(holidayId);
-      selectedRecipientIds.value = (data ?? []).map(item => item.recipientId);
-    } catch (error) {
-      selectedRecipientIds.value = [];
-      message(getErrorMessage(error, "加载收件人关联失败"), {
         type: "error"
       });
     }
@@ -356,10 +345,7 @@ export function useHolidayConfig() {
     let currentRow = cloneDefaultFormInline();
 
     try {
-      const tasks: Array<Promise<unknown>> = [
-        loadOptions(),
-        loadRecipientOptions()
-      ];
+      const tasks: Array<Promise<unknown>> = [loadOptions()];
 
       if (isEdit && row?.id !== undefined) {
         tasks.push(
@@ -367,12 +353,11 @@ export function useHolidayConfig() {
             result => result.data
           )
         );
-        tasks.push(loadHolidayRecipients(row.id));
       }
 
       const result = await Promise.all(tasks);
       currentRow = normalizeFormInline(
-        isEdit ? (result[2] as SysHolidayConfig) : row
+        isEdit ? (result[1] as SysHolidayConfig) : row
       );
     } catch (error) {
       message(getErrorMessage(error, `${title}数据加载失败`), {
@@ -385,11 +370,9 @@ export function useHolidayConfig() {
       title: `${title}节假日配置`,
       props: {
         formInline: currentRow,
-        formOptions: formOptions.value,
-        recipientOptions: recipientOptions.value,
-        selectedRecipientIds: selectedRecipientIds.value
+        formOptions: formOptions.value
       },
-      width: "900px",
+      width: "680px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -399,14 +382,11 @@ export function useHolidayConfig() {
         h(editForm, {
           ref: formRef,
           formInline: currentRow,
-          formOptions: formOptions.value,
-          recipientOptions: recipientOptions.value,
-          selectedRecipientIds: selectedRecipientIds.value
+          formOptions: formOptions.value
         }),
       beforeSure: async (done, { options, closeLoading }) => {
         const FormRef = formRef.value?.getRef();
         const curData = options.props.formInline as SysHolidayConfig;
-        const curRecipientIds = formRef.value?.getRecipientIds() ?? [];
 
         if (!FormRef) {
           closeLoading();
@@ -440,15 +420,6 @@ export function useHolidayConfig() {
               throw new Error(result.msg || `${title}失败`);
             }
 
-            // 更新收件人关联
-            const holidayId = result.data?.id;
-            if (holidayId) {
-              await updateHolidayRecipient({
-                holidayId,
-                recipientIds: curRecipientIds ?? []
-              });
-            }
-
             message(`${title}节假日配置成功`, {
               type: "success"
             });
@@ -461,6 +432,75 @@ export function useHolidayConfig() {
             });
           }
         });
+      }
+    });
+  }
+
+  async function openRecipientDialog(row: SysHolidayConfig) {
+    if (!row?.id) return;
+
+    let selectedIds: number[] = [];
+
+    try {
+      const [, holidayRecipientResult] = await Promise.all([
+        loadRecipientOptions(),
+        getHolidayRecipientList(row.id)
+      ]);
+      selectedIds = (holidayRecipientResult?.data ?? []).map(
+        item => item.recipientId
+      );
+    } catch (error) {
+      message(getErrorMessage(error, "加载收件人数据失败"), {
+        type: "error"
+      });
+      return;
+    }
+
+    addDialog({
+      title: `收件人关联 - ${row.holidayName}`,
+      props: {
+        holidayId: row.id,
+        holidayName: row.holidayName,
+        recipientOptions: recipientOptions.value,
+        selectedRecipientIds: selectedIds
+      },
+      width: "680px",
+      draggable: true,
+      fullscreen: deviceDetection(),
+      fullscreenIcon: true,
+      closeOnClickModal: false,
+      sureBtnLoading: true,
+      contentRenderer: () =>
+        h(recipientForm, {
+          ref: recipientFormRef,
+          holidayId: row.id,
+          holidayName: row.holidayName,
+          recipientOptions: recipientOptions.value,
+          selectedRecipientIds: selectedIds
+        }),
+      beforeSure: async (done, { closeLoading }) => {
+        const curRecipientIds = recipientFormRef.value?.getRecipientIds() ?? [];
+
+        try {
+          const result = await updateHolidayRecipient({
+            holidayId: row.id,
+            recipientIds: curRecipientIds
+          });
+
+          if (result.code !== 200) {
+            throw new Error(result.msg || "更新收件人关联失败");
+          }
+
+          message("收件人关联更新成功", {
+            type: "success"
+          });
+          done();
+        } catch (error) {
+          closeLoading();
+          message(getErrorMessage(error, "更新收件人关联失败"), {
+            type: "error"
+          });
+        }
       }
     });
   }
@@ -568,11 +608,10 @@ export function useHolidayConfig() {
     columns,
     dataList,
     pagination,
-    recipientOptions,
-    selectedRecipientIds,
     onSearch,
     resetForm,
     openDialog,
+    openRecipientDialog,
     handleDelete,
     handleSizeChange,
     handleCurrentChange,

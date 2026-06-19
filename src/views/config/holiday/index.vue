@@ -7,6 +7,7 @@ import Refresh from "~icons/ep/refresh";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import AddFill from "~icons/ri/add-circle-line";
+import User from "~icons/ep/user";
 
 defineOptions({
   name: "HolidayConfig"
@@ -21,11 +22,10 @@ const {
   columns,
   dataList,
   pagination,
-  recipientOptions,
-  selectedRecipientIds,
   onSearch,
   resetForm,
   openDialog,
+  openRecipientDialog,
   handleDelete,
   handleSizeChange,
   handleCurrentChange,
@@ -153,6 +153,16 @@ const {
                 </el-button>
               </template>
             </el-popconfirm>
+            <el-button
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
+              :icon="useRenderIcon(User)"
+              @click="openRecipientDialog(row)"
+            >
+              收件人
+            </el-button>
           </template>
         </pure-table>
       </template>

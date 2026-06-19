@@ -63,8 +63,6 @@ interface RecipientOption {
 interface FormProps {
   formInline: SysHolidayConfig;
   formOptions: SysHolidayOptions;
-  recipientOptions?: RecipientOption[];
-  selectedRecipientIds?: number[];
 }
 
 export type {
