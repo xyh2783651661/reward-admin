@@ -248,6 +248,17 @@ const systemMonitorRouter = {
         roles: ["admin"],
         keepAlive: true
       }
+    },
+    {
+      path: "/monitor/ai-provider-health",
+      component: "monitor/ai-provider-health/index",
+      name: "AiProviderHealth",
+      meta: {
+        icon: "ri:heart-pulse-line",
+        title: title("供应商健康", "Provider Health"),
+        roles: ["admin"],
+        keepAlive: true
+      }
     }
   ]
 };
