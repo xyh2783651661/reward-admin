@@ -27,10 +27,26 @@ export const formRules = reactive<FormRules>({
       trigger: "blur"
     }
   ],
+  repeatType: [
+    {
+      required: true,
+      message: "重复类型为必选项",
+      trigger: "change"
+    }
+  ],
   holidayType: [
     {
       required: true,
       message: "节假日类型为必选项",
+      trigger: "change"
+    }
+  ],
+  holidayDate: [
+    {
+      validator: (_rule, _value, callback) => {
+        // FIXED_DATE 类型时由 buildSubmitPayload 校验
+        callback();
+      },
       trigger: "change"
     }
   ],
@@ -72,6 +88,70 @@ export const formRules = reactive<FormRules>({
         callback();
       },
       trigger: "blur"
+    }
+  ],
+  repeatMonth: [
+    {
+      validator: (_rule, value, callback) => {
+        if (value === null || value === undefined || value === "") {
+          callback();
+          return;
+        }
+
+        const month = Number(value);
+
+        if (isNaN(month) || month < 1 || month > 12) {
+          callback(new Error("月份范围为 1-12"));
+          return;
+        }
+
+        callback();
+      },
+      trigger: "blur"
+    }
+  ],
+  repeatWeekday: [
+    {
+      validator: (_rule, value, callback) => {
+        if (value === null || value === undefined || value === "") {
+          callback();
+          return;
+        }
+
+        const weekday = Number(value);
+
+        if (isNaN(weekday) || weekday < 1 || weekday > 7) {
+          callback(new Error("星期几范围为 1-7"));
+          return;
+        }
+
+        callback();
+      },
+      trigger: "change"
+    }
+  ],
+  repeatOrdinal: [
+    {
+      validator: (_rule, value, callback) => {
+        if (value === null || value === undefined || value === "") {
+          callback();
+          return;
+        }
+
+        const ordinal = Number(value);
+
+        // 允许 1-5 和 -1（最后一个）
+        if (
+          isNaN(ordinal) ||
+          ((ordinal < 1 || ordinal > 5) && ordinal !== -1)
+        ) {
+          callback(new Error("第几个范围为 1-5 或 -1（最后一个）"));
+          return;
+        }
+
+        callback();
+      },
+      trigger: "change"
     }
   ],
   sortOrder: [

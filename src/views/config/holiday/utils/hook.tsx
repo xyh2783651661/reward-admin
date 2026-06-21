@@ -30,9 +30,13 @@ import type {
 const DEFAULT_FORM_INLINE: SysHolidayConfig = {
   id: undefined,
   holidayName: "",
-  holidayDate: "",
+  holidayDate: null,
   lunarMonth: null,
   lunarDay: null,
+  repeatType: "FIXED_DATE",
+  repeatMonth: null,
+  repeatWeekday: null,
+  repeatOrdinal: null,
   holidayType: "",
   status: 1,
   sortOrder: 0,
@@ -75,6 +79,19 @@ function normalizeFormInline(
         : defaults.lunarMonth,
     lunarDay:
       typeof row?.lunarDay === "number" ? row.lunarDay : defaults.lunarDay,
+    repeatType: row?.repeatType ?? defaults.repeatType,
+    repeatMonth:
+      typeof row?.repeatMonth === "number"
+        ? row.repeatMonth
+        : defaults.repeatMonth,
+    repeatWeekday:
+      typeof row?.repeatWeekday === "number"
+        ? row.repeatWeekday
+        : defaults.repeatWeekday,
+    repeatOrdinal:
+      typeof row?.repeatOrdinal === "number"
+        ? row.repeatOrdinal
+        : defaults.repeatOrdinal,
     holidayType: String(row?.holidayType ?? defaults.holidayType),
     status:
       typeof row?.status === "number"
@@ -106,6 +123,7 @@ function getOptionLabel<T>(
 function buildSubmitPayload(formInline: SysHolidayConfig) {
   const payload: Record<string, any> = {
     holidayName: formInline.holidayName.trim(),
+    repeatType: formInline.repeatType,
     holidayType: formInline.holidayType,
     status: formInline.status,
     sortOrder: formInline.sortOrder ?? 0,
@@ -116,35 +134,74 @@ function buildSubmitPayload(formInline: SysHolidayConfig) {
     payload.id = formInline.id;
   }
 
-  // holidayDate: 有值传值，无值传 null（告知后端清空）
-  payload.holidayDate = formInline.holidayDate || null;
-
-  // lunarMonth/lunarDay: 有值传值，无值不传（保持原值）
-  if (formInline.lunarMonth !== null && formInline.lunarMonth !== undefined) {
-    payload.lunarMonth = formInline.lunarMonth;
-  }
-
-  if (formInline.lunarDay !== null && formInline.lunarDay !== undefined) {
-    payload.lunarDay = formInline.lunarDay;
-  }
-
   if (!payload.holidayName) {
     throw new Error("节假日名称为必填项");
+  }
+
+  if (!payload.repeatType) {
+    throw new Error("重复类型为必选项");
   }
 
   if (!payload.holidayType) {
     throw new Error("节假日类型为必选项");
   }
 
-  const hasHolidayDate = !!payload.holidayDate;
-  const hasLunarDate =
-    payload.lunarMonth !== null &&
-    payload.lunarMonth !== undefined &&
-    payload.lunarDay !== null &&
-    payload.lunarDay !== undefined;
+  // 根据 repeatType 填充对应的日期字段
+  switch (formInline.repeatType) {
+    case "FIXED_DATE":
+      if (!formInline.holidayDate) {
+        throw new Error("固定公历日期类型必须填写公历日期");
+      }
+      payload.holidayDate = formInline.holidayDate;
+      break;
 
-  if (!hasHolidayDate && !hasLunarDate) {
-    throw new Error("公历日期和农历日期至少填写一项");
+    case "LUNAR":
+      if (
+        formInline.lunarMonth === null ||
+        formInline.lunarMonth === undefined
+      ) {
+        throw new Error("农历日期类型必须填写农历月份");
+      }
+      if (formInline.lunarDay === null || formInline.lunarDay === undefined) {
+        throw new Error("农历日期类型必须填写农历日期");
+      }
+      payload.lunarMonth = formInline.lunarMonth;
+      payload.lunarDay = formInline.lunarDay;
+      break;
+
+    case "WEEKDAY_OF_MONTH":
+      if (
+        formInline.repeatMonth === null ||
+        formInline.repeatMonth === undefined
+      ) {
+        throw new Error("某月第N个星期几类型必须填写月份");
+      }
+      if (
+        formInline.repeatWeekday === null ||
+        formInline.repeatWeekday === undefined
+      ) {
+        throw new Error("某月第N个星期几类型必须填写星期几");
+      }
+      if (
+        formInline.repeatOrdinal === null ||
+        formInline.repeatOrdinal === undefined
+      ) {
+        throw new Error("某月第N个星期几类型必须填写第几个");
+      }
+      payload.repeatMonth = formInline.repeatMonth;
+      payload.repeatWeekday = formInline.repeatWeekday;
+      payload.repeatOrdinal = formInline.repeatOrdinal;
+      break;
+
+    case "LAST_DAY_OF_MONTH":
+      if (
+        formInline.repeatMonth === null ||
+        formInline.repeatMonth === undefined
+      ) {
+        throw new Error("某月最后一天类型必须填写月份");
+      }
+      payload.repeatMonth = formInline.repeatMonth;
+      break;
   }
 
   return payload;
@@ -155,13 +212,8 @@ export function useHolidayConfig() {
     current: 1,
     size: 10,
     holidayName: "",
-    holidayDate: "",
-    lunarMonth: null,
-    lunarDay: null,
     holidayType: "",
-    status: "",
-    sortOrder: null,
-    description: ""
+    status: ""
   });
   const formRef = ref();
   const recipientFormRef = ref();
@@ -185,6 +237,25 @@ export function useHolidayConfig() {
     );
   });
 
+  // repeatType 到中文的映射
+  const repeatTypeLabelMap: Record<string, string> = {
+    FIXED_DATE: "固定公历日期",
+    LUNAR: "农历日期",
+    WEEKDAY_OF_MONTH: "某月第N个星期几",
+    LAST_DAY_OF_MONTH: "某月最后一天"
+  };
+
+  // 星期几到中文的映射
+  const weekdayLabelMap: Record<number, string> = {
+    1: "周一",
+    2: "周二",
+    3: "周三",
+    4: "周四",
+    5: "周五",
+    6: "周六",
+    7: "周日"
+  };
+
   const columns: TableColumnList = [
     {
       label: "ID",
@@ -197,26 +268,71 @@ export function useHolidayConfig() {
       minWidth: 140
     },
     {
-      label: "公历日期",
-      prop: "holidayDate",
-      minWidth: 120,
-      formatter: ({ holidayDate }) =>
-        holidayDate ? dayjs(holidayDate).format("YYYY-MM-DD") : "-"
+      label: "日期信息",
+      prop: "dateInfo",
+      minWidth: 180,
+      cellRenderer: ({ row }) => {
+        const {
+          repeatType,
+          holidayDate,
+          lunarMonth,
+          lunarDay,
+          repeatMonth,
+          repeatWeekday,
+          repeatOrdinal
+        } = row;
+
+        switch (repeatType) {
+          case "FIXED_DATE":
+            return (
+              <span>
+                {holidayDate ? dayjs(holidayDate).format("YYYY-MM-DD") : "-"}
+              </span>
+            );
+
+          case "LUNAR":
+            return lunarMonth && lunarDay ? (
+              <span>
+                农历{lunarMonth}月{lunarDay}日
+              </span>
+            ) : (
+              <span>-</span>
+            );
+
+          case "WEEKDAY_OF_MONTH":
+            if (repeatMonth && repeatWeekday && repeatOrdinal) {
+              const ordinalText =
+                repeatOrdinal === -1 ? "最后一个" : `第${repeatOrdinal}个`;
+              return (
+                <span>
+                  {repeatMonth}月{ordinalText}
+                  {weekdayLabelMap[repeatWeekday] ?? `周${repeatWeekday}`}
+                </span>
+              );
+            }
+            return <span>-</span>;
+
+          case "LAST_DAY_OF_MONTH":
+            return repeatMonth ? (
+              <span>{repeatMonth}月最后一天</span>
+            ) : (
+              <span>-</span>
+            );
+
+          default:
+            return <span>-</span>;
+        }
+      }
     },
     {
-      label: "农历日期",
-      prop: "lunarDate",
+      label: "重复类型",
+      prop: "repeatType",
       minWidth: 120,
-      cellRenderer: ({ row }) => {
-        if (row.lunarMonth && row.lunarDay) {
-          return (
-            <span>
-              {row.lunarMonth}月{row.lunarDay}日
-            </span>
-          );
-        }
-        return <span>-</span>;
-      }
+      cellRenderer: ({ row }) => (
+        <span>
+          {repeatTypeLabelMap[row.repeatType] ?? row.repeatType ?? "-"}
+        </span>
+      )
     },
     {
       label: "节假日类型",

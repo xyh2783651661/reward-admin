@@ -1,5 +1,11 @@
 type ToggleValue = 0 | 1;
 
+type RepeatType =
+  | "FIXED_DATE"
+  | "LUNAR"
+  | "WEEKDAY_OF_MONTH"
+  | "LAST_DAY_OF_MONTH";
+
 interface OptionItem<T = string | number> {
   label: string;
   value: T;
@@ -8,9 +14,13 @@ interface OptionItem<T = string | number> {
 interface SysHolidayConfig {
   id?: number;
   holidayName: string;
-  holidayDate: string;
+  holidayDate: string | null;
   lunarMonth: number | null;
   lunarDay: number | null;
+  repeatType: RepeatType;
+  repeatMonth: number | null;
+  repeatWeekday: number | null;
+  repeatOrdinal: number | null;
   holidayType: string;
   status: ToggleValue;
   sortOrder: number;
@@ -24,18 +34,16 @@ interface SysHolidayConfigPageReq {
   current: number;
   size: number;
   holidayName: string;
-  holidayDate: string;
-  lunarMonth: number | null;
-  lunarDay: number | null;
   holidayType: string;
   status: ToggleValue | "";
-  sortOrder: number | null;
-  description: string;
 }
 
 interface SysHolidayOptions {
   holidayTypes: Array<OptionItem<string>>;
   statusOptions: Array<OptionItem<ToggleValue>>;
+  repeatTypes?: Array<OptionItem<string>>;
+  weekdayOptions?: Array<OptionItem<number>>;
+  ordinalOptions?: Array<OptionItem<number>>;
 }
 
 interface SysHolidayRecipient {
@@ -67,6 +75,7 @@ interface FormProps {
 
 export type {
   ToggleValue,
+  RepeatType,
   FormProps,
   OptionItem,
   SysHolidayConfig,

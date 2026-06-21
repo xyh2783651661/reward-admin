@@ -1,13 +1,24 @@
 import { http } from "@/utils/http";
 import type { ApiResult, ApiPageResult } from "./types";
 
+/** 重复类型 */
+export type RepeatType =
+  | "FIXED_DATE"
+  | "LUNAR"
+  | "WEEKDAY_OF_MONTH"
+  | "LAST_DAY_OF_MONTH";
+
 /** 节假日配置项 */
 export interface SysHolidayConfig {
   id: number;
   holidayName: string;
-  holidayDate: string;
-  lunarMonth: number;
-  lunarDay: number;
+  holidayDate: string | null;
+  lunarMonth: number | null;
+  lunarDay: number | null;
+  repeatType: RepeatType;
+  repeatMonth: number | null;
+  repeatWeekday: number | null;
+  repeatOrdinal: number | null;
   holidayType: string;
   status: 0 | 1;
   sortOrder: number;
@@ -22,13 +33,8 @@ export interface SysHolidayConfigPageReq {
   current: number;
   size: number;
   holidayName?: string;
-  holidayDate?: string;
-  lunarMonth?: number;
-  lunarDay?: number;
   holidayType?: string;
   status?: 0 | 1;
-  sortOrder?: number;
-  description?: string;
 }
 
 /** 选项项 */
@@ -41,6 +47,9 @@ export interface OptionItem<T = string | number> {
 export interface SysHolidayOptions {
   holidayTypes: OptionItem<string>[];
   statusOptions: OptionItem<number>[];
+  repeatTypes?: OptionItem<string>[];
+  weekdayOptions?: OptionItem<number>[];
+  ordinalOptions?: OptionItem<number>[];
 }
 
 /** 分页查询节假日配置 */

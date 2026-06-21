@@ -46,6 +46,10 @@
   "holidayDate": "2024-02-10",
   "lunarMonth": 1,
   "lunarDay": 1,
+  "repeatType": "LUNAR",
+  "repeatMonth": null,
+  "repeatWeekday": null,
+  "repeatOrdinal": null,
   "holidayType": "法定节假日",
   "status": 1,
   "sortOrder": 1,
@@ -58,20 +62,33 @@
 
 字段说明：
 
-| 字段        | 类型   | 说明                         |
-| ----------- | ------ | ---------------------------- |
-| id          | number | 主键 id                      |
-| holidayName | string | 节假日名称                   |
-| holidayDate | string | 节假日日期（公历）           |
-| lunarMonth  | number | 农历月份                     |
-| lunarDay    | number | 农历日期                     |
-| holidayType | string | 节假日类型                   |
-| status      | number | `1=启用`，`0=禁用`           |
-| sortOrder   | number | 排序                         |
-| description | string | 描述                         |
-| createdTime | string | 创建时间                     |
-| updatedTime | string | 更新时间                     |
-| deleted     | number | 逻辑删除标记，正常一般为 `0` |
+| 字段          | 类型   | 说明                                                                  |
+| ------------- | ------ | --------------------------------------------------------------------- |
+| id            | number | 主键 id                                                               |
+| holidayName   | string | 节假日名称                                                            |
+| holidayDate   | string | 节假日日期（公历），用于 FIXED_DATE 类型                              |
+| lunarMonth    | number | 农历月份，用于 LUNAR 类型                                             |
+| lunarDay      | number | 农历日期，用于 LUNAR 类型                                             |
+| repeatType    | string | 重复类型：`FIXED_DATE`/`LUNAR`/`WEEKDAY_OF_MONTH`/`LAST_DAY_OF_MONTH` |
+| repeatMonth   | number | 月份（1-12），用于 WEEKDAY_OF_MONTH 和 LAST_DAY_OF_MONTH              |
+| repeatWeekday | number | 星期几（1=周一，7=周日），用于 WEEKDAY_OF_MONTH                       |
+| repeatOrdinal | number | 第几个（1=第一个，-1=最后一个），用于 WEEKDAY_OF_MONTH                |
+| holidayType   | string | 节假日类型                                                            |
+| status        | number | `1=启用`，`0=禁用`                                                    |
+| sortOrder     | number | 排序                                                                  |
+| description   | string | 描述                                                                  |
+| createdTime   | string | 创建时间                                                              |
+| updatedTime   | string | 更新时间                                                              |
+| deleted       | number | 逻辑删除标记，正常一般为 `0`                                          |
+
+**repeatType 说明：**
+
+| repeatType        | 说明            | 必填字段                                  | 示例                 |
+| ----------------- | --------------- | ----------------------------------------- | -------------------- |
+| FIXED_DATE        | 固定公历日期    | holidayDate                               | 元旦：1月1日         |
+| LUNAR             | 农历日期        | lunarMonth, lunarDay                      | 春节：正月初一       |
+| WEEKDAY_OF_MONTH  | 某月第N个星期几 | repeatMonth, repeatWeekday, repeatOrdinal | 母亲节：5月第2个周日 |
+| LAST_DAY_OF_MONTH | 某月最后一天    | repeatMonth                               | 除夕：12月最后一天   |
 
 ### 3.2 分页请求体 SysHolidayConfigReq
 
@@ -86,6 +103,10 @@
   "holidayDate": "2024-02-10",
   "lunarMonth": 1,
   "lunarDay": 1,
+  "repeatType": "LUNAR",
+  "repeatMonth": null,
+  "repeatWeekday": null,
+  "repeatOrdinal": null,
   "holidayType": "法定节假日",
   "status": 1,
   "sortOrder": 1,
@@ -97,7 +118,7 @@
 
 - `current` 默认值 `1`
 - `size` 默认值 `10`
-- 分页接口实际筛选字段为：`holidayName`、`holidayDate`、`lunarMonth`、`lunarDay`、`holidayType`、`status`
+- 分页接口实际筛选字段为：`holidayName`、`holidayType`、`status`
 
 ### 3.3 TypeScript 类型建议
 
@@ -105,9 +126,13 @@
 export interface SysHolidayConfig {
   id: number;
   holidayName: string;
-  holidayDate: string;
-  lunarMonth: number;
-  lunarDay: number;
+  holidayDate: string | null;
+  lunarMonth: number | null;
+  lunarDay: number | null;
+  repeatType: "FIXED_DATE" | "LUNAR" | "WEEKDAY_OF_MONTH" | "LAST_DAY_OF_MONTH";
+  repeatMonth: number | null;
+  repeatWeekday: number | null;
+  repeatOrdinal: number | null;
   holidayType: string;
   status: 0 | 1;
   sortOrder: number;
@@ -121,13 +146,8 @@ export interface SysHolidayConfigPageReq {
   current: number;
   size: number;
   holidayName?: string;
-  holidayDate?: string;
-  lunarMonth?: number;
-  lunarDay?: number;
   holidayType?: string;
   status?: 0 | 1;
-  sortOrder?: number;
-  description?: string;
 }
 
 export interface OptionItem<T = string | number> {
@@ -294,80 +314,84 @@ GET /sys-holidays/options
 POST /sys-holidays/add
 ```
 
-请求体：
+请求体示例：
+
+**固定公历日期（如元旦）：**
+
+```json
+{
+  "holidayName": "元旦",
+  "holidayDate": "2026-01-01",
+  "repeatType": "FIXED_DATE",
+  "holidayType": "legal",
+  "status": 1,
+  "sortOrder": 1,
+  "description": "新年第一天"
+}
+```
+
+**农历日期（如春节）：**
 
 ```json
 {
   "holidayName": "春节",
-  "holidayDate": "2024-02-10",
   "lunarMonth": 1,
   "lunarDay": 1,
-  "holidayType": "法定节假日",
+  "repeatType": "LUNAR",
+  "holidayType": "traditional",
   "status": 1,
   "sortOrder": 1,
   "description": "农历新年"
 }
 ```
 
+**某月第N个星期几（如母亲节）：**
+
+```json
+{
+  "holidayName": "母亲节",
+  "repeatType": "WEEKDAY_OF_MONTH",
+  "repeatMonth": 5,
+  "repeatWeekday": 7,
+  "repeatOrdinal": 2,
+  "holidayType": "other",
+  "status": 1,
+  "sortOrder": 1,
+  "description": "5月第二个周日"
+}
+```
+
+**某月最后一天（如除夕）：**
+
+```json
+{
+  "holidayName": "除夕",
+  "repeatType": "LAST_DAY_OF_MONTH",
+  "repeatMonth": 12,
+  "holidayType": "traditional",
+  "status": 1,
+  "sortOrder": 1,
+  "description": "农历年末最后一天"
+}
+```
+
 字段规则：
 
 - `holidayName`：必填
-- `holidayDate`：选填（公历日期）
-- `lunarMonth`：选填（农历月份）
-- `lunarDay`：选填（农历日期）
+- `repeatType`：必填，决定使用哪组日期字段
+- `holidayDate`：FIXED_DATE 类型必填
+- `lunarMonth`/`lunarDay`：LUNAR 类型必填
+- `repeatMonth`：WEEKDAY_OF_MONTH 和 LAST_DAY_OF_MONTH 类型必填
+- `repeatWeekday`：WEEKDAY_OF_MONTH 类型必填（1=周一，7=周日）
+- `repeatOrdinal`：WEEKDAY_OF_MONTH 类型必填（1=第一个，-1=最后一个）
 - `holidayType`：必填
 - `status`：选填，不传默认 `1`
 - `sortOrder`：选填，不传默认 `0`
 - `description`：选填
 
-成功响应：
-
-```json
-{
-  "code": 200,
-  "msg": "success",
-  "data": {
-    "id": 1,
-    "holidayName": "春节",
-    "holidayDate": "2024-02-10",
-    "lunarMonth": 1,
-    "lunarDay": 1,
-    "holidayType": "法定节假日",
-    "status": 1,
-    "sortOrder": 1,
-    "description": "农历新年",
-    "createdTime": "2026-05-06T12:00:00",
-    "updatedTime": "2026-05-06T12:00:00",
-    "deleted": 0
-  }
-}
-```
-
-失败响应：
-
-1. `holidayName` 为空：
-
-```json
-{
-  "code": 400,
-  "msg": "holidayName is required",
-  "data": null
-}
-```
-
-2. `holidayType` 为空：
-
-```json
-{
-  "code": 400,
-  "msg": "holidayType is required",
-  "data": null
-}
-```
-
 前端说明：
 
-- `holidayDate` 和 `lunarMonth`/`lunarDay` 至少填一个
+- 根据 `repeatType` 动态显示/隐藏对应的日期字段
 - 提交新增成功后建议刷新 `page` 和 `options`
 
 ### 4.5 修改节假日配置
@@ -380,15 +404,16 @@ POST /sys-holidays/update
 
 ```json
 {
-  "id": 1,
-  "holidayName": "春节",
-  "holidayDate": "2024-02-10",
-  "lunarMonth": 1,
-  "lunarDay": 1,
-  "holidayType": "法定节假日",
-  "status": 1,
-  "sortOrder": 1,
-  "description": "农历新年（已更新）"
+  “id”: 1,
+  “holidayName”: “母亲节”,
+  “repeatType”: “WEEKDAY_OF_MONTH”,
+  “repeatMonth”: 5,
+  “repeatWeekday”: 7,
+  “repeatOrdinal”: 2,
+  “holidayType”: “other”,
+  “status”: 1,
+  “sortOrder”: 1,
+  “description”: “5月第二个周日（已更新）”
 }
 ```
 
@@ -402,9 +427,9 @@ POST /sys-holidays/update
 
 ```json
 {
-  "code": 400,
-  "msg": "id is required",
-  "data": null
+  “code”: 400,
+  “msg”: “id is required”,
+  “data”: null
 }
 ```
 
@@ -412,45 +437,53 @@ POST /sys-holidays/update
 
 ```json
 {
-  "code": 404,
-  "msg": "holiday config not found",
-  "data": null
+  “code”: 404,
+  “msg”: “holiday config not found”,
+  “data”: null
 }
 ```
 
 更新语义：
 
-| 字段        | 更新规则                                           |
-| ----------- | -------------------------------------------------- |
-| id          | 必填                                               |
-| holidayName | 只有“非空字符串”才会更新                           |
-| holidayDate | 字段不为 `null` 就会更新                           |
-| lunarMonth  | 传了就更新，不传保持原值                           |
-| lunarDay    | 传了就更新，不传保持原值                           |
-| holidayType | 只有“非空字符串”才会更新                           |
-| status      | 传了就更新，不传保持原值                           |
-| sortOrder   | 传了就更新，不传保持原值                           |
-| description | 字段不为 `null` 就会更新，传空字符串 `""` 也会覆盖 |
+| 字段          | 更新规则                                           |
+| ------------- | -------------------------------------------------- |
+| id            | 必填                                               |
+| holidayName   | 只有”非空字符串”才会更新                           |
+| holidayDate   | 字段不为 `null` 就会更新                           |
+| lunarMonth    | 传了就更新，不传保持原值                           |
+| lunarDay      | 传了就更新，不传保持原值                           |
+| repeatType    | 只有”非空字符串”才会更新                           |
+| repeatMonth   | 传了就更新，不传保持原值                           |
+| repeatWeekday | 传了就更新，不传保持原值                           |
+| repeatOrdinal | 传了就更新，不传保持原值                           |
+| holidayType   | 只有”非空字符串”才会更新                           |
+| status        | 传了就更新，不传保持原值                           |
+| sortOrder     | 传了就更新，不传保持原值                           |
+| description   | 字段不为 `null` 就会更新，传空字符串 `””` 也会覆盖 |
 
 成功响应示例：
 
 ```json
 {
-  "code": 200,
-  "msg": "success",
-  "data": {
-    "id": 1,
-    "holidayName": "春节",
-    "holidayDate": "2024-02-10",
-    "lunarMonth": 1,
-    "lunarDay": 1,
-    "holidayType": "法定节假日",
-    "status": 1,
-    "sortOrder": 1,
-    "description": "农历新年（已更新）",
-    "createdTime": "2026-05-06T12:00:00",
-    "updatedTime": "2026-05-06T12:10:00",
-    "deleted": 0
+  “code”: 200,
+  “msg”: “success”,
+  “data”: {
+    “id”: 1,
+    “holidayName”: “母亲节”,
+    “holidayDate”: null,
+    “lunarMonth”: null,
+    “lunarDay”: null,
+    “repeatType”: “WEEKDAY_OF_MONTH”,
+    “repeatMonth”: 5,
+    “repeatWeekday”: 7,
+    “repeatOrdinal”: 2,
+    “holidayType”: “other”,
+    “status”: 1,
+    “sortOrder”: 1,
+    “description”: “5月第二个周日（已更新）”,
+    “createdTime”: “2026-05-06T12:00:00”,
+    “updatedTime”: “2026-05-06T12:10:00”,
+    “deleted”: 0
   }
 }
 ```
@@ -516,16 +549,20 @@ DELETE /sys-holidays/1
 
 ### 5.2 新增/编辑表单建议
 
-| 字段        | 组件建议           |
-| ----------- | ------------------ |
-| holidayName | Input              |
-| holidayDate | DatePicker         |
-| lunarMonth  | InputNumber (1-12) |
-| lunarDay    | InputNumber (1-30) |
-| holidayType | Select             |
-| status      | Radio / Switch     |
-| sortOrder   | InputNumber        |
-| description | Input / Textarea   |
+| 字段          | 组件建议                                                        |
+| ------------- | --------------------------------------------------------------- |
+| holidayName   | Input                                                           |
+| repeatType    | Select（根据选择动态显示/隐藏日期字段）                         |
+| holidayDate   | DatePicker（FIXED_DATE 类型显示）                               |
+| lunarMonth    | InputNumber 1-12（LUNAR 类型显示）                              |
+| lunarDay      | InputNumber 1-30（LUNAR 类型显示）                              |
+| repeatMonth   | InputNumber 1-12（WEEKDAY_OF_MONTH/LAST_DAY_OF_MONTH 类型显示） |
+| repeatWeekday | Select（WEEKDAY_OF_MONTH 类型显示，选项：周一~周日）            |
+| repeatOrdinal | Select（WEEKDAY_OF_MONTH 类型显示，选项：第一个~最后一个）      |
+| holidayType   | Select                                                          |
+| status        | Radio / Switch                                                  |
+| sortOrder     | InputNumber                                                     |
+| description   | Input / Textarea                                                |
 
 ### 5.3 前端校验建议
 
@@ -533,9 +570,12 @@ DELETE /sys-holidays/1
 
 - `holidayName` 必填
 - `holidayName` 长度建议不超过 64
+- `repeatType` 必填
 - `holidayType` 必填
-- `lunarMonth` 范围 1-12
-- `lunarDay` 范围 1-30
+- FIXED_DATE 类型：`holidayDate` 必填
+- LUNAR 类型：`lunarMonth`（1-12）和 `lunarDay`（1-30）必填
+- WEEKDAY_OF_MONTH 类型：`repeatMonth`（1-12）、`repeatWeekday`（1-7）、`repeatOrdinal`（1-5或-1）必填
+- LAST_DAY_OF_MONTH 类型：`repeatMonth`（1-12）必填
 - `status` 只能是 `0/1`
 - `sortOrder` 非负整数
 
@@ -558,11 +598,16 @@ export const holidayConfigApi = {
 ## 7. 联调注意事项
 
 1. 后台管理页详情查询，请优先使用 `GET /sys-holidays/detail/{id}`
-2. `holidayDate` 和 `lunarMonth`/`lunarDay` 是两套日期体系，前端至少填一个
+2. 根据 `repeatType` 动态显示/隐藏日期字段：
+   - `FIXED_DATE`：显示 `holidayDate`
+   - `LUNAR`：显示 `lunarMonth` 和 `lunarDay`
+   - `WEEKDAY_OF_MONTH`：显示 `repeatMonth`、`repeatWeekday`、`repeatOrdinal`
+   - `LAST_DAY_OF_MONTH`：显示 `repeatMonth`
 3. 新增、修改、删除后，建议刷新：
    - 当前列表
    - `GET /sys-holidays/options`
 4. 删除为逻辑删除，删除后数据仍存在于数据库
+5. `options` 接口返回 `repeatTypes`、`weekdayOptions`、`ordinalOptions` 用于下拉选择
 
 ---
 
