@@ -243,7 +243,9 @@ export function useDailyImage() {
       for (let i = 0; i < links.length; i++) {
         const item = links[i];
         const a = document.createElement("a");
-        a.href = item.url;
+        a.href = item.url.startsWith("/api")
+          ? item.url
+          : `/api${item.url.startsWith("/") ? "" : "/"}${item.url}`;
         a.download = item.name;
         a.click();
 
