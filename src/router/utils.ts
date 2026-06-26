@@ -162,19 +162,21 @@ function handleAsyncRoutes(routeList) {
   } else {
     formatFlatteningRoutes(addAsyncRoutes(routeList)).map(
       (v: RouteRecordRaw) => {
+        const flatRoute: RouteRecordRaw = { ...v };
+        delete (flatRoute as any).children;
         // 防止重复添加路由
         if (
           router.options.routes[0].children.findIndex(
-            value => value.path === v.path
+            value => value.path === flatRoute.path
           ) !== -1
         ) {
           return;
         } else {
           // 切记将路由push到routes后还需要使用addRoute，这样路由才能正常跳转
-          router.options.routes[0].children.push(v);
+          router.options.routes[0].children.push(flatRoute);
           // 最终路由进行升序
           ascending(router.options.routes[0].children);
-          if (!router.hasRoute(v?.name)) router.addRoute(v);
+          if (!router.hasRoute(flatRoute?.name)) router.addRoute(flatRoute);
           const flattenRouters: any = router
             .getRoutes()
             .find(n => n.path === "/");
