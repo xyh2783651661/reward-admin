@@ -37,7 +37,7 @@ export type RefreshTokenResult = {
 
 /** 登录 */
 export const getLogin = (data?: object) => {
-  return http.request<UserResult>("post", "/login", { data });
+  return http.request<UserResult>("post", "/api/admin/auth/login", { data });
 };
 
 /** 文档认证登录路径（保留旧登录入口兼容现有流程） */
@@ -47,17 +47,24 @@ export const authLogin = (data?: object) => {
 
 /** 刷新`token` */
 export const refreshTokenApi = (data?: object) => {
-  return http.request<RefreshTokenResult>("post", "/refresh-token", { data });
+  return http.request<RefreshTokenResult>(
+    "post",
+    "/api/admin/auth/refresh-token",
+    { data }
+  );
 };
 
 /** 登出 */
 export const logout = () => {
-  return http.request<ApiResult>("post", "/api/auth/logout");
+  return http.request<ApiResult>("post", "/api/admin/auth/logout");
 };
 
 /** 获取当前用户信息 */
 export const getCurrentUser = () => {
-  return http.request<ApiResult<Record<string, any>>>("get", "/api/auth/me");
+  return http.request<ApiResult<Record<string, any>>>(
+    "get",
+    "/api/admin/auth/me"
+  );
 };
 
 /** 修改密码 */

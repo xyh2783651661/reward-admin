@@ -10,10 +10,9 @@ import type {
   PureHttpRequestConfig
 } from "./types.d";
 import { stringify } from "qs";
-import { getToken, formatToken, userKey } from "@/utils/auth";
+import { getToken, formatToken, removeToken } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
 import { generateSignature } from "@/utils/http/sign";
-import { storageLocal } from "@pureadmin/utils";
 
 const appId = "wep-client";
 const clientType = "web";
@@ -25,22 +24,6 @@ function getDeviceType() {
   if (width < 768) return "MOBILE";
   if (width < 1200) return "TABLET";
   return "PC";
-}
-
-function getStoredUserId() {
-  const userInfo = storageLocal().getItem<Record<string, any>>(userKey) ?? {};
-  const tokenInfo = getToken() as Record<string, any> | undefined;
-  const userId =
-    userInfo.userId ??
-    userInfo.id ??
-    userInfo.externalUserId ??
-    tokenInfo?.userId ??
-    tokenInfo?.id ??
-    tokenInfo?.externalUserId;
-
-  return userId === undefined || userId === null || `${userId}`.trim() === ""
-    ? undefined
-    : String(userId);
 }
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
@@ -104,11 +87,6 @@ class PureHttp {
         config.headers["X-Device-Type"] = getDeviceType();
         config.headers["X-Client-Type"] = clientType;
         config.headers["X-Client-Version"] = clientVersion;
-
-        const userId = getStoredUserId();
-        if (userId) {
-          config.headers["X-User-Id"] = userId;
-        }
         /** ============================ */
 
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
@@ -121,7 +99,10 @@ class PureHttp {
           return config;
         }
         /** 请求白名单，放置一些不需要`token`的接口（通过设置请求白名单，防止`token`过期后再请求造成的死循环问题） */
-        const whiteList = ["/refresh-token", "/login"];
+        const whiteList = [
+          "/api/admin/auth/refresh-token",
+          "/api/admin/auth/login"
+        ];
         return whiteList.some(url => config.url.endsWith(url))
           ? config
           : new Promise(resolve => {
@@ -185,6 +166,11 @@ class PureHttp {
       (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
+        // 401：登录态失效，清理 token 并跳转登录页
+        if ($error?.response?.status === 401) {
+          removeToken();
+          if (location.hash !== "#/login") location.hash = "#/login";
+        }
         // 所有的响应异常 区分来源为取消请求/非取消请求
         return Promise.reject($error);
       }

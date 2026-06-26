@@ -1,6 +1,4 @@
 import { http } from "@/utils/http";
-import { storageLocal } from "@pureadmin/utils";
-import { userKey } from "@/utils/auth";
 import type { NoticeTabItem } from "@/layout/components/lay-notice/data";
 import type { ApiResult, ApiPageResult } from "./types";
 
@@ -12,32 +10,21 @@ interface NoticePanelData {
 }
 
 interface NoticePanelOptions {
-  userId?: string | number;
   clientType?: NoticeClientType;
 }
 
-function buildNoticeHeaders(options?: NoticePanelOptions) {
-  const userInfo = storageLocal().getItem<Record<string, any>>(userKey) ?? {};
-  const userId = options?.userId ?? userInfo.userId ?? userInfo.id;
-  const headers: Record<string, string> = {
-    "X-Client-Type": options?.clientType ?? "web"
-  };
-
-  if (userId !== undefined && userId !== null && `${userId}`.trim() !== "") {
-    headers["X-User-Id"] = String(userId);
-  }
-
-  return headers;
-}
-
 // ==================== 通知面板 ====================
+// 用户 ID 由后端 Sa-Token 登录态解析，前端不再透传 X-User-Id。
+// X-Client-Type 已在 http 全局拦截器设置，这里仅在需要覆盖时传入。
 
 const getNoticePanel = (options?: NoticePanelOptions) => {
   return http.request<ApiResult<NoticePanelData>>(
     "get",
     "/api/notifications/panel",
     {
-      headers: buildNoticeHeaders(options)
+      headers: options?.clientType
+        ? { "X-Client-Type": options.clientType }
+        : undefined
     }
   );
 };
@@ -47,7 +34,9 @@ const markNotificationRead = (
   options?: NoticePanelOptions
 ) => {
   return http.request<ApiResult>("post", `/api/notifications/${id}/read`, {
-    headers: buildNoticeHeaders(options)
+    headers: options?.clientType
+      ? { "X-Client-Type": options.clientType }
+      : undefined
   });
 };
 
@@ -55,7 +44,11 @@ const markAllNotificationsRead = (options?: NoticePanelOptions) => {
   return http.request<ApiResult<number>>(
     "post",
     "/api/notifications/read-all",
-    { headers: buildNoticeHeaders(options) }
+    {
+      headers: options?.clientType
+        ? { "X-Client-Type": options.clientType }
+        : undefined
+    }
   );
 };
 
@@ -109,32 +102,28 @@ export const withdrawSysNotice = (id: string | number, operator?: string) => {
   );
 };
 
-// ==================== 用户已读状态 ====================
+// ==================== 用户已读状态（admin 后台，走 Sa-Token 登录态） ====================
 
 /** 标记单个公告已读 */
 export const markNoticeRead = (noticeId: string | number) => {
   return http.request<ApiResult>(
     "post",
-    `/api/notice/userNoticeRead/${noticeId}/mark`,
-    { headers: buildNoticeHeaders() }
+    `/api/admin/notice/read/${noticeId}/mark`
   );
 };
 
 /** 批量标记已读 */
 export const batchMarkNoticeRead = (ids?: Array<string | number>) => {
-  return http.request<ApiResult>(
-    "post",
-    "/api/notice/userNoticeRead/batch-mark",
-    { data: ids, headers: buildNoticeHeaders() }
-  );
+  return http.request<ApiResult>("post", "/api/admin/notice/read/batch-mark", {
+    data: ids
+  });
 };
 
 /** 一键全部已读 */
 export const markAllNoticeRead = () => {
   return http.request<ApiResult<number>>(
     "post",
-    "/api/notice/userNoticeRead/mark-all",
-    { headers: buildNoticeHeaders() }
+    "/api/admin/notice/read/mark-all"
   );
 };
 
@@ -142,8 +131,7 @@ export const markAllNoticeRead = () => {
 export const getUnreadCount = () => {
   return http.request<ApiResult<number>>(
     "get",
-    "/api/notice/userNoticeRead/unread-count",
-    { headers: buildNoticeHeaders() }
+    "/api/admin/notice/read/unread-count"
   );
 };
 
