@@ -148,6 +148,7 @@ onMounted(() => {
       >
         <template #buttons>
           <el-button
+            v-perms="'config:mail:add'"
             type="primary"
             :icon="useRenderIcon(AddFill)"
             @click="openDialog()"
@@ -179,6 +180,7 @@ onMounted(() => {
           >
             <template #operation="{ row }">
               <el-button
+                v-perms="'config:mail:edit'"
                 class="reset-margin"
                 link
                 type="primary"
@@ -194,6 +196,7 @@ onMounted(() => {
               >
                 <template #reference>
                   <el-button
+                    v-perms="'config:mail:delete'"
                     class="reset-margin"
                     link
                     type="primary"

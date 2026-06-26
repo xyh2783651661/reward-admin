@@ -72,6 +72,7 @@ const {
     <PureTableBar title="恋爱记录" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
+          v-perms="'love:records:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -112,6 +113,7 @@ const {
               详情
             </el-button>
             <el-button
+              v-perms="'love:records:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -127,6 +129,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-perms="'love:records:delete'"
                   class="reset-margin"
                   link
                   type="primary"

@@ -150,6 +150,7 @@ const {
     <PureTableBar title="公告列表" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
+          v-perms="'notice:sysNotice:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -184,6 +185,7 @@ const {
           </template>
           <template #operation="{ row }">
             <el-button
+              v-perms="'notice:sysNotice:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -195,6 +197,7 @@ const {
             </el-button>
             <el-button
               v-if="Number(row.status) === 0 || Number(row.status) === 2"
+              v-perms="'notice:sysNotice:publish'"
               class="reset-margin"
               link
               type="success"
@@ -205,6 +208,7 @@ const {
             </el-button>
             <el-button
               v-if="Number(row.status) === 1"
+              v-perms="'notice:sysNotice:withdraw'"
               class="reset-margin"
               link
               type="warning"
@@ -219,6 +223,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-perms="'notice:sysNotice:delete'"
                   class="reset-margin"
                   link
                   type="danger"

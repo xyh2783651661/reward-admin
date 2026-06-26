@@ -101,6 +101,7 @@ const {
     <PureTableBar class="w-full" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
+          v-perms="'config:pocketMoney:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -108,6 +109,7 @@ const {
           新增规则
         </el-button>
         <el-button
+          v-perms="'config:pocketMoney:export'"
           type="primary"
           :loading="exportLoading"
           :icon="useRenderIcon(HugeiconsDownload01)"
@@ -139,6 +141,7 @@ const {
         >
           <template #operation="{ row }">
             <el-button
+              v-perms="'config:pocketMoney:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -154,6 +157,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-perms="'config:pocketMoney:delete'"
                   class="reset-margin"
                   link
                   type="primary"

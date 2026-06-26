@@ -99,6 +99,7 @@ const {
     <PureTableBar title="节假日配置管理" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
+          v-perms="'config:holiday:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -128,6 +129,7 @@ const {
         >
           <template #operation="{ row }">
             <el-button
+              v-perms="'config:holiday:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -143,6 +145,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-perms="'config:holiday:delete'"
                   class="reset-margin"
                   link
                   type="primary"
@@ -154,6 +157,7 @@ const {
               </template>
             </el-popconfirm>
             <el-button
+              v-perms="'config:holiday:recipients'"
               class="reset-margin"
               link
               type="primary"

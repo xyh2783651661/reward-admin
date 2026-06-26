@@ -180,6 +180,7 @@ function getSourceLabel(type?: string) {
       <template #buttons>
         <div class="toolbar-actions">
           <el-button
+            v-perms="'dailyImage:manage:upload'"
             type="primary"
             :loading="uploadLoading"
             :icon="useRenderIcon(Upload)"
@@ -224,6 +225,7 @@ function getSourceLabel(type?: string) {
               @command="handleDownloadCommand"
             >
               <el-button
+                v-perms="'dailyImage:manage:export'"
                 type="success"
                 :disabled="!hasSelection"
                 :loading="downloadActionLoading"
@@ -241,6 +243,7 @@ function getSourceLabel(type?: string) {
               </template>
             </el-dropdown>
             <el-button
+              v-perms="'dailyImage:manage:delete'"
               type="danger"
               :disabled="!hasSelection"
               :loading="batchDeleteLoading"
@@ -341,6 +344,7 @@ function getSourceLabel(type?: string) {
               </div>
               <div class="image-card__actions" @click.stop>
                 <el-button
+                  v-perms="'dailyImage:manage:export'"
                   plain
                   type="success"
                   :size="size"

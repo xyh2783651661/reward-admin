@@ -24,6 +24,7 @@ const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
     <PureTableBar title="纪念日管理" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
+          v-perms="'love:anniversaries:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -51,6 +52,7 @@ const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
         >
           <template #operation="{ row }">
             <el-button
+              v-perms="'love:anniversaries:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -66,6 +68,7 @@ const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
             >
               <template #reference>
                 <el-button
+                  v-perms="'love:anniversaries:delete'"
                   class="reset-margin"
                   link
                   type="primary"

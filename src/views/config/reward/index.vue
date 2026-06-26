@@ -170,6 +170,7 @@ onMounted(() => {
       >
         <template #buttons>
           <el-button
+            v-perms="'config:reward:add'"
             type="primary"
             :icon="useRenderIcon(AddFill)"
             @click="openDialog()"
@@ -177,6 +178,7 @@ onMounted(() => {
             新增配置
           </el-button>
           <el-button
+            v-perms="'config:reward:export'"
             type="primary"
             :loading="exportLoading"
             :icon="useRenderIcon(HugeiconsDownload01)"
@@ -209,6 +211,7 @@ onMounted(() => {
           >
             <template #operation="{ row }">
               <el-button
+                v-perms="'config:reward:edit'"
                 class="reset-margin"
                 link
                 type="primary"
@@ -224,6 +227,7 @@ onMounted(() => {
               >
                 <template #reference>
                   <el-button
+                    v-perms="'config:reward:delete'"
                     class="reset-margin"
                     link
                     type="primary"

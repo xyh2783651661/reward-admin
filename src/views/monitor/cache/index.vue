@@ -69,6 +69,7 @@ const {
     <PureTableBar :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
+          v-perms="'monitor:cache:clear'"
           type="danger"
           :icon="useRenderIcon('ri:delete-bin-line')"
           @click="onClearAll"
@@ -95,7 +96,14 @@ const {
           </div>
           <el-popconfirm title="是否确认删除选中缓存?" @confirm="onbatchDel">
             <template #reference>
-              <el-button type="danger" text class="mr-1!"> 批量删除 </el-button>
+              <el-button
+                v-perms="'monitor:cache:delete'"
+                type="danger"
+                text
+                class="mr-1!"
+              >
+                批量删除
+              </el-button>
             </template>
           </el-popconfirm>
         </div>
@@ -136,6 +144,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-perms="'monitor:cache:delete'"
                   class="reset-margin"
                   link
                   type="danger"
