@@ -267,14 +267,14 @@ export function useCacheMonitor() {
       prop: "accessCount",
       width: 110,
       align: "right",
-      formatter: ({ row }) => formatNumber(row?.accessCount)
+      formatter: row => formatNumber(row?.accessCount)
     },
     {
       label: "命中次数",
       prop: "hitCount",
       width: 110,
       align: "right",
-      formatter: ({ row }) => formatNumber(row?.hitCount)
+      formatter: row => formatNumber(row?.hitCount)
     },
     {
       label: "命中率",
@@ -324,7 +324,7 @@ export function useCacheMonitor() {
       prop: "sizeHuman",
       width: 110,
       align: "right",
-      formatter: ({ row }) => (row?.sizeHuman ? emptyText(row.sizeHuman) : "-")
+      formatter: row => (row?.sizeHuman ? emptyText(row.sizeHuman) : "-")
     }
   ];
 
@@ -333,7 +333,7 @@ export function useCacheMonitor() {
       label: "操作人",
       prop: "operator",
       width: 100,
-      formatter: ({ row }) => emptyText(row?.operator)
+      formatter: row => emptyText(row?.operator)
     },
     {
       label: "操作",
@@ -372,14 +372,14 @@ export function useCacheMonitor() {
       label: "时间",
       prop: "time",
       width: 170,
-      formatter: ({ row }) => formatDate(row?.time)
+      formatter: row => formatDate(row?.time)
     },
     {
       label: "描述",
       prop: "description",
       minWidth: 150,
       showOverflowTooltip: true,
-      formatter: ({ row }) => emptyText(row?.description)
+      formatter: row => emptyText(row?.description)
     }
   ];
 
