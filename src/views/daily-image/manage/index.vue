@@ -143,13 +143,18 @@ function getSourceLabel(type?: string) {
 
 <template>
   <div class="main">
-    <el-form ref="formRef" :inline="true" :model="form" class="search-form">
+    <el-form
+      ref="formRef"
+      :inline="true"
+      :model="form"
+      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
+    >
       <el-form-item label="来源" prop="source">
         <el-select
           v-model="form.source"
           placeholder="全部"
           clearable
-          style="width: 150px"
+          class="w-[180px]!"
         >
           <el-option
             v-for="item in sourceOptions"
@@ -162,7 +167,7 @@ function getSourceLabel(type?: string) {
       <el-form-item>
         <el-button
           type="primary"
-          :icon="useRenderIcon('ri:search-line')"
+          :icon="useRenderIcon('ri/search-line')"
           @click="onSearch"
         >
           搜索

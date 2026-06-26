@@ -14,14 +14,10 @@ import {
   // getRoleMenuIds,
   updateRewardSubject
 } from "@/api/system";
-import {
-  mockLoadTreeData,
-  mockRoleMenuCheckedIds
-} from "../../composables/mockData";
-import { useCrudTable, useTreePanel } from "../../composables";
-import { type Ref, ref, h } from "vue";
+import { useCrudTable } from "../../composables";
+import { ref, h } from "vue";
 
-export function useRewardSubject(treeRef: Ref) {
+export function useRewardSubject() {
   const formRef = ref();
   const switchLoadMap = ref({});
   const { switchStyle } = usePublicHooks();
@@ -41,26 +37,6 @@ export function useRewardSubject(treeRef: Ref) {
     searchApi: getRewardSubjectList,
     deleteApi: deleteRewardSubject,
     defaultForm: { name: "", type: "", stage: "", status: "" }
-  });
-
-  const {
-    curRow,
-    isShow,
-    treeData,
-    treeProps,
-    isLinkage,
-    isExpandAll,
-    isSelectAll,
-    treeSearchValue,
-    handleMenu,
-    handleSave,
-    rowStyle,
-    onQueryChanged,
-    filterMethod
-  } = useTreePanel({
-    treeRef,
-    loadTreeData: mockLoadTreeData,
-    getCheckedIds: row => mockRoleMenuCheckedIds(row)
   });
 
   const columns: TableColumnList = [
@@ -198,27 +174,14 @@ export function useRewardSubject(treeRef: Ref) {
 
   return {
     form,
-    isShow,
-    curRow,
     loading,
     columns,
-    rowStyle,
     dataList,
-    treeData,
-    treeProps,
-    isLinkage,
     pagination,
-    isExpandAll,
-    isSelectAll,
-    treeSearchValue,
     onSearch,
     resetForm,
     openDialog,
-    handleMenu,
-    handleSave,
     handleDelete,
-    filterMethod,
-    onQueryChanged,
     handleSizeChange,
     handleCurrentChange,
     handleSelectionChange

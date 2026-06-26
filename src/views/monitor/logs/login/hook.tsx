@@ -104,17 +104,17 @@ export function useMailLog() {
 
   async function onSearch() {
     loading.value = true;
-    const { data } = await getMailSendRecordsList<MailSendRecordItem>(
-      toRaw(form)
-    );
-    dataList.value = data.records ?? [];
-    pagination.total = data.total;
-    pagination.pageSize = data.size;
-    pagination.currentPage = data.current;
-
-    setTimeout(() => {
+    try {
+      const { data } = await getMailSendRecordsList<MailSendRecordItem>(
+        toRaw(form)
+      );
+      dataList.value = data.records ?? [];
+      pagination.total = data.total;
+      pagination.pageSize = data.size;
+      pagination.currentPage = data.current;
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   const resetForm = formEl => {

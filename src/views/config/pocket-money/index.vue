@@ -176,10 +176,6 @@ const {
 </template>
 
 <style lang="scss" scoped>
-.main-content {
-  margin: 24px 24px 0 !important;
-}
-
 .search-form {
   :deep(.el-form-item) {
     margin-bottom: 12px;

@@ -36,7 +36,6 @@ const iconClass = computed(() => {
   ];
 });
 
-const treeRef = ref();
 const formRef = ref();
 const tableRef = ref();
 const contentRef = ref();
@@ -44,10 +43,8 @@ const treeHeight = ref();
 
 const {
   form,
-  isShow,
   loading,
   columns,
-  rowStyle,
   dataList,
   pagination,
   onSearch,
@@ -57,7 +54,7 @@ const {
   handleSizeChange,
   handleCurrentChange,
   handleSelectionChange
-} = useRole(treeRef);
+} = useRole();
 
 onMounted(() => {
   useResizeObserver(contentRef, async () => {
@@ -142,7 +139,7 @@ onMounted(() => {
       :class="['flex', deviceDetection() ? 'flex-wrap' : '']"
     >
       <PureTableBar
-        :class="[isShow && !deviceDetection() ? 'w-[60vw]!' : 'w-full']"
+        class="w-full"
         style="transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1)"
         :columns="columns"
         @refresh="onSearch"
@@ -166,7 +163,6 @@ onMounted(() => {
             :loading="loading"
             :size="size"
             adaptive
-            :row-style="rowStyle"
             :adaptiveConfig="{ offsetBottom: 108 }"
             :data="dataList"
             :columns="dynamicColumns"
@@ -219,10 +215,6 @@ onMounted(() => {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
-}
-
-.main-content {
-  margin: 24px 24px 0 !important;
 }
 
 .search-form {

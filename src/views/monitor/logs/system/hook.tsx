@@ -252,7 +252,6 @@ export function useSystemLog(_tableRef: Ref) {
 
   function onDetail(row) {
     getSystemLogsDetail(row.id).then(res => {
-      console.log(res);
       addDialog({
         title: "系统日志详情",
         fullscreen: true,
@@ -267,15 +266,15 @@ export function useSystemLog(_tableRef: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { data } = await getSystemLogsList(toRaw(form));
-    dataList.value = data.records;
-    pagination.total = data.total;
-    pagination.pageSize = data.size;
-    pagination.currentPage = data.current;
-
-    setTimeout(() => {
+    try {
+      const { data } = await getSystemLogsList(toRaw(form));
+      dataList.value = data.records;
+      pagination.total = data.total;
+      pagination.pageSize = data.size;
+      pagination.currentPage = data.current;
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   async function loadFilterOptions() {
