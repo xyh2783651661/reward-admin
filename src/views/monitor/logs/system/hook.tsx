@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import Detail from "./detail.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -12,7 +12,7 @@ import {
   exportAccessLogsList
 } from "@/api/system";
 import Info from "~icons/ri/question-line";
-import { usePublicHooks } from "@/views/system/hooks";
+import { usePublicHooks } from "@/hooks/usePublicHooks";
 
 export function useSystemLog(_tableRef: Ref) {
   const form = reactive({

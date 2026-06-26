@@ -1,6 +1,24 @@
-// 抽离可公用的工具函数等用于系统管理页面逻辑
 import { computed } from "vue";
 import { useDark } from "@pureadmin/utils";
+
+export function useIconClass() {
+  return computed(() => {
+    return [
+      "w-[22px]",
+      "h-[22px]",
+      "flex",
+      "justify-center",
+      "items-center",
+      "outline-hidden",
+      "rounded-[4px]",
+      "cursor-pointer",
+      "transition-colors",
+      "hover:bg-[#0000000f]",
+      "dark:hover:bg-[#ffffff1f]",
+      "dark:hover:text-[#ffffffd9]"
+    ];
+  });
+}
 
 export function usePublicHooks() {
   const { isDark } = useDark();
@@ -14,7 +32,6 @@ export function usePublicHooks() {
 
   const tagStyle = computed(() => {
     return (status: number) => {
-      // 成功
       if (status === 1) {
         return {
           "--el-tag-text-color": isDark.value ? "#6abe39" : "#389e0d",
@@ -23,7 +40,6 @@ export function usePublicHooks() {
         };
       }
 
-      // 待发送 / 处理中
       if (status === 0) {
         return {
           "--el-tag-text-color": isDark.value ? "#ffd666" : "#d48806",
@@ -32,7 +48,6 @@ export function usePublicHooks() {
         };
       }
 
-      // 失败（默认）
       return {
         "--el-tag-text-color": isDark.value ? "#e84749" : "#cf1322",
         "--el-tag-bg-color": isDark.value ? "#2b1316" : "#fff1f0",
@@ -42,11 +57,8 @@ export function usePublicHooks() {
   });
 
   return {
-    /** 当前网页是否为`dark`模式 */
     isDark,
-    /** 表现更鲜明的`el-switch`组件  */
     switchStyle,
-    /** 表现更鲜明的`el-tag`组件  */
     tagStyle
   };
 }

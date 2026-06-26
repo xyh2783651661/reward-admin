@@ -1,8 +1,8 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
-import { usePublicHooks } from "../../hooks";
+import { usePublicHooks } from "@/hooks/usePublicHooks";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { deviceDetection } from "@pureadmin/utils";

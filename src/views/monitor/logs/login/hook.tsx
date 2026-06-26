@@ -1,7 +1,7 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getMailSendRecordsList } from "@/api/system";
-import { usePublicHooks } from "@/views/system/hooks";
+import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw } from "vue";
 import { addDialog } from "@/components/ReDialog/index";

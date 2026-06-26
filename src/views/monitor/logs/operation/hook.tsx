@@ -1,6 +1,6 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import { getOperationLogsList, getTaskLogsFilterOptions } from "@/api/system";
-import { usePublicHooks } from "@/views/system/hooks";
+import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { addDialog } from "@/components/ReDialog/index";

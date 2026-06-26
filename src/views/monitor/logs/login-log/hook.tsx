@@ -1,6 +1,6 @@
-import { emptyText, formatDate } from "@/utils/format";
+﻿import { emptyText, formatDate } from "@/utils/format";
 import { getLoginLogsList } from "@/api/system";
-import { usePublicHooks } from "@/views/system/hooks";
+import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw } from "vue";
 
