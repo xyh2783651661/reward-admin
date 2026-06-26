@@ -93,7 +93,9 @@ export {
   batchDeleteAccessLogs,
   exportAccessLogsList,
   getTraceDetail,
-  getTaskLogsFilterOptions
+  getTaskLogsFilterOptions,
+  getTaskLogDetail,
+  getTaskLogStats
 } from "./logs";
 
 export { getAiCallRecordPage, getAiCallRecordDetail } from "./ai";

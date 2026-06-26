@@ -91,3 +91,71 @@ export const getTaskLogsFilterOptions = () => {
     }>
   >("get", "/api/task-logs/filter-options");
 };
+
+/** 任务日志详情 */
+export interface TaskLogStep {
+  stepName: string;
+  success: boolean;
+  errorMessage?: string;
+  costMs?: number;
+}
+
+export interface TaskLogException {
+  type: string;
+  message: string;
+  stackTrace: string;
+}
+
+export interface TaskLogDetail {
+  id: number;
+  taskName: string;
+  description?: string;
+  success: boolean;
+  timeCost?: number;
+  startTime?: string;
+  endTime?: string;
+  classMethod?: string;
+  createdTime?: string;
+  steps: TaskLogStep[];
+  exception?: TaskLogException;
+}
+
+export interface TaskLogStatsItem {
+  taskName: string;
+  totalCount: number;
+  successCount: number;
+  successRate: number;
+  avgTimeCost: number;
+  lastTimeCost?: number;
+  lastSuccess?: string;
+  lastCreatedTime?: string;
+}
+
+export interface TaskLogTrendPoint {
+  date: string;
+  total: number;
+  success: number;
+  failure: number;
+  avgTimeCost: number;
+}
+
+export interface TaskLogStats {
+  totalCount: number;
+  successCount: number;
+  failureCount: number;
+  successRate: number;
+  avgTimeCost: number;
+  maxTimeCost: number;
+  taskStats: TaskLogStatsItem[];
+  trend: TaskLogTrendPoint[];
+}
+
+/** 获取单条任务日志详情 */
+export const getTaskLogDetail = (id: number | string) => {
+  return http.request<ApiResult<TaskLogDetail>>("get", `/api/task-logs/${id}`);
+};
+
+/** 获取任务统计概览 */
+export const getTaskLogStats = () => {
+  return http.request<ApiResult<TaskLogStats>>("get", "/api/task-logs/stats");
+};

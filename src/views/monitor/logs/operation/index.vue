@@ -81,13 +81,13 @@ const {
           clearable
           class="w-[150px]!"
         >
-          <el-option label="成功" value="true" />
-          <el-option label="失败" value="false" />
+          <el-option label="成功" :value="true" />
+          <el-option label="失败" :value="false" />
         </el-select>
       </el-form-item>
-      <el-form-item label="开始时间" prop="requestTime">
+      <el-form-item label="时间范围" prop="timeRange">
         <el-date-picker
-          v-model="form.requestTime"
+          v-model="form.timeRange"
           :shortcuts="getPickerShortcuts()"
           type="datetimerange"
           range-separator="至"
@@ -133,7 +133,7 @@ const {
         >
           <template #operation="{ row }">
             <el-button
-              v-if="!row.success || row.detail"
+              v-if="!row.success || row.hasSteps || row.hasException"
               class="reset-margin outline-hidden!"
               link
               type="primary"

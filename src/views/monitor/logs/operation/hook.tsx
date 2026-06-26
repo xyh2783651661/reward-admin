@@ -1,17 +1,22 @@
 ﻿import dayjs from "dayjs";
-import { getOperationLogsList, getTaskLogsFilterOptions } from "@/api/system";
+import {
+  getOperationLogsList,
+  getTaskLogsFilterOptions,
+  getTaskLogDetail
+} from "@/api/system";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/operation/detail.vue";
+import { message } from "@/utils/message";
 
 export function useOperationLog(_tableRef?: Ref) {
   const form = reactive({
     taskName: "",
     classMethod: "",
-    success: "",
-    requestTime: ["", ""],
+    success: undefined as boolean | undefined,
+    timeRange: ["", ""],
     current: 1,
     size: 10
   });
@@ -62,8 +67,8 @@ export function useOperationLog(_tableRef?: Ref) {
     },
     {
       label: "状态",
-      prop: "status",
-      minWidth: 100,
+      prop: "success",
+      minWidth: 80,
       cellRenderer: ({ row, props }) => (
         <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 2)}>
           {row.success ? "成功" : "失败"}
@@ -73,15 +78,16 @@ export function useOperationLog(_tableRef?: Ref) {
     {
       label: "开始时间",
       prop: "startTime",
-      minWidth: 300,
-      formatter: ({ startTime }) =>
-        dayjs(startTime).format("YYYY-MM-DD HH:mm:ss")
+      minWidth: 170,
+      formatter: row =>
+        row.startTime ? dayjs(row.startTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "结束时间",
       prop: "endTime",
-      minWidth: 300,
-      formatter: ({ endTime }) => dayjs(endTime).format("YYYY-MM-DD HH:mm:ss")
+      minWidth: 170,
+      formatter: row =>
+        row.endTime ? dayjs(row.endTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "调用方法",
@@ -90,11 +96,11 @@ export function useOperationLog(_tableRef?: Ref) {
     },
     {
       label: "执行详情",
-      prop: "detail",
-      minWidth: 120,
+      prop: "hasSteps",
+      minWidth: 100,
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} type={row.detail ? "primary" : "info"}>
-          {row.detail ? "有步骤" : "无"}
+        <el-tag size={props.size} type={row.hasSteps ? "primary" : "info"}>
+          {row.hasSteps ? "有步骤" : "无"}
         </el-tag>
       )
     },
@@ -105,17 +111,21 @@ export function useOperationLog(_tableRef?: Ref) {
     }
   ];
 
-  function onDetail(row) {
-    addDialog({
-      title: row.success ? "执行详情" : "异常信息详情",
-      fullscreen: true,
-      hideFooter: true,
-      contentRenderer: () => Detail,
-      props: {
-        exception: row.exception,
-        detail: row.detail
-      }
-    });
+  async function onDetail(row) {
+    try {
+      const { data } = await getTaskLogDetail(row.id);
+      addDialog({
+        title: `${data.taskName || "任务"} 执行详情`,
+        fullscreen: true,
+        hideFooter: true,
+        contentRenderer: () => Detail,
+        props: {
+          detail: data
+        }
+      });
+    } catch {
+      message("加载详情失败", { type: "error" });
+    }
   }
 
   function handleSizeChange(val: number) {
@@ -131,15 +141,17 @@ export function useOperationLog(_tableRef?: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { data } = await getOperationLogsList(toRaw(form));
-    dataList.value = data.records;
-    pagination.total = data.total;
-    pagination.pageSize = data.size;
-    pagination.currentPage = data.current;
-
-    setTimeout(() => {
+    try {
+      const { data } = await getOperationLogsList(toRaw(form));
+      dataList.value = data.records;
+      pagination.total = data.total;
+      pagination.pageSize = data.size;
+      pagination.currentPage = data.current;
+    } catch {
+      dataList.value = [];
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   async function loadFilterOptions() {
