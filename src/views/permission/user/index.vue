@@ -142,7 +142,7 @@ const {
               重置密码
             </el-button>
             <el-popconfirm
-              :title="`是否确认删除用户「${row.username}」`"
+              :title="`是否确认删除「${row.username}」？`"
               @confirm="handleDelete(row)"
             >
               <template #reference>

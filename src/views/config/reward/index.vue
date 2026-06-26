@@ -222,7 +222,7 @@ onMounted(() => {
                 修改
               </el-button>
               <el-popconfirm
-                :title="`是否确认删除ID为${row.id}的这条数据`"
+                :title="`是否确认删除「${row.rewardKey}」？`"
                 @confirm="handleDelete(row)"
               >
                 <template #reference>

@@ -64,7 +64,7 @@ const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
               修改
             </el-button>
             <el-popconfirm
-              :title="`是否确认删除菜单「${row.menuName}」`"
+              :title="`是否确认删除「${row.menuName}」？`"
               @confirm="handleDelete(row)"
             >
               <template #reference>

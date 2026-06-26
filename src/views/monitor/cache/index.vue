@@ -94,7 +94,7 @@ const {
               取消选择
             </el-button>
           </div>
-          <el-popconfirm title="是否确认删除选中缓存?" @confirm="onbatchDel">
+          <el-popconfirm title="是否确认删除选中缓存？" @confirm="onbatchDel">
             <template #reference>
               <el-button
                 v-perms="'monitor:cache:delete'"
@@ -139,7 +139,7 @@ const {
               查看
             </el-button>
             <el-popconfirm
-              :title="`确认删除 key: ${row.key}?`"
+              :title="`是否确认删除「${row.key}」？`"
               @confirm="onDeleteKey(row)"
             >
               <template #reference>

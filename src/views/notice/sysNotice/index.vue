@@ -218,7 +218,7 @@ const {
               撤回
             </el-button>
             <el-popconfirm
-              :title="`是否确认删除公告「${row.title || row.id}」？`"
+              :title="`是否确认删除「${row.title || row.id}」？`"
               @confirm="handleDelete(row)"
             >
               <template #reference>

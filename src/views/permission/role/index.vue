@@ -134,7 +134,7 @@ const {
               权限
             </el-button>
             <el-popconfirm
-              :title="`是否确认删除角色「${row.roleName}」`"
+              :title="`是否确认删除「${row.roleName}」？`"
               @confirm="handleDelete(row)"
             >
               <template #reference>

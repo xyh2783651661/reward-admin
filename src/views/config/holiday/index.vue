@@ -140,7 +140,7 @@ const {
               修改
             </el-button>
             <el-popconfirm
-              :title="`是否确认删除节假日 ${row.holidayName} 的这条配置`"
+              :title="`是否确认删除「${row.holidayName}」？`"
               @confirm="handleDelete(row)"
             >
               <template #reference>
