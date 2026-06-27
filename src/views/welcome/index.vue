@@ -171,15 +171,37 @@ function getDeltaSymbol(trend: SummaryTrend) {
   return "→";
 }
 
+function readCssVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return value || fallback;
+}
+
+function isDarkMode(): boolean {
+  return document.documentElement.classList.contains("dark");
+}
+
 function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
+  const dark = isDarkMode();
+  const axisLabel = readCssVar("--el-text-color-secondary", "#64748b");
+  const splitLine = readCssVar("--el-border-color-lighter", "#edf2f7");
+  const axisLine = dark
+    ? "rgba(255,255,255,0.12)"
+    : readCssVar("--el-border-color", "#dbe4f0");
+  const tooltipBg = dark ? "rgba(20,22,28,0.94)" : "rgba(15,23,42,0.92)";
+
   return {
     color: ["#2563eb", "#059669", "#d97706"],
     tooltip: {
       trigger: "axis",
-      backgroundColor: "rgba(15, 23, 42, 0.92)",
+      backgroundColor: tooltipBg,
       borderWidth: 0,
+      padding: [10, 14],
       textStyle: {
-        color: "#fff"
+        color: "#fff",
+        fontSize: 12
       }
     },
     legend: {
@@ -187,8 +209,9 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
       right: 0,
       itemWidth: 12,
       itemHeight: 12,
+      icon: "roundRect",
       textStyle: {
-        color: "#64748b"
+        color: axisLabel
       }
     },
     grid: {
@@ -200,43 +223,46 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
     },
     xAxis: {
       type: "category",
-      boundaryGap: false,
+      boundaryGap: true,
       data: data.categories,
       axisTick: {
         show: false
       },
       axisLine: {
         lineStyle: {
-          color: "#dbe4f0"
+          color: axisLine
         }
       },
       axisLabel: {
-        color: "#64748b"
+        color: axisLabel
       }
     },
     yAxis: [
       {
         type: "value",
         name: "数量",
+        nameTextStyle: { color: axisLabel },
         splitLine: {
           lineStyle: {
-            color: "#edf2f7"
+            color: splitLine,
+            type: "dashed"
           }
         },
         axisLabel: {
-          color: "#64748b"
+          color: axisLabel
         }
       },
       {
         type: "value",
         name: "成功率",
+        nameTextStyle: { color: axisLabel },
         min: 95,
         max: 100,
         splitLine: {
           show: false
         },
         axisLabel: {
-          color: "#64748b",
+          color: axisLabel,
           formatter: "{value}%"
         }
       }
@@ -245,18 +271,18 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
       {
         name: "奖励发放",
         type: "bar",
-        barMaxWidth: 18,
+        barMaxWidth: 16,
         itemStyle: {
-          borderRadius: [8, 8, 0, 0]
+          borderRadius: [6, 6, 0, 0]
         },
         data: data.rewardIssued
       },
       {
         name: "任务执行",
         type: "bar",
-        barMaxWidth: 18,
+        barMaxWidth: 16,
         itemStyle: {
-          borderRadius: [8, 8, 0, 0]
+          borderRadius: [6, 6, 0, 0]
         },
         data: data.taskExecutions
       },
@@ -266,12 +292,12 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
         yAxisIndex: 1,
         smooth: true,
         symbol: "circle",
-        symbolSize: 8,
+        symbolSize: 7,
         lineStyle: {
-          width: 3
+          width: 2.5
         },
         areaStyle: {
-          color: "rgba(217, 119, 6, 0.12)"
+          color: "rgba(217, 119, 6, 0.1)"
         },
         data: data.mailSuccessRate
       }
@@ -353,8 +379,19 @@ useResizeObserver(chartRef, () => {
   trendChart?.resize();
 });
 
+let themeObserver: MutationObserver | null = null;
+
 onMounted(() => {
   void loadWorkbench();
+  themeObserver = new MutationObserver(() => {
+    if (trendChart) {
+      trendChart.setOption(buildTrendOption(trendData.value), true);
+    }
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "data-theme"]
+  });
 });
 
 onActivated(() => {
@@ -362,6 +399,8 @@ onActivated(() => {
 });
 
 onBeforeUnmount(() => {
+  themeObserver?.disconnect();
+  themeObserver = null;
   trendChart?.dispose();
   trendChart = null;
 });
@@ -378,197 +417,166 @@ onBeforeUnmount(() => {
       :closable="false"
     />
 
-    <section v-loading="loading" class="hero-panel">
-      <div class="hero-panel__content">
-        <div class="hero-panel__main">
-          <div class="hero-panel__eyebrow">
-            <span>{{ greeting }}，{{ displayName }}</span>
-            <el-tag type="success" effect="light" round>工作台在线</el-tag>
-          </div>
-          <h1 class="hero-panel__title">
-            {{ headline.title || "系统运行一切正常" }}
-          </h1>
-          <p class="hero-panel__description">
-            {{
-              headline.description ||
-              "这里会聚合系统配置、邮件发送和任务执行的关键数据。"
-            }}
-          </p>
-          <div class="hero-panel__meta">
-            <span>
-              <IconifyIconOnline icon="ri:refresh-line" />
-              最近更新 {{ updatedAtText }}
-            </span>
-            <span>
-              <IconifyIconOnline icon="ri:time-line" />
-              当前时间 {{ currentTimeText }}
-            </span>
-          </div>
+    <section v-loading="loading" class="hero">
+      <div class="hero__main">
+        <div class="hero__eyebrow">
+          <span class="hero__greeting">{{ greeting }}，{{ displayName }}</span>
+          <span class="hero__pulse" />
+          <span class="hero__status">工作台在线</span>
         </div>
-        <div class="hero-panel__aside">
-          <div class="focus-card">
-            <div class="focus-card__title">今日关注</div>
-            <div v-if="focusItems.length" class="focus-card__list">
-              <el-tag
-                v-for="item in focusItems"
-                :key="item.label"
-                :type="item.type"
-                effect="light"
-                round
-              >
-                {{ item.label }}: {{ item.value }}
-              </el-tag>
-            </div>
-            <el-empty v-else description="暂无关注项" :image-size="48" />
-          </div>
-          <el-button
-            type="primary"
-            plain
-            :loading="loading"
-            @click="loadWorkbench"
+        <h1 class="hero__title">{{ headline.title || "系统运行一切正常" }}</h1>
+        <p class="hero__desc">
+          {{
+            headline.description ||
+            "这里会聚合系统配置、邮件发送和任务执行的关键数据。"
+          }}
+        </p>
+        <div class="hero__meta">
+          <span
+            ><IconifyIconOnline icon="ri:refresh-line" /> 最近更新
+            {{ updatedAtText }}</span
           >
-            刷新首页
-          </el-button>
+          <span
+            ><IconifyIconOnline icon="ri:time-line" />
+            {{ currentTimeText }}</span
+          >
         </div>
       </div>
+      <aside class="hero__aside">
+        <div class="focus-stack">
+          <div class="focus-stack__label">今日关注</div>
+          <div class="focus-stack__tags">
+            <span
+              v-for="item in focusItems"
+              :key="item.label"
+              class="focus-chip"
+              :data-type="item.type"
+            >
+              <span class="focus-chip__k">{{ item.label }}</span>
+              <span class="focus-chip__v">{{ item.value }}</span>
+            </span>
+          </div>
+        </div>
+        <button
+          class="hero__refresh"
+          :disabled="loading"
+          @click="loadWorkbench"
+        >
+          <IconifyIconOnline icon="ri:refresh-line" />
+          <span>刷新首页</span>
+        </button>
+      </aside>
     </section>
 
-    <section class="summary-grid">
-      <button
-        v-for="card in summaryCards"
+    <section class="kpi-grid">
+      <article
+        v-for="(card, i) in summaryCards"
         :key="card.key"
-        type="button"
-        class="summary-card"
-        :class="{ 'is-clickable': card.path }"
+        class="kpi-card"
+        :class="{ 'kpi-card--wide': i === 0, 'is-clickable': card.path }"
+        :style="{ '--i': i, '--accent': card.color }"
         :disabled="!card.path"
-        :style="{
-          '--summary-accent': card.color
-        }"
         @click="navigateTo(card.path)"
       >
-        <div class="summary-card__header">
-          <span class="summary-card__icon">
-            <IconifyIconOnline :icon="card.icon" />
-          </span>
-          <span class="summary-card__trend" :class="`is-${card.trend}`">
+        <div class="kpi-card__top">
+          <span class="kpi-card__icon"
+            ><IconifyIconOnline :icon="card.icon"
+          /></span>
+          <span class="kpi-card__label">{{ card.label }}</span>
+          <span class="kpi-card__trend" :class="`is-${card.trend}`">
             {{ getDeltaSymbol(card.trend) }} {{ getTrendLabel(card.trend) }}
           </span>
         </div>
-        <div class="summary-card__label">{{ card.label }}</div>
-        <div class="summary-card__value">{{ formatCardValue(card) }}</div>
-        <div class="summary-card__delta" :class="`is-${card.trend}`">
-          {{ formatDelta(card) }}
+        <div class="kpi-card__value-row">
+          <strong class="kpi-card__value">{{ formatCardValue(card) }}</strong>
+          <span class="kpi-card__delta" :class="`is-${card.trend}`">
+            {{ formatDelta(card) }}
+          </span>
         </div>
-        <p class="summary-card__description">{{ card.description }}</p>
-      </button>
-    </section>
-
-    <section class="content-grid">
-      <article class="panel panel--wide">
-        <div class="panel__header">
-          <div>
-            <h2 class="panel__title">运行趋势</h2>
-            <p class="panel__subtitle">
-              奖励发放、邮件成功率和任务执行量统一在这里看。
-            </p>
-          </div>
-          <el-radio-group
-            v-model="activeRange"
-            size="small"
-            @change="handleRangeChange"
-          >
-            <el-radio-button value="7d">近 7 天</el-radio-button>
-            <el-radio-button value="30d">近 30 天</el-radio-button>
-          </el-radio-group>
-        </div>
-        <div class="metric-grid">
-          <div
-            v-for="item in trendMetrics"
-            :key="item.label"
-            class="metric-card"
-          >
-            <span class="metric-card__icon">
-              <IconifyIconOnline :icon="item.icon" />
-            </span>
-            <span class="metric-card__label">{{ item.label }}</span>
-            <strong class="metric-card__value">{{ item.value }}</strong>
-          </div>
-        </div>
-        <div ref="chartRef" v-loading="trendLoading" class="trend-chart" />
-      </article>
-
-      <article class="panel">
-        <div class="panel__header">
-          <div>
-            <h2 class="panel__title">快捷入口</h2>
-            <p class="panel__subtitle">把常用配置和排障入口固定到首页。</p>
-          </div>
-        </div>
-        <div v-if="quickEntries.length" class="quick-entry-list">
-          <button
-            v-for="entry in quickEntries"
-            :key="entry.key"
-            type="button"
-            class="quick-entry"
-            :style="{ '--quick-accent': entry.accent }"
-            @click="navigateTo(entry.path)"
-          >
-            <span class="quick-entry__icon">
-              <IconifyIconOnline :icon="entry.icon" />
-            </span>
-            <span class="quick-entry__text">
-              <strong>{{ entry.title }}</strong>
-              <span>{{ entry.description }}</span>
-            </span>
-          </button>
-        </div>
-        <el-empty v-else description="暂无快捷入口" :image-size="72" />
+        <p class="kpi-card__desc">{{ card.description }}</p>
       </article>
     </section>
 
-    <section class="content-grid content-grid--bottom">
-      <article class="panel">
-        <div class="panel__header">
-          <div>
-            <h2 class="panel__title">待办推进</h2>
-            <p class="panel__subtitle">{{ todoSummaryText }}</p>
+    <section class="trend-panel">
+      <header class="trend-panel__head">
+        <div>
+          <h2 class="trend-panel__title">运行趋势</h2>
+          <p class="trend-panel__sub">
+            奖励发放、邮件成功率和任务执行量统一在这里看。
+          </p>
+        </div>
+        <el-radio-group
+          v-model="activeRange"
+          size="small"
+          @change="handleRangeChange"
+        >
+          <el-radio-button value="7d">近 7 天</el-radio-button>
+          <el-radio-button value="30d">近 30 天</el-radio-button>
+        </el-radio-group>
+      </header>
+      <div class="trend-metrics">
+        <div
+          v-for="item in trendMetrics"
+          :key="item.label"
+          class="trend-metric"
+        >
+          <span class="trend-metric__icon"
+            ><IconifyIconOnline :icon="item.icon"
+          /></span>
+          <div class="trend-metric__text">
+            <span class="trend-metric__label">{{ item.label }}</span>
+            <strong class="trend-metric__value">{{ item.value }}</strong>
           </div>
         </div>
-        <div v-if="todoList.length" class="todo-list">
+      </div>
+      <div ref="chartRef" v-loading="trendLoading" class="trend-chart" />
+    </section>
+
+    <section class="dual-grid">
+      <article class="list-panel">
+        <header class="list-panel__head">
+          <div>
+            <h2 class="list-panel__title">待办推进</h2>
+            <p class="list-panel__sub">{{ todoSummaryText }}</p>
+          </div>
+        </header>
+        <div v-if="todoList.length" class="todo-stack">
           <button
-            v-for="item in todoList"
+            v-for="(item, i) in todoList"
             :key="item.id"
-            type="button"
-            class="todo-card"
+            class="todo-row"
+            :class="`is-${item.status}`"
+            :style="{ '--i': i }"
             @click="navigateTo(item.path)"
           >
-            <div class="todo-card__header">
-              <div class="todo-card__title-wrap">
-                <h3 class="todo-card__title">{{ item.title }}</h3>
-                <p class="todo-card__description">{{ item.description }}</p>
-              </div>
-              <el-tag :type="item.status" effect="light">{{ item.tag }}</el-tag>
+            <span class="todo-row__bar" />
+            <div class="todo-row__body">
+              <div class="todo-row__title">{{ item.title }}</div>
+              <div class="todo-row__desc">{{ item.description }}</div>
             </div>
-            <div class="todo-card__footer">
-              <span>
+            <div class="todo-row__meta">
+              <el-tag :type="item.status" size="small" effect="light" round>
+                {{ item.tag }}
+              </el-tag>
+              <span class="todo-row__time">
                 <IconifyIconOnline icon="ri:calendar-check-line" />
-                截止 {{ item.dueTime }}
+                {{ item.dueTime }}
               </span>
-              <span class="todo-card__action">{{ item.actionText }}</span>
+              <span class="todo-row__action">{{ item.actionText }} ›</span>
             </div>
           </button>
         </div>
-        <el-empty v-else description="暂无待办" :image-size="72" />
+        <el-empty v-else description="暂无待办" :image-size="64" />
       </article>
 
-      <article class="panel">
-        <div class="panel__header">
+      <article class="list-panel">
+        <header class="list-panel__head">
           <div>
-            <h2 class="panel__title">最近动态</h2>
-            <p class="panel__subtitle">{{ activitySummaryText }}</p>
+            <h2 class="list-panel__title">最近动态</h2>
+            <p class="list-panel__sub">{{ activitySummaryText }}</p>
           </div>
-        </div>
-        <el-timeline v-if="activityList.length" class="activity-timeline">
+        </header>
+        <el-timeline v-if="activityList.length" class="activity-tl">
           <el-timeline-item
             v-for="item in activityList"
             :key="item.id"
@@ -576,44 +584,165 @@ onBeforeUnmount(() => {
             placement="top"
             hollow
           >
-            <button
-              type="button"
-              class="activity-card"
-              @click="navigateTo(item.path)"
-            >
-              <div class="activity-card__title">
-                <span class="activity-card__icon">
+            <button class="activity-row" @click="navigateTo(item.path)">
+              <div class="activity-row__head">
+                <span class="activity-row__icon">
                   <IconifyIconOnline :icon="item.icon" />
                 </span>
                 <strong>{{ item.title }}</strong>
               </div>
-              <p class="activity-card__description">{{ item.description }}</p>
-              <span class="activity-card__operator">
+              <p class="activity-row__desc">{{ item.description }}</p>
+              <span class="activity-row__op">
                 <IconifyIconOnline icon="ri:user-line" />
                 {{ item.operator }}
               </span>
             </button>
           </el-timeline-item>
         </el-timeline>
-        <el-empty v-else description="暂无动态" :image-size="72" />
+        <el-empty v-else description="暂无动态" :image-size="64" />
       </article>
+    </section>
+
+    <section class="quick-rail">
+      <span class="quick-rail__label">快捷入口</span>
+      <div class="quick-rail__list">
+        <button
+          v-for="entry in quickEntries"
+          :key="entry.key"
+          class="quick-chip"
+          :style="{ '--accent': entry.accent }"
+          @click="navigateTo(entry.path)"
+        >
+          <span class="quick-chip__icon"
+            ><IconifyIconOnline :icon="entry.icon"
+          /></span>
+          <span class="quick-chip__text">
+            <strong>{{ entry.title }}</strong>
+            <small>{{ entry.description }}</small>
+          </span>
+          <span class="quick-chip__arrow">›</span>
+        </button>
+      </div>
     </section>
   </div>
 </template>
 
 <style lang="scss" scoped>
+
+
+@keyframes wb-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wb-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(1.6);
+  }
+}
+
+/* ============ Responsive ============ */
+@media (width <= 1280px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-card--wide {
+    grid-column: span 2;
+  }
+
+  .dual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-rail__list {
+    flex-wrap: wrap;
+  }
+
+  .quick-chip {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+  }
+}
+
+@media (width <= 768px) {
+  .workbench {
+    padding: 12px;
+  }
+
+  .hero {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .hero__aside {
+    width: 100%;
+  }
+
+  .kpi-grid,
+  .trend-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-card--wide {
+    grid-column: span 1;
+  }
+
+  .trend-panel__head,
+  .list-panel__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .todo-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .todo-row__meta {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .quick-chip {
+    flex: 1 1 100%;
+  }
+}
+
 .workbench {
-  --workbench-radius: 16px;
-  --workbench-gap: 16px;
-  --workbench-shadow: 0 10px 28px rgb(0 0 0 / 4%);
+  --wb-gap: 16px;
+  --wb-radius: 14px;
+  --wb-border: var(--el-border-color-lighter);
+  --wb-card: var(--el-bg-color-overlay);
+  --wb-shadow: 0 1px 2px rgb(0 0 0 / 3%), 0 8px 24px rgb(0 0 0 / 4%);
+  --wb-shadow-hover: 0 2px 4px rgb(0 0 0 / 4%), 0 16px 40px rgb(0 0 0 / 8%);
 
   display: flex;
   flex-direction: column;
-  gap: var(--workbench-gap);
+  gap: var(--wb-gap);
   min-height: 100%;
-  padding: 16px;
+  padding: 20px;
   background:
-    radial-gradient(circle at 8% 0, rgb(64 158 255 / 10%), transparent 26%),
+    radial-gradient(
+        circle at 1px 1px,
+        var(--el-fill-color-dark, rgb(0 0 0 / 4%)) 1px,
+        transparent 0
+      )
+      0 0 / 22px 22px,
     var(--el-bg-color);
 }
 
@@ -621,48 +750,21 @@ onBeforeUnmount(() => {
   margin-bottom: 0;
 }
 
-.hero-panel,
-.panel,
-.summary-card {
-  position: relative;
-  overflow: hidden;
-  background: var(--el-bg-color-overlay);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--workbench-radius);
-  box-shadow: var(--workbench-shadow);
-}
-
-.hero-panel {
-  padding: 24px;
-  color: var(--el-text-color-primary);
-  background:
-    linear-gradient(135deg, rgb(64 158 255 / 12%), transparent 42%),
-    var(--el-bg-color-overlay);
-  border-color: var(--el-color-primary-light-8);
-
-  &::after {
-    position: absolute;
-    right: -48px;
-    bottom: -72px;
-    width: 220px;
-    height: 220px;
-    content: "";
-    background: var(--el-color-primary-light-9);
-    border-radius: 50%;
-    opacity: 0.7;
-  }
-}
-
-.hero-panel__content {
-  position: relative;
-  z-index: 1;
+/* ============ Hero ============ */
+.hero {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   align-items: stretch;
   justify-content: space-between;
+  padding: 28px 28px 24px;
+  background: var(--wb-card);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius);
+  box-shadow: var(--wb-shadow);
+  animation: wb-fade-up 0.5s ease both;
 }
 
-.hero-panel__main {
+.hero__main {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -670,38 +772,55 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-.hero-panel__eyebrow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.hero__eyebrow {
+  display: inline-flex;
+  gap: 10px;
   align-items: center;
-  margin: 0 0 10px;
+  margin-bottom: 14px;
   font-size: 13px;
   font-weight: 600;
   color: var(--el-color-primary);
 }
 
-.hero-panel__title {
-  margin: 0;
-  font-size: clamp(24px, 3.2vw, 34px);
-  font-weight: 700;
-  line-height: 1.18;
-  letter-spacing: -0.02em;
+.hero__greeting {
+  letter-spacing: 0.01em;
 }
 
-.hero-panel__description {
-  max-width: 680px;
-  margin: 12px 0 0;
+.hero__pulse {
+  width: 7px;
+  height: 7px;
+  background: var(--el-color-success);
+  border-radius: 50%;
+  animation: wb-pulse 2s ease-in-out infinite;
+}
+
+.hero__status {
+  font-weight: 500;
+  color: var(--el-text-color-secondary);
+}
+
+.hero__title {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--el-text-color-primary);
+  letter-spacing: -0.03em;
+}
+
+.hero__desc {
+  max-width: 620px;
+  margin: 14px 0 0;
   font-size: 15px;
-  line-height: 1.8;
+  line-height: 1.75;
   color: var(--el-text-color-regular);
 }
 
-.hero-panel__meta {
+.hero__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 18px;
+  margin-top: 20px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 
@@ -709,68 +828,129 @@ onBeforeUnmount(() => {
     display: inline-flex;
     gap: 6px;
     align-items: center;
-    padding: 6px 10px;
-    background: var(--el-fill-color-lighter);
-    border-radius: 999px;
   }
 }
 
-.hero-panel__aside {
+.hero__aside {
   display: flex;
   flex-shrink: 0;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   justify-content: space-between;
-  width: min(320px, 36%);
+  width: min(300px, 32%);
 }
 
-.focus-card {
-  padding: 14px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-extra-light);
-  border-radius: 14px;
+.focus-stack {
+  padding: 16px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--wb-border);
+  border-radius: 12px;
 }
 
-.focus-card__title {
-  margin-bottom: 10px;
-  font-size: 13px;
+.focus-stack__label {
+  margin-bottom: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: var(--el-text-color-primary);
+  color: var(--el-text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.focus-card__list {
+.focus-stack__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--workbench-gap);
+.focus-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 5px 11px;
+  font-size: 13px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--wb-border);
+  border-radius: 999px;
 }
 
-.summary-card {
-  padding: 18px;
-  color: var(--el-text-color-primary);
-  text-align: left;
-  cursor: default;
-  border-top: 3px solid var(--summary-accent);
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
+.focus-chip__k {
+  color: var(--el-text-color-secondary);
+}
 
-  &::before {
-    position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 76px;
-    height: 76px;
-    content: "";
-    background: var(--el-fill-color-lighter);
-    border-radius: 50%;
-    opacity: 0.8;
+.focus-chip__v {
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.focus-chip[data-type="primary"] {
+  border-color: var(--el-color-primary-light-6);
+}
+
+.focus-chip[data-type="success"] {
+  border-color: var(--el-color-success-light-6);
+}
+
+.focus-chip[data-type="warning"] {
+  border-color: var(--el-color-warning-light-6);
+}
+
+.focus-chip[data-type="danger"] {
+  border-color: var(--el-color-danger-light-6);
+}
+
+.hero__refresh {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--el-color-primary-light-8);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+}
+
+/* ============ KPI ============ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--wb-gap);
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  text-align: left;
+  background: var(--wb-card);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius);
+  box-shadow: var(--wb-shadow);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  animation: wb-fade-up 0.5s ease both;
+  animation-delay: calc(var(--i, 0) * 60ms + 80ms);
+
+  &--wide {
+    grid-column: span 2;
   }
 
   &.is-clickable {
@@ -778,8 +958,8 @@ onBeforeUnmount(() => {
   }
 
   &.is-clickable:hover {
-    border-color: var(--el-color-primary-light-7);
-    box-shadow: 0 14px 32px rgb(64 158 255 / 10%);
+    border-color: var(--accent, var(--el-color-primary-light-6));
+    box-shadow: var(--wb-shadow-hover);
     transform: translateY(-2px);
   }
 
@@ -788,78 +968,42 @@ onBeforeUnmount(() => {
   }
 }
 
-.summary-card__header {
-  position: relative;
-  z-index: 1;
+.kpi-card__top {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  justify-content: space-between;
 }
 
-.summary-card__icon {
+.kpi-card__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  color: var(--summary-accent);
-  background: var(--el-fill-color-lighter);
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  color: var(--accent, var(--el-color-primary));
+  background: color-mix(
+    in srgb,
+    var(--accent, var(--el-color-primary)) 12%,
+    transparent
+  );
+  border-radius: 10px;
 }
 
-.summary-card__trend {
-  position: relative;
-  z-index: 1;
-  padding: 3px 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--el-color-info);
-  white-space: nowrap;
-  background: var(--el-fill-color-lighter);
-  border-radius: 999px;
-
-  &.is-up {
-    color: var(--el-color-success);
-    background: var(--el-color-success-light-9);
-  }
-
-  &.is-down {
-    color: var(--el-color-warning);
-    background: var(--el-color-warning-light-9);
-  }
-}
-
-.summary-card__label,
-.summary-card__value,
-.summary-card__delta,
-.summary-card__description {
-  position: relative;
-  z-index: 1;
-}
-
-.summary-card__label {
-  margin-top: 16px;
+.kpi-card__label {
   font-size: 13px;
+  font-weight: 600;
   color: var(--el-text-color-secondary);
 }
 
-.summary-card__value {
-  margin-top: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 30px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-.summary-card__delta {
-  margin-top: 10px;
-  font-size: 14px;
+.kpi-card__trend {
+  padding: 2px 8px;
+  margin-left: auto;
+  font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+  background: var(--el-fill-color-lighter);
+  border-radius: 999px;
 
   &.is-up {
     color: var(--el-color-success);
@@ -870,101 +1014,133 @@ onBeforeUnmount(() => {
   }
 
   &.is-flat {
-    color: var(--el-color-info);
+    color: var(--el-text-color-secondary);
   }
 }
 
-.summary-card__description {
-  margin: 10px 0 0;
-  font-size: 13px;
+.kpi-card__value-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.kpi-card__value {
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--el-text-color-primary);
+  letter-spacing: -0.02em;
+}
+
+.kpi-card--wide .kpi-card__value {
+  font-size: 40px;
+}
+
+.kpi-card__delta {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  &.is-up {
+    color: var(--el-color-success);
+  }
+
+  &.is-down {
+    color: var(--el-color-warning);
+  }
+
+  &.is-flat {
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.kpi-card__desc {
+  margin: 0;
+  font-size: 12.5px;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
-.content-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
-  gap: var(--workbench-gap);
-}
-
-.content-grid--bottom {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.panel {
+/* ============ Trend ============ */
+.trend-panel {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 18px;
+  padding: 22px;
+  background: var(--wb-card);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius);
+  box-shadow: var(--wb-shadow);
+  animation: wb-fade-up 0.5s ease both;
+  animation-delay: 320ms;
 }
 
-.panel__header {
+.trend-panel__head {
   display: flex;
   gap: 16px;
   align-items: center;
   justify-content: space-between;
 }
 
-.panel__title {
+.trend-panel__title {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
   color: var(--el-text-color-primary);
 }
 
-.panel__subtitle {
-  margin: 6px 0 0;
+.trend-panel__sub {
+  margin: 5px 0 0;
   font-size: 13px;
-  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
-.metric-grid {
+.trend-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
-.metric-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 10px;
+.trend-metric {
+  display: flex;
+  gap: 12px;
   align-items: center;
-  padding: 14px;
+  padding: 14px 16px;
   background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-extra-light);
-  border-radius: 14px;
+  border: 1px solid var(--wb-border);
+  border-radius: 12px;
 }
 
-.metric-card__icon {
+.trend-metric__icon {
   display: inline-flex;
-  grid-row: span 2;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
   border-radius: 10px;
 }
 
-.metric-card__label {
-  display: block;
-  font-size: 13px;
+.trend-metric__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trend-metric__label {
+  font-size: 12px;
   color: var(--el-text-color-secondary);
 }
 
-.metric-card__value {
-  display: block;
-  margin-top: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 24px;
-  font-weight: 700;
+.trend-metric__value {
+  font-size: 22px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
   color: var(--el-text-color-primary);
-  white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .trend-chart {
@@ -972,32 +1148,67 @@ onBeforeUnmount(() => {
   min-height: 320px;
 }
 
-.quick-entry-list,
-.todo-list {
+/* ============ Dual grid ============ */
+.dual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--wb-gap);
+}
+
+.list-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
+  padding: 22px;
+  background: var(--wb-card);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius);
+  box-shadow: var(--wb-shadow);
+  animation: wb-fade-up 0.5s ease both;
+  animation-delay: 400ms;
 }
 
-.quick-entry,
-.todo-card,
-.activity-card {
-  width: 100%;
-  color: inherit;
+.list-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.list-panel__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.list-panel__sub {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+/* todo */
+.todo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todo-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
   text-align: left;
-  background: transparent;
-  border: 0;
-}
-
-.quick-entry,
-.todo-card {
   background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-extra-light);
-  border-radius: 14px;
+  border: 1px solid var(--wb-border);
+  border-radius: 12px;
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
     background 0.18s ease;
+  animation: wb-fade-up 0.4s ease both;
+  animation-delay: calc(var(--i, 0) * 50ms + 480ms);
 
   &:hover {
     background: var(--el-fill-color-lighter);
@@ -1006,188 +1217,228 @@ onBeforeUnmount(() => {
   }
 }
 
-.quick-entry {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 14px;
-}
-
-.quick-entry__icon {
-  display: inline-flex;
+.todo-row__bar {
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  color: var(--quick-accent);
-  background: var(--el-fill-color-lighter);
-  border-radius: 12px;
+  align-self: stretch;
+  width: 3px;
+  background: var(--el-text-color-placeholder);
+  border-radius: 999px;
 }
 
-.quick-entry__text {
-  display: flex;
+.todo-row.is-danger .todo-row__bar {
+  background: var(--el-color-danger);
+}
+
+.todo-row.is-warning .todo-row__bar {
+  background: var(--el-color-warning);
+}
+
+.todo-row.is-info .todo-row__bar {
+  background: var(--el-color-primary);
+}
+
+.todo-row.is-primary .todo-row__bar {
+  background: var(--el-color-primary);
+}
+
+.todo-row.is-success .todo-row__bar {
+  background: var(--el-color-success);
+}
+
+.todo-row__body {
   flex: 1;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-
-  strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--el-text-color-primary);
-    white-space: nowrap;
-  }
-
-  span {
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.todo-card {
-  padding: 14px;
-}
-
-.todo-card__header {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.todo-card__title-wrap {
   min-width: 0;
 }
 
-.todo-card__title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.todo-card__description {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
-.todo-card__footer {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 14px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-
-  span {
-    display: inline-flex;
-    gap: 5px;
-    align-items: center;
-  }
-}
-
-.todo-card__action {
+.todo-row__title {
+  font-size: 14px;
   font-weight: 600;
-  color: var(--el-color-primary);
-}
-
-.activity-timeline {
-  padding-top: 0;
-}
-
-.activity-card {
-  padding: 0 0 0 4px;
-}
-
-.activity-card__title {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  font-size: 15px;
   color: var(--el-text-color-primary);
 }
 
-.activity-card__icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  font-size: 16px;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  border-radius: 12px;
-}
-
-.activity-card__description {
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 1.65;
+.todo-row__desc {
+  display: -webkit-box;
+  margin-top: 4px;
+  overflow: hidden;
+  -webkit-line-clamp: 1;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--el-text-color-secondary);
+  -webkit-box-orient: vertical;
 }
 
-.activity-card__operator {
+.todo-row__meta {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.todo-row__time {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  margin-top: 10px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
 
-@media (width <= 1280px) {
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.todo-row__action {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
 
-  .content-grid,
-  .content-grid--bottom {
-    grid-template-columns: 1fr;
+/* activity */
+.activity-tl {
+  padding-top: 0;
+}
+
+.activity-row {
+  width: 100%;
+  padding: 2px 0 2px 4px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  transition: opacity 0.18s ease;
+
+  &:hover {
+    opacity: 0.75;
   }
 }
 
-@media (width <= 768px) {
-  .workbench {
-    padding: 10px;
+.activity-row__head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.activity-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 9px;
+}
+
+.activity-row__desc {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
+.activity-row__op {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* ============ Quick rail ============ */
+.quick-rail {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--wb-card);
+  border: 1px solid var(--wb-border);
+  border-radius: var(--wb-radius);
+  box-shadow: var(--wb-shadow);
+  animation: wb-fade-up 0.5s ease both;
+  animation-delay: 560ms;
+}
+
+.quick-rail__label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--el-text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.quick-rail__list {
+  display: flex;
+  flex: 1;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.quick-chip {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  align-items: center;
+  min-width: 200px;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--el-bg-color);
+  border: 1px solid var(--wb-border);
+  border-radius: 12px;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+
+  &:hover {
+    background: var(--el-fill-color-lighter);
+    border-color: var(--accent, var(--el-color-primary-light-7));
+    transform: translateY(-2px);
+  }
+}
+
+.quick-chip__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  font-size: 19px;
+  color: var(--accent, var(--el-color-primary));
+  background: color-mix(
+    in srgb,
+    var(--accent, var(--el-color-primary)) 12%,
+    transparent
+  );
+  border-radius: 10px;
+}
+
+.quick-chip__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+
+  strong {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
   }
 
-  .hero-panel {
-    padding: 18px;
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--el-text-color-secondary);
+    white-space: nowrap;
   }
+}
 
-  .hero-panel__content,
-  .panel__header,
-  .todo-card__header,
-  .todo-card__footer {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .hero-panel__aside {
-    width: 100%;
-  }
-
-  .summary-grid,
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .panel,
-  .summary-card {
-    padding: 16px;
-  }
-
-  .trend-chart {
-    min-height: 300px;
-  }
+.quick-chip__arrow {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--el-text-color-placeholder);
 }
 </style>
