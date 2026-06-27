@@ -99,15 +99,17 @@ function handleMarkRead() {
           {{ noticeItem.datetime || "刚刚" }}
         </span>
         <div class="notice-actions">
-          <button
-            v-if="isUnread"
-            type="button"
-            class="notice-link-button"
-            @click.stop="handleMarkRead"
-          >
-            标为已读
-          </button>
-          <span v-else class="notice-read-state">已读</span>
+          <template v-if="noticeItem.type === 'notify'">
+            <button
+              v-if="isUnread"
+              type="button"
+              class="notice-link-button"
+              @click.stop="handleMarkRead"
+            >
+              标为已读
+            </button>
+            <span v-else class="notice-read-state">已读</span>
+          </template>
           <span v-if="isActionable" class="notice-open-link">
             {{ noticeItem.actionText || "查看详情" }}
           </span>

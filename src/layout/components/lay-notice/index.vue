@@ -4,6 +4,8 @@ import { useI18n } from "vue-i18n";
 import { computed, onMounted, ref } from "vue";
 import {
   getNoticePanel,
+  getSysNoticeDetail,
+  getUnreadCount,
   markAllNoticeRead,
   markNoticeRead
 } from "@/api/notice";
@@ -19,10 +21,12 @@ const actionLoading = ref(false);
 const notices = ref<NoticeTabItem[]>([]);
 const activeKey = ref("");
 const generatedAt = ref("");
+const serverUnreadCount = ref(0);
+const detailVisible = ref(false);
+const detailLoading = ref(false);
+const detailData = ref<Record<string, any> | null>(null);
 
-const noticesNum = computed(() => {
-  return notices.value.reduce((total, tab) => total + getUnreadCount(tab), 0);
-});
+const noticesNum = computed(() => serverUnreadCount.value);
 
 const totalNum = computed(() => {
   return notices.value.reduce((total, tab) => total + tab.list.length, 0);
@@ -36,7 +40,7 @@ const panelWidth = computed(() =>
   notices.value.length === 0 ? "260px" : "420px"
 );
 
-function getUnreadCount(tab: NoticeTabItem) {
+function countTabUnread(tab: NoticeTabItem) {
   return tab.list.filter(item => item.read === false).length;
 }
 
@@ -55,13 +59,18 @@ function getNoticeReadId(item: NoticeListItem) {
 async function loadNotices() {
   loading.value = true;
   try {
-    const { data } = await getNoticePanel();
-    const tabs = data.tabs ?? [];
+    const [panelRes, unreadRes] = await Promise.all([
+      getNoticePanel(),
+      getUnreadCount()
+    ]);
+    const tabs = panelRes.data.tabs ?? [];
     const hasActiveKey = tabs.some(item => item.key === activeKey.value);
 
     notices.value = tabs;
-    generatedAt.value = data.generatedAt ?? "";
+    generatedAt.value = panelRes.data.generatedAt ?? "";
     activeKey.value = hasActiveKey ? activeKey.value : (tabs[0]?.key ?? "");
+    serverUnreadCount.value =
+      typeof unreadRes.data === "number" ? unreadRes.data : 0;
   } catch (error) {
     console.error(error);
     message("加载通知中心失败", { type: "error" });
@@ -103,6 +112,9 @@ async function handleMarkRead(item: NoticeListItem, silent = false) {
       await markNoticeRead(getNoticeReadId(item));
     }
     updateNoticeRead(item);
+    if (item.type === "notify" && serverUnreadCount.value > 0) {
+      serverUnreadCount.value -= 1;
+    }
     if (!silent) {
       message("已标记为已读", { type: "success" });
     }
@@ -122,6 +134,7 @@ async function handleMarkAllRead() {
     const { data } = await markAllNoticeRead();
     const markedCount = typeof data === "number" ? data : noticesNum.value;
     updateAllRead();
+    serverUnreadCount.value = 0;
     message(`已标记 ${markedCount} 条通知为已读`, { type: "success" });
   } catch (error) {
     console.error(error);
@@ -132,12 +145,32 @@ async function handleMarkAllRead() {
 }
 
 function handleNoticeAction(item: NoticeListItem) {
-  if (item.read === false) {
-    handleMarkRead(item, true);
+  if (item.type === "notify") {
+    if (item.read === false) {
+      handleMarkRead(item, true);
+    }
+    openNoticeDetail(item);
+    return;
   }
 
   if (item.path) {
     router.push(item.path);
+  }
+}
+
+async function openNoticeDetail(item: NoticeListItem) {
+  const noticeId = item.noticeId ?? getNoticeReadId(item);
+  detailVisible.value = true;
+  detailLoading.value = true;
+  detailData.value = null;
+  try {
+    const { data } = await getSysNoticeDetail(noticeId);
+    detailData.value = data ?? null;
+  } catch (error) {
+    console.error(error);
+    message("加载公告详情失败", { type: "error" });
+  } finally {
+    detailLoading.value = false;
   }
 }
 
@@ -222,8 +255,8 @@ onMounted(() => {
                 <template #label>
                   <span class="notice-tab-label">
                     {{ item.name }}
-                    <span v-if="getUnreadCount(item)" class="notice-tab-badge">
-                      {{ getUnreadCount(item) }}
+                    <span v-if="countTabUnread(item)" class="notice-tab-badge">
+                      {{ countTabUnread(item) }}
                     </span>
                   </span>
                 </template>
@@ -249,6 +282,37 @@ onMounted(() => {
       </el-dropdown-menu>
     </template>
   </el-dropdown>
+
+  <el-drawer
+    v-model="detailVisible"
+    title="公告详情"
+    direction="rtl"
+    size="480px"
+  >
+    <div v-loading="detailLoading" class="notice-detail">
+      <template v-if="detailData">
+        <h3 class="notice-detail__title">{{ detailData.title }}</h3>
+        <div class="notice-detail__meta">
+          <el-tag
+            v-if="
+              typeof detailData.priority === 'number' &&
+              detailData.priority >= 8
+            "
+            type="danger"
+            size="small"
+            effect="light"
+          >
+            高优先级
+          </el-tag>
+          <span v-if="detailData.publishTime" class="notice-detail__time">
+            发布时间：{{ detailData.publishTime }}
+          </span>
+        </div>
+        <div class="notice-detail__content">{{ detailData.content }}</div>
+      </template>
+      <el-empty v-else-if="!detailLoading" description="暂无内容" />
+    </div>
+  </el-drawer>
 </template>
 
 <style lang="scss" scoped>
@@ -354,5 +418,33 @@ onMounted(() => {
   text-align: right;
   background: var(--el-fill-color-lighter);
   border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.notice-detail {
+  padding: 4px 20px 20px;
+}
+
+.notice-detail__title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.notice-detail__meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.notice-detail__content {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--el-text-color-regular);
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 </style>
