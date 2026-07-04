@@ -23,7 +23,10 @@ const {
   onSearch,
   resetForm,
   handleSizeChange,
-  handleCurrentChange
+  handleCurrentChange,
+  handlePublish,
+  handleYank,
+  handleEditRelease
 } = useRole(tableRef);
 </script>
 
@@ -96,7 +99,39 @@ const {
           }"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
-        />
+        >
+          <template #operation="{ row }">
+            <el-button
+              v-if="row.state === 'BETA' || row.state === 'DRAFT'"
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
+              @click="handlePublish(row)"
+            >
+              发版
+            </el-button>
+            <el-button
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
+              @click="handleEditRelease(row)"
+            >
+              灰度/策略
+            </el-button>
+            <el-button
+              v-if="row.state !== 'YANKED'"
+              class="reset-margin"
+              link
+              type="danger"
+              :size="size"
+              @click="handleYank(row)"
+            >
+              撤回
+            </el-button>
+          </template>
+        </pure-table>
       </template>
     </PureTableBar>
   </div>

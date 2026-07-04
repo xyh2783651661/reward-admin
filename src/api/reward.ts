@@ -244,6 +244,23 @@ export const getRewardApkVersionsList = (data?: object) => {
   });
 };
 
+/** 发布指定版本为稳定版（全量） */
+export const publishRewardApkVersion = (id: number | string) => {
+  return http.request<ApiResult>("post", `/api/reward-apk/publish/${id}`);
+};
+
+/** 撤回指定版本 */
+export const yankRewardApkVersion = (id: number | string) => {
+  return http.request<ApiResult>("post", `/api/reward-apk/yank/${id}`);
+};
+
+/** 更新版本发布策略（灰度放量 / 强制策略 / 最低版本 / 状态 / 更新日志） */
+export const updateRewardApkRelease = (id: number | string, data?: object) => {
+  return http.request<ApiResult>("post", `/api/reward-apk/release/${id}`, {
+    data
+  });
+};
+
 export const getRewardOptions = () => {
   return http.request<ApiResult<Record<string, any>>>("get", "/api/options");
 };
