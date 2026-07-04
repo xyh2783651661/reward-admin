@@ -58,10 +58,18 @@ export function useOperationLog(_tableRef?: Ref) {
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
-          type={row.timeCost < 1000 ? "success" : "warning"}
+          type={
+            row.timeCost < 5000
+              ? "success"
+              : row.timeCost < 30000
+                ? "primary"
+                : "warning"
+          }
           effect="plain"
         >
-          {row.timeCost} ms
+          {row.timeCost < 1000
+            ? `${row.timeCost} ms`
+            : `${(row.timeCost / 1000).toFixed(2)} s`}
         </el-tag>
       )
     },

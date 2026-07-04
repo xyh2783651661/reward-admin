@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import dayjs from "dayjs";
 import type { TaskLogDetail } from "@/api/logs";
 
@@ -14,6 +14,40 @@ const steps = computed(() => props.detail?.steps ?? []);
 const failedSteps = computed(() => steps.value.filter(s => !s.success));
 
 const exception = computed(() => props.detail?.exception);
+
+// 只看失败步骤开关
+const onlyFailed = ref(false);
+// 步骤名关键字过滤
+const keyword = ref("");
+
+// 步骤拆细后可能有几十步，识别耗时最长的若干步以便高亮定位瓶颈
+const SLOW_TOP_N = 3;
+const slowThreshold = computed(() => {
+  const costs = steps.value
+    .map(s => s.costMs ?? 0)
+    .filter(c => c > 0)
+    .sort((a, b) => b - a);
+  if (costs.length <= SLOW_TOP_N) return Infinity;
+  // 取第 N 名的耗时作为阈值（>= 它的即为 TopN 慢步骤）
+  return costs[SLOW_TOP_N - 1];
+});
+
+function isSlow(ms?: number) {
+  if (!ms || ms <= 0) return false;
+  return ms >= slowThreshold.value;
+}
+
+// 应用「只看失败」+「关键字」两个过滤条件后的步骤（保留原始序号）
+const visibleSteps = computed(() => {
+  const kw = keyword.value.trim().toLowerCase();
+  return steps.value
+    .map((step, index) => ({ step, index }))
+    .filter(({ step }) => {
+      if (onlyFailed.value && step.success) return false;
+      if (kw && !(step.stepName ?? "").toLowerCase().includes(kw)) return false;
+      return true;
+    });
+});
 
 function formatTime(t?: string) {
   if (!t) return "-";
@@ -75,24 +109,68 @@ function percent(ms?: number) {
           {{ failedSteps.length }} 个失败
         </el-tag>
       </div>
-      <el-timeline class="mt-3">
+
+      <!-- 步骤过滤工具栏：步骤拆细后可能几十步，支持只看失败 + 关键字定位 -->
+      <div class="step-toolbar mt-3">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索步骤名（如收件人、供应商）"
+          clearable
+          size="small"
+          class="step-search"
+        />
+        <el-switch
+          v-model="onlyFailed"
+          :disabled="failedSteps.length === 0"
+          size="small"
+          inline-prompt
+          active-text="只看失败"
+          inactive-text="全部步骤"
+        />
+        <span class="step-count-hint">
+          显示 {{ visibleSteps.length }} / {{ steps.length }}
+        </span>
+      </div>
+
+      <el-empty
+        v-if="visibleSteps.length === 0"
+        :image-size="60"
+        description="没有匹配的步骤"
+      />
+      <el-timeline v-else class="mt-3">
         <el-timeline-item
-          v-for="(step, idx) in steps"
-          :key="idx"
+          v-for="{ step, index } in visibleSteps"
+          :key="index"
           :type="step.success ? 'success' : 'danger'"
-          :timestamp="`步骤 ${idx + 1}`"
+          :timestamp="`步骤 ${index + 1}`"
           placement="top"
         >
-          <div class="step-card" :class="{ 'is-fail': !step.success }">
+          <div
+            class="step-card"
+            :class="{
+              'is-fail': !step.success,
+              'is-slow': isSlow(step.costMs)
+            }"
+          >
             <div class="step-header">
               <span class="step-name">{{ step.stepName }}</span>
-              <el-tag
-                size="small"
-                :type="step.success ? 'success' : 'danger'"
-                effect="plain"
-              >
-                {{ step.success ? "成功" : "失败" }}
-              </el-tag>
+              <div class="step-tags">
+                <el-tag
+                  v-if="isSlow(step.costMs)"
+                  size="small"
+                  type="warning"
+                  effect="dark"
+                >
+                  耗时较长
+                </el-tag>
+                <el-tag
+                  size="small"
+                  :type="step.success ? 'success' : 'danger'"
+                  effect="plain"
+                >
+                  {{ step.success ? "成功" : "失败" }}
+                </el-tag>
+              </div>
             </div>
             <div class="step-meta">
               <span class="step-cost"> 耗时 {{ formatMs(step.costMs) }} </span>
@@ -189,6 +267,32 @@ function percent(ms?: number) {
   border-color: var(--el-color-danger-light-5);
 }
 
+.step-card.is-slow {
+  border-color: var(--el-color-warning-light-5);
+}
+
+.step-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.step-search {
+  width: 260px;
+}
+
+.step-count-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.step-tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .step-header {
   display: flex;
   gap: 8px;
@@ -201,6 +305,7 @@ function percent(ms?: number) {
   font-size: 14px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+  word-break: break-all;
 }
 
 .step-meta {
