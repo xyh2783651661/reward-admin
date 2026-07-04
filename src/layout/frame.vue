@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
-import { ref, unref, watch, onMounted, nextTick } from "vue";
+import { ref, unref, watch, onMounted, nextTick, computed } from "vue";
 
 defineOptions({
   name: "LayFrame"
@@ -23,6 +23,24 @@ const fallbackTimer = ref<number | null>(null);
 
 if (unref(currentRoute.meta)?.frameSrc) {
   frameSrc.value = unref(currentRoute.meta)?.frameSrc as string;
+}
+
+/**
+ * Mixed Content 检测：当前页面为 HTTPS 但内嵌地址为 HTTP 时，
+ * 浏览器会强制拦截 iframe。此时降级为提示 + 新标签打开，避免白屏。
+ */
+const isMixedContent = computed(() => {
+  const src = frameSrc.value;
+  if (!src) return false;
+  return (
+    window.location.protocol === "https:" && /^http:\/\//i.test(src.trim())
+  );
+});
+
+function openInNewTab() {
+  if (frameSrc.value) {
+    window.open(frameSrc.value, "_blank", "noopener");
+  }
 }
 
 function clearFallbackTimer() {
@@ -87,7 +105,22 @@ onMounted(() => {
 </script>
 
 <template>
+  <!-- HTTPS 页面无法内嵌 HTTP 地址（Mixed Content 被浏览器拦截），降级为新标签打开 -->
+  <div v-if="isMixedContent" class="frame-fallback">
+    <el-result
+      icon="warning"
+      title="该页面需在新标签打开"
+      sub-title="当前站点为 HTTPS，而目标地址为 HTTP，浏览器出于安全策略无法内嵌显示，请点击下方按钮在新标签页打开。"
+    >
+      <template #extra>
+        <el-button type="primary" @click="openInNewTab">
+          在新标签打开
+        </el-button>
+      </template>
+    </el-result>
+  </div>
   <div
+    v-else
     v-loading="loading"
     class="frame"
     :element-loading-text="t('status.pureLoad')"
@@ -108,6 +141,14 @@ onMounted(() => {
     overflow: hidden;
     border: 0;
   }
+}
+
+.frame-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .main-content {
