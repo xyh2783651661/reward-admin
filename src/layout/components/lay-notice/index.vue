@@ -5,7 +5,6 @@ import { computed, onMounted, ref } from "vue";
 import {
   getNoticePanel,
   getSysNoticeDetail,
-  getUnreadCount,
   markAllNoticeRead,
   markNoticeRead
 } from "@/api/notice";
@@ -21,12 +20,18 @@ const actionLoading = ref(false);
 const notices = ref<NoticeTabItem[]>([]);
 const activeKey = ref("");
 const generatedAt = ref("");
-const serverUnreadCount = ref(0);
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detailData = ref<Record<string, any> | null>(null);
 
-const noticesNum = computed(() => serverUnreadCount.value);
+// 未读数统一从 notices 现算：右上角 badge、subtitle、tab 小红点全部同源，
+// 避免旧实现里 getUnreadCount 与 getNoticePanel 双数据源之间偏差导致的对不上问题。
+const noticesNum = computed(() =>
+  notices.value.reduce(
+    (sum, tab) => sum + tab.list.filter(item => item.read === false).length,
+    0
+  )
+);
 
 const totalNum = computed(() => {
   return notices.value.reduce((total, tab) => total + tab.list.length, 0);
@@ -59,18 +64,13 @@ function getNoticeReadId(item: NoticeListItem) {
 async function loadNotices() {
   loading.value = true;
   try {
-    const [panelRes, unreadRes] = await Promise.all([
-      getNoticePanel(),
-      getUnreadCount()
-    ]);
-    const tabs = panelRes.data.tabs ?? [];
+    const { data } = await getNoticePanel();
+    const tabs = data.tabs ?? [];
     const hasActiveKey = tabs.some(item => item.key === activeKey.value);
 
     notices.value = tabs;
-    generatedAt.value = panelRes.data.generatedAt ?? "";
+    generatedAt.value = data.generatedAt ?? "";
     activeKey.value = hasActiveKey ? activeKey.value : (tabs[0]?.key ?? "");
-    serverUnreadCount.value =
-      typeof unreadRes.data === "number" ? unreadRes.data : 0;
   } catch (error) {
     console.error(error);
     message("加载通知中心失败", { type: "error" });
@@ -112,9 +112,6 @@ async function handleMarkRead(item: NoticeListItem, silent = false) {
       await markNoticeRead(getNoticeReadId(item));
     }
     updateNoticeRead(item);
-    if (item.type === "notify" && serverUnreadCount.value > 0) {
-      serverUnreadCount.value -= 1;
-    }
     if (!silent) {
       message("已标记为已读", { type: "success" });
     }
@@ -134,7 +131,6 @@ async function handleMarkAllRead() {
     const { data } = await markAllNoticeRead();
     const markedCount = typeof data === "number" ? data : noticesNum.value;
     updateAllRead();
-    serverUnreadCount.value = 0;
     message(`已标记 ${markedCount} 条通知为已读`, { type: "success" });
   } catch (error) {
     console.error(error);
