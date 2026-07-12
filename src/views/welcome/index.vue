@@ -18,6 +18,7 @@ import { useUserStoreHook } from "@/store/modules/user";
 import { message } from "@/utils/message";
 import {
   getWorkbenchActivities,
+  getWorkbenchHealthOverview,
   getWorkbenchSummary,
   getWorkbenchTodos,
   getWorkbenchTrends
@@ -25,6 +26,8 @@ import {
 import type {
   SummaryTrend,
   WorkbenchActivityItem,
+  WorkbenchHealthData,
+  WorkbenchHealthLight,
   WorkbenchSummaryCard,
   WorkbenchSummaryData,
   WorkbenchTodoItem,
@@ -38,11 +41,7 @@ defineOptions({
 type TrendRange = "7d" | "30d";
 
 const emptySummary: WorkbenchSummaryData = {
-  headline: {
-    title: "",
-    description: "",
-    updatedAt: ""
-  },
+  headline: { title: "", description: "", updatedAt: "" },
   focusItems: [],
   summaryCards: [],
   quickEntries: []
@@ -52,8 +51,13 @@ const emptyTrend: WorkbenchTrendData = {
   range: "7d",
   categories: [],
   rewardIssued: [],
-  mailSuccessRate: [],
+  aiCallCount: [],
   taskExecutions: []
+};
+
+const emptyHealth: WorkbenchHealthData = {
+  generatedAt: "",
+  lights: []
 };
 
 const router = useRouter();
@@ -64,6 +68,7 @@ const chartRef = ref<HTMLElement | null>(null);
 const activeRange = ref<TrendRange>("7d");
 const summary = ref<WorkbenchSummaryData>(emptySummary);
 const trendData = ref<WorkbenchTrendData>(emptyTrend);
+const health = ref<WorkbenchHealthData>(emptyHealth);
 const todoList = ref<WorkbenchTodoItem[]>([]);
 const activityList = ref<WorkbenchActivityItem[]>([]);
 const lastLoadedAt = ref("");
@@ -77,7 +82,6 @@ const displayName = computed(() => {
 
 const greeting = computed(() => {
   const hour = dayjs().hour();
-
   if (hour < 6) return "凌晨好";
   if (hour < 11) return "早上好";
   if (hour < 14) return "中午好";
@@ -87,25 +91,26 @@ const greeting = computed(() => {
 
 const summaryCards = computed(() => summary.value.summaryCards ?? []);
 const quickEntries = computed(() => summary.value.quickEntries ?? []);
-const focusItems = computed(() => summary.value.focusItems ?? []);
 const headline = computed(
   () => summary.value.headline ?? emptySummary.headline
 );
-const latestRewardIssued = computed(() => {
-  return trendData.value.rewardIssued.at(-1) ?? 0;
+const healthLights = computed(() => health.value.lights ?? []);
+const healthWarnCount = computed(
+  () => healthLights.value.filter(l => l.status !== "up").length
+);
+const overallHealthStatus = computed<"up" | "warn" | "down">(() => {
+  if (healthLights.value.some(l => l.status === "down")) return "down";
+  if (healthLights.value.some(l => l.status === "warn")) return "warn";
+  return "up";
 });
-const latestSuccessRate = computed(() => {
-  const value = trendData.value.mailSuccessRate.at(-1) ?? 0;
-  return `${value.toFixed(1)}%`;
-});
-const latestTaskExecutions = computed(() => {
-  return trendData.value.taskExecutions.at(-1) ?? 0;
+const overallHealthText = computed(() => {
+  if (healthWarnCount.value === 0) return "全部通道运行正常";
+  return `${healthWarnCount.value} 项需要关注`;
 });
 const todoCount = computed(() => todoList.value.length);
 const updatedAtText = computed(() => {
   return headline.value.updatedAt || lastLoadedAt.value || "等待刷新";
 });
-const currentTimeText = computed(() => dayjs().format("YYYY-MM-DD HH:mm"));
 const todoSummaryText = computed(() => {
   return todoCount.value > 0
     ? `当前有 ${todoCount.value} 条事项待你确认`
@@ -116,23 +121,6 @@ const activitySummaryText = computed(() => {
     ? `已汇总 ${activityList.value.length} 条近期动作`
     : "暂无新的系统动态";
 });
-const trendMetrics = computed(() => [
-  {
-    label: "最新奖励发放",
-    value: latestRewardIssued.value,
-    icon: "ri:gift-line"
-  },
-  {
-    label: "最新邮件成功率",
-    value: latestSuccessRate.value,
-    icon: "ri:mail-check-line"
-  },
-  {
-    label: "最新任务执行",
-    value: latestTaskExecutions.value,
-    icon: "ri:timer-flash-line"
-  }
-]);
 
 function navigateTo(path?: string) {
   if (path) {
@@ -140,10 +128,16 @@ function navigateTo(path?: string) {
   }
 }
 
+function handleLightClick(light: WorkbenchHealthLight) {
+  if (light.path) {
+    router.push(light.path);
+  }
+}
+
 function getTrendLabel(trend: SummaryTrend) {
-  if (trend === "up") return "持续提升";
-  if (trend === "down") return "需要关注";
-  return "保持稳定";
+  if (trend === "up") return "较昨日 ↑";
+  if (trend === "down") return "较昨日 ↓";
+  return "与昨日持平";
 }
 
 function formatCardValue(card: WorkbenchSummaryCard) {
@@ -151,7 +145,6 @@ function formatCardValue(card: WorkbenchSummaryCard) {
     typeof card.value === "number" && Number.isInteger(card.value)
       ? card.value
       : Number(card.value).toFixed(1);
-
   return `${value}${card.unit ?? ""}`;
 }
 
@@ -161,7 +154,6 @@ function formatDelta(card: WorkbenchSummaryCard) {
     Number.isInteger(card.delta) || Math.abs(card.delta) >= 10
       ? Math.abs(card.delta)
       : Math.abs(card.delta).toFixed(1);
-
   return `${prefix}${numeric}${card.unit ?? ""}`;
 }
 
@@ -193,16 +185,13 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
   const tooltipBg = dark ? "rgba(20,22,28,0.94)" : "rgba(15,23,42,0.92)";
 
   return {
-    color: ["#2563eb", "#059669", "#d97706"],
+    color: ["#2563eb", "#10b981", "#8b5cf6"],
     tooltip: {
       trigger: "axis",
       backgroundColor: tooltipBg,
       borderWidth: 0,
       padding: [10, 14],
-      textStyle: {
-        color: "#fff",
-        fontSize: 12
-      }
+      textStyle: { color: "#fff", fontSize: 12 }
     },
     legend: {
       top: 0,
@@ -210,12 +199,10 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
       itemWidth: 12,
       itemHeight: 12,
       icon: "roundRect",
-      textStyle: {
-        color: axisLabel
-      }
+      textStyle: { color: axisLabel }
     },
     grid: {
-      top: 52,
+      top: 46,
       left: 16,
       right: 16,
       bottom: 8,
@@ -225,81 +212,39 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
       type: "category",
       boundaryGap: true,
       data: data.categories,
-      axisTick: {
-        show: false
-      },
-      axisLine: {
-        lineStyle: {
-          color: axisLine
-        }
-      },
-      axisLabel: {
-        color: axisLabel
-      }
+      axisTick: { show: false },
+      axisLine: { lineStyle: { color: axisLine } },
+      axisLabel: { color: axisLabel }
     },
-    yAxis: [
-      {
-        type: "value",
-        name: "数量",
-        nameTextStyle: { color: axisLabel },
-        splitLine: {
-          lineStyle: {
-            color: splitLine,
-            type: "dashed"
-          }
-        },
-        axisLabel: {
-          color: axisLabel
-        }
-      },
-      {
-        type: "value",
-        name: "成功率",
-        nameTextStyle: { color: axisLabel },
-        min: 95,
-        max: 100,
-        splitLine: {
-          show: false
-        },
-        axisLabel: {
-          color: axisLabel,
-          formatter: "{value}%"
-        }
-      }
-    ],
+    yAxis: {
+      type: "value",
+      splitLine: { lineStyle: { color: splitLine, type: "dashed" } },
+      axisLabel: { color: axisLabel }
+    },
     series: [
       {
-        name: "奖励发放",
+        name: "奖励分析",
         type: "bar",
-        barMaxWidth: 16,
-        itemStyle: {
-          borderRadius: [6, 6, 0, 0]
-        },
+        barMaxWidth: 14,
+        itemStyle: { borderRadius: [6, 6, 0, 0] },
         data: data.rewardIssued
       },
       {
-        name: "任务执行",
+        name: "AI 调用",
         type: "bar",
-        barMaxWidth: 16,
-        itemStyle: {
-          borderRadius: [6, 6, 0, 0]
-        },
-        data: data.taskExecutions
+        barMaxWidth: 14,
+        itemStyle: { borderRadius: [6, 6, 0, 0] },
+        data: data.aiCallCount
       },
       {
-        name: "邮件成功率",
+        name: "任务执行",
         type: "line",
-        yAxisIndex: 1,
         smooth: true,
         symbol: "circle",
         symbolSize: 7,
-        lineStyle: {
-          width: 2.5
-        },
-        areaStyle: {
-          color: "rgba(217, 119, 6, 0.1)"
-        },
-        data: data.mailSuccessRate
+        lineStyle: { width: 2.5 },
+        areaStyle: { color: "rgba(139, 92, 246, 0.1)" },
+        data: data.taskExecutions
       }
     ]
   };
@@ -307,9 +252,7 @@ function buildTrendOption(data: WorkbenchTrendData): EChartsOption {
 
 async function renderTrendChart() {
   await nextTick();
-
   if (!chartRef.value) return;
-
   trendChart ??= echarts.init(chartRef.value);
   trendChart.setOption(buildTrendOption(trendData.value), true);
   trendChart.resize();
@@ -317,7 +260,6 @@ async function renderTrendChart() {
 
 async function loadTrend(range = activeRange.value) {
   trendLoading.value = true;
-
   try {
     const { data } = await getWorkbenchTrends(range);
     trendData.value = data ?? emptyTrend;
@@ -332,15 +274,17 @@ async function loadTrend(range = activeRange.value) {
 async function loadWorkbench() {
   loading.value = true;
   loadErrorText.value = "";
-
   try {
-    const [summaryResponse, todoResponse, activityResponse] = await Promise.all(
-      [getWorkbenchSummary(), getWorkbenchTodos(), getWorkbenchActivities()]
-    );
-
-    summary.value = summaryResponse.data ?? emptySummary;
-    todoList.value = todoResponse.data ?? [];
-    activityList.value = activityResponse.data ?? [];
+    const [summaryRes, healthRes, todoRes, activityRes] = await Promise.all([
+      getWorkbenchSummary(),
+      getWorkbenchHealthOverview(),
+      getWorkbenchTodos(),
+      getWorkbenchActivities()
+    ]);
+    summary.value = summaryRes.data ?? emptySummary;
+    health.value = healthRes.data ?? emptyHealth;
+    todoList.value = todoRes.data ?? [];
+    activityList.value = activityRes.data ?? [];
     await loadTrend(activeRange.value);
     lastLoadedAt.value = dayjs().format("YYYY-MM-DD HH:mm");
   } catch (error) {
@@ -354,7 +298,6 @@ async function loadWorkbench() {
 
 function handleRangeChange(range: string | number | boolean) {
   const nextRange = range === "30d" ? "30d" : "7d";
-
   if (
     activeRange.value === nextRange &&
     trendData.value.range === nextRange &&
@@ -362,7 +305,6 @@ function handleRangeChange(range: string | number | boolean) {
   ) {
     return;
   }
-
   activeRange.value = nextRange;
   void loadTrend(nextRange);
 }
@@ -417,71 +359,71 @@ onBeforeUnmount(() => {
       :closable="false"
     />
 
+    <!-- Hero：只保留问候 + 一句状态 + 刷新 -->
     <section v-loading="loading" class="hero">
       <div class="hero__main">
         <div class="hero__eyebrow">
           <span class="hero__greeting">{{ greeting }}，{{ displayName }}</span>
-          <span class="hero__pulse" />
-          <span class="hero__status">工作台在线</span>
+          <span class="hero__pulse" :class="`is-${overallHealthStatus}`" />
+          <span class="hero__status">{{ overallHealthText }}</span>
         </div>
         <h1 class="hero__title">{{ headline.title || "系统运行一切正常" }}</h1>
         <p class="hero__desc">
           {{
             headline.description ||
-            "这里会聚合系统配置、邮件发送和任务执行的关键数据。"
+            "本页优先展示需要动手处理的信号；越往下越轻量。"
           }}
         </p>
         <div class="hero__meta">
-          <span
-            ><IconifyIconOnline icon="ri:refresh-line" /> 最近更新
-            {{ updatedAtText }}</span
-          >
-          <span
-            ><IconifyIconOnline icon="ri:time-line" />
-            {{ currentTimeText }}</span
-          >
+          <span>
+            <IconifyIconOnline icon="ri:refresh-line" />
+            最近更新 {{ updatedAtText }}
+          </span>
         </div>
       </div>
-      <aside class="hero__aside">
-        <div class="focus-stack">
-          <div class="focus-stack__label">今日关注</div>
-          <div class="focus-stack__tags">
-            <span
-              v-for="item in focusItems"
-              :key="item.label"
-              class="focus-chip"
-              :data-type="item.type"
-            >
-              <span class="focus-chip__k">{{ item.label }}</span>
-              <span class="focus-chip__v">{{ item.value }}</span>
-            </span>
-          </div>
-        </div>
-        <button
-          class="hero__refresh"
-          :disabled="loading"
-          @click="loadWorkbench"
-        >
-          <IconifyIconOnline icon="ri:refresh-line" />
-          <span>刷新首页</span>
-        </button>
-      </aside>
+      <button class="hero__refresh" :disabled="loading" @click="loadWorkbench">
+        <IconifyIconOnline icon="ri:refresh-line" />
+        <span>刷新首页</span>
+      </button>
     </section>
 
+    <!-- Layer 1：健康总览 -->
+    <section class="health-grid">
+      <button
+        v-for="light in healthLights"
+        :key="light.key"
+        class="health-card"
+        :class="[`is-${light.status}`, light.path && 'is-clickable']"
+        :disabled="!light.path"
+        @click="handleLightClick(light)"
+      >
+        <span class="health-card__indicator" />
+        <span class="health-card__icon">
+          <IconifyIconOnline :icon="light.icon" />
+        </span>
+        <div class="health-card__body">
+          <div class="health-card__label">{{ light.label }}</div>
+          <div class="health-card__primary">{{ light.primary }}</div>
+          <div class="health-card__secondary">{{ light.secondary }}</div>
+        </div>
+      </button>
+    </section>
+
+    <!-- Layer 2a: KPI -->
     <section class="kpi-grid">
       <article
         v-for="(card, i) in summaryCards"
         :key="card.key"
         class="kpi-card"
-        :class="{ 'kpi-card--wide': i === 0, 'is-clickable': card.path }"
+        :class="{ 'is-clickable': card.path }"
         :style="{ '--i': i, '--accent': card.color }"
         :disabled="!card.path"
         @click="navigateTo(card.path)"
       >
         <div class="kpi-card__top">
-          <span class="kpi-card__icon"
-            ><IconifyIconOnline :icon="card.icon"
-          /></span>
+          <span class="kpi-card__icon">
+            <IconifyIconOnline :icon="card.icon" />
+          </span>
           <span class="kpi-card__label">{{ card.label }}</span>
           <span class="kpi-card__trend" :class="`is-${card.trend}`">
             {{ getDeltaSymbol(card.trend) }} {{ getTrendLabel(card.trend) }}
@@ -497,13 +439,12 @@ onBeforeUnmount(() => {
       </article>
     </section>
 
+    <!-- Layer 2b: 趋势图 -->
     <section class="trend-panel">
       <header class="trend-panel__head">
         <div>
           <h2 class="trend-panel__title">运行趋势</h2>
-          <p class="trend-panel__sub">
-            奖励发放、邮件成功率和任务执行量统一在这里看。
-          </p>
+          <p class="trend-panel__sub">奖励分析、AI 调用与任务执行体量。</p>
         </div>
         <el-radio-group
           v-model="activeRange"
@@ -514,24 +455,10 @@ onBeforeUnmount(() => {
           <el-radio-button value="30d">近 30 天</el-radio-button>
         </el-radio-group>
       </header>
-      <div class="trend-metrics">
-        <div
-          v-for="item in trendMetrics"
-          :key="item.label"
-          class="trend-metric"
-        >
-          <span class="trend-metric__icon"
-            ><IconifyIconOnline :icon="item.icon"
-          /></span>
-          <div class="trend-metric__text">
-            <span class="trend-metric__label">{{ item.label }}</span>
-            <strong class="trend-metric__value">{{ item.value }}</strong>
-          </div>
-        </div>
-      </div>
       <div ref="chartRef" v-loading="trendLoading" class="trend-chart" />
     </section>
 
+    <!-- Layer 3: 待办 + 动态 -->
     <section class="dual-grid">
       <article class="list-panel">
         <header class="list-panel__head">
@@ -603,6 +530,7 @@ onBeforeUnmount(() => {
       </article>
     </section>
 
+    <!-- 快捷入口 -->
     <section class="quick-rail">
       <span class="quick-rail__label">快捷入口</span>
       <div class="quick-rail__list">
@@ -613,9 +541,9 @@ onBeforeUnmount(() => {
           :style="{ '--accent': entry.accent }"
           @click="navigateTo(entry.path)"
         >
-          <span class="quick-chip__icon"
-            ><IconifyIconOnline :icon="entry.icon"
-          /></span>
+          <span class="quick-chip__icon">
+            <IconifyIconOnline :icon="entry.icon" />
+          </span>
           <span class="quick-chip__text">
             <strong>{{ entry.title }}</strong>
             <small>{{ entry.description }}</small>
@@ -628,8 +556,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style lang="scss" scoped>
-
-
 @keyframes wb-fade-up {
   from {
     opacity: 0;
@@ -655,14 +581,13 @@ onBeforeUnmount(() => {
   }
 }
 
-/* ============ Responsive ============ */
 @media (width <= 1280px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .health-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .kpi-card--wide {
-    grid-column: span 2;
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .dual-grid {
@@ -689,17 +614,9 @@ onBeforeUnmount(() => {
     padding: 20px;
   }
 
-  .hero__aside {
-    width: 100%;
-  }
-
-  .kpi-grid,
-  .trend-metrics {
+  .health-grid,
+  .kpi-grid {
     grid-template-columns: 1fr;
-  }
-
-  .kpi-card--wide {
-    grid-column: span 1;
   }
 
   .trend-panel__head,
@@ -754,9 +671,9 @@ onBeforeUnmount(() => {
 .hero {
   display: flex;
   gap: 24px;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
-  padding: 28px 28px 24px;
+  padding: 24px 28px;
   background: var(--wb-card);
   border: 1px solid var(--wb-border);
   border-radius: var(--wb-radius);
@@ -776,7 +693,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   gap: 10px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   font-size: 13px;
   font-weight: 600;
   color: var(--el-color-primary);
@@ -789,9 +706,20 @@ onBeforeUnmount(() => {
 .hero__pulse {
   width: 7px;
   height: 7px;
-  background: var(--el-color-success);
   border-radius: 50%;
   animation: wb-pulse 2s ease-in-out infinite;
+
+  &.is-up {
+    background: var(--el-color-success);
+  }
+
+  &.is-warn {
+    background: var(--el-color-warning);
+  }
+
+  &.is-down {
+    background: var(--el-color-danger);
+  }
 }
 
 .hero__status {
@@ -801,7 +729,7 @@ onBeforeUnmount(() => {
 
 .hero__title {
   margin: 0;
-  font-size: clamp(26px, 3.4vw, 38px);
+  font-size: clamp(22px, 3vw, 32px);
   font-weight: 800;
   line-height: 1.15;
   color: var(--el-text-color-primary);
@@ -810,9 +738,9 @@ onBeforeUnmount(() => {
 
 .hero__desc {
   max-width: 620px;
-  margin: 14px 0 0;
-  font-size: 15px;
-  line-height: 1.75;
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--el-text-color-regular);
 }
 
@@ -820,8 +748,8 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
-  margin-top: 20px;
-  font-size: 13px;
+  margin-top: 14px;
+  font-size: 12.5px;
   color: var(--el-text-color-secondary);
 
   span {
@@ -831,79 +759,13 @@ onBeforeUnmount(() => {
   }
 }
 
-.hero__aside {
-  display: flex;
-  flex-shrink: 0;
-  flex-direction: column;
-  gap: 14px;
-  justify-content: space-between;
-  width: min(300px, 32%);
-}
-
-.focus-stack {
-  padding: 16px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--wb-border);
-  border-radius: 12px;
-}
-
-.focus-stack__label {
-  margin-bottom: 12px;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--el-text-color-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.focus-stack__tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.focus-chip {
-  display: inline-flex;
-  gap: 6px;
-  align-items: baseline;
-  padding: 5px 11px;
-  font-size: 13px;
-  background: var(--el-bg-color);
-  border: 1px solid var(--wb-border);
-  border-radius: 999px;
-}
-
-.focus-chip__k {
-  color: var(--el-text-color-secondary);
-}
-
-.focus-chip__v {
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.focus-chip[data-type="primary"] {
-  border-color: var(--el-color-primary-light-6);
-}
-
-.focus-chip[data-type="success"] {
-  border-color: var(--el-color-success-light-6);
-}
-
-.focus-chip[data-type="warning"] {
-  border-color: var(--el-color-warning-light-6);
-}
-
-.focus-chip[data-type="danger"] {
-  border-color: var(--el-color-danger-light-6);
-}
-
 .hero__refresh {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 8px;
   align-items: center;
   justify-content: center;
-  height: 42px;
+  height: 40px;
   padding: 0 18px;
   font-size: 14px;
   font-weight: 600;
@@ -925,6 +787,120 @@ onBeforeUnmount(() => {
   }
 }
 
+/* ============ Health grid ============ */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.health-card {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 14px 14px 18px;
+  overflow: hidden;
+  text-align: left;
+  background: var(--wb-card);
+  border: 1px solid var(--wb-border);
+  border-radius: 12px;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+  animation: wb-fade-up 0.4s ease both;
+
+  &.is-clickable {
+    cursor: pointer;
+  }
+
+  &.is-clickable:hover {
+    box-shadow: var(--wb-shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    color: inherit;
+    cursor: default;
+  }
+}
+
+.health-card__indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+}
+
+.health-card.is-up .health-card__indicator {
+  background: var(--el-color-success);
+}
+
+.health-card.is-warn .health-card__indicator {
+  background: var(--el-color-warning);
+}
+
+.health-card.is-down .health-card__indicator {
+  background: var(--el-color-danger);
+}
+
+.health-card__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  font-size: 16px;
+  border-radius: 8px;
+}
+
+.health-card.is-up .health-card__icon {
+  color: var(--el-color-success);
+  background: var(--el-color-success-light-9);
+}
+
+.health-card.is-warn .health-card__icon {
+  color: var(--el-color-warning);
+  background: var(--el-color-warning-light-9);
+}
+
+.health-card.is-down .health-card__icon {
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+}
+
+.health-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.health-card__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+}
+
+.health-card__primary {
+  margin: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+}
+
+.health-card__secondary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11.5px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+}
+
 /* ============ KPI ============ */
 .kpi-grid {
   display: grid;
@@ -935,8 +911,8 @@ onBeforeUnmount(() => {
 .kpi-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  gap: 10px;
+  padding: 18px 20px;
   text-align: left;
   background: var(--wb-card);
   border: 1px solid var(--wb-border);
@@ -948,10 +924,6 @@ onBeforeUnmount(() => {
     border-color 0.2s ease;
   animation: wb-fade-up 0.5s ease both;
   animation-delay: calc(var(--i, 0) * 60ms + 80ms);
-
-  &--wide {
-    grid-column: span 2;
-  }
 
   &.is-clickable {
     cursor: pointer;
@@ -978,16 +950,16 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  font-size: 17px;
   color: var(--accent, var(--el-color-primary));
   background: color-mix(
     in srgb,
     var(--accent, var(--el-color-primary)) 12%,
     transparent
   );
-  border-radius: 10px;
+  border-radius: 9px;
 }
 
 .kpi-card__label {
@@ -1025,7 +997,7 @@ onBeforeUnmount(() => {
 }
 
 .kpi-card__value {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -1033,12 +1005,8 @@ onBeforeUnmount(() => {
   letter-spacing: -0.02em;
 }
 
-.kpi-card--wide .kpi-card__value {
-  font-size: 40px;
-}
-
 .kpi-card__delta {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 
@@ -1057,8 +1025,8 @@ onBeforeUnmount(() => {
 
 .kpi-card__desc {
   margin: 0;
-  font-size: 12.5px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
 
@@ -1066,7 +1034,7 @@ onBeforeUnmount(() => {
 .trend-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   padding: 22px;
   background: var(--wb-card);
   border: 1px solid var(--wb-border);
@@ -1085,67 +1053,20 @@ onBeforeUnmount(() => {
 
 .trend-panel__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--el-text-color-primary);
 }
 
 .trend-panel__sub {
-  margin: 5px 0 0;
-  font-size: 13px;
+  margin: 4px 0 0;
+  font-size: 12.5px;
   color: var(--el-text-color-secondary);
-}
-
-.trend-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.trend-metric {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--wb-border);
-  border-radius: 12px;
-}
-
-.trend-metric__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-  color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  border-radius: 10px;
-}
-
-.trend-metric__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.trend-metric__label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.trend-metric__value {
-  font-size: 22px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-primary);
-  letter-spacing: -0.01em;
 }
 
 .trend-chart {
   width: 100%;
-  min-height: 320px;
+  min-height: 280px;
 }
 
 /* ============ Dual grid ============ */
@@ -1176,14 +1097,14 @@ onBeforeUnmount(() => {
 
 .list-panel__title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--el-text-color-primary);
 }
 
 .list-panel__sub {
-  margin: 5px 0 0;
-  font-size: 13px;
+  margin: 4px 0 0;
+  font-size: 12.5px;
   color: var(--el-text-color-secondary);
 }
 
@@ -1401,9 +1322,9 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  font-size: 19px;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
   color: var(--accent, var(--el-color-primary));
   background: color-mix(
     in srgb,

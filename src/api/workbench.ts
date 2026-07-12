@@ -9,6 +9,7 @@ type ApiResult<T> = {
 
 type WorkbenchTrendRange = "7d" | "30d";
 type SummaryTrend = "up" | "down" | "flat";
+type HealthLightStatus = "up" | "warn" | "down";
 
 interface WorkbenchHeadline {
   title: string;
@@ -55,7 +56,7 @@ interface WorkbenchTrendData {
   range: WorkbenchTrendRange;
   categories: string[];
   rewardIssued: number[];
-  mailSuccessRate: number[];
+  aiCallCount: number[];
   taskExecutions: number[];
 }
 
@@ -78,6 +79,21 @@ interface WorkbenchActivityItem {
   time: string;
   path: string;
   icon: string;
+}
+
+interface WorkbenchHealthLight {
+  key: string;
+  label: string;
+  status: HealthLightStatus;
+  primary: string;
+  secondary: string;
+  path?: string;
+  icon: string;
+}
+
+interface WorkbenchHealthData {
+  generatedAt: string;
+  lights: WorkbenchHealthLight[];
 }
 
 const getWorkbenchSummary = () => {
@@ -111,6 +127,13 @@ const getWorkbenchActivities = () => {
   );
 };
 
+const getWorkbenchHealthOverview = () => {
+  return http.request<ApiResult<WorkbenchHealthData>>(
+    "get",
+    "/api/workbench/health-overview"
+  );
+};
+
 const completeWorkbenchTodo = (id: string | number) => {
   return http.request<ApiResult<Record<string, any>>>(
     "post",
@@ -123,12 +146,14 @@ export {
   getWorkbenchTrends,
   getWorkbenchTodos,
   getWorkbenchActivities,
+  getWorkbenchHealthOverview,
   completeWorkbenchTodo
 };
 
 export type {
   WorkbenchTrendRange,
   SummaryTrend,
+  HealthLightStatus,
   WorkbenchHeadline,
   WorkbenchFocusItem,
   WorkbenchSummaryCard,
@@ -136,5 +161,7 @@ export type {
   WorkbenchSummaryData,
   WorkbenchTrendData,
   WorkbenchTodoItem,
-  WorkbenchActivityItem
+  WorkbenchActivityItem,
+  WorkbenchHealthLight,
+  WorkbenchHealthData
 };
