@@ -91,6 +91,7 @@ const greeting = computed(() => {
 
 const summaryCards = computed(() => summary.value.summaryCards ?? []);
 const quickEntries = computed(() => summary.value.quickEntries ?? []);
+const focusItems = computed(() => summary.value.focusItems ?? []);
 const headline = computed(
   () => summary.value.headline ?? emptySummary.headline
 );
@@ -378,6 +379,17 @@ onBeforeUnmount(() => {
           <span>
             <IconifyIconOnline icon="ri:refresh-line" />
             最近更新 {{ updatedAtText }}
+          </span>
+          <span
+            v-for="item in focusItems"
+            :key="item.label"
+            :class="['hero__chip', `is-${item.type}`]"
+          >
+            <span class="hero__chip-dot" />
+            <span class="hero__chip-k">{{ item.label }}</span>
+            <span class="hero__chip-v" :title="item.value">{{
+              item.value
+            }}</span>
           </span>
         </div>
       </div>
@@ -747,16 +759,79 @@ onBeforeUnmount(() => {
 .hero__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 10px;
+  align-items: center;
   margin-top: 14px;
   font-size: 12.5px;
   color: var(--el-text-color-secondary);
 
-  span {
+  > span:not(.hero__chip) {
     display: inline-flex;
     gap: 6px;
     align-items: center;
+    margin-right: 8px;
   }
+}
+
+/* Hero 里的版本/环境 chip：低调、右上方向靠，鼠标悬停有 tooltip */
+.hero__chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 10px 3px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--wb-border);
+  border-radius: 999px;
+
+  &.is-primary {
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary-light-7);
+  }
+
+  &.is-success {
+    color: var(--el-color-success);
+    background: var(--el-color-success-light-9);
+    border-color: var(--el-color-success-light-7);
+  }
+
+  &.is-warning {
+    color: var(--el-color-warning);
+    background: var(--el-color-warning-light-9);
+    border-color: var(--el-color-warning-light-7);
+  }
+
+  &.is-danger {
+    color: var(--el-color-danger);
+    background: var(--el-color-danger-light-9);
+    border-color: var(--el-color-danger-light-7);
+  }
+
+  &.is-info {
+    color: var(--el-text-color-regular);
+  }
+}
+
+.hero__chip-dot {
+  width: 6px;
+  height: 6px;
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.hero__chip-k {
+  color: var(--el-text-color-secondary);
+}
+
+.hero__chip-v {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .hero__refresh {
