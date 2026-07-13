@@ -93,11 +93,31 @@ export const getTaskLogsFilterOptions = () => {
 };
 
 /** 任务日志详情 */
+export interface TaskLogBatchItem {
+  id?: string | number | null;
+  reason?: string;
+  note?: string;
+  [key: string]: any;
+}
+
 export interface TaskLogStep {
   stepName: string;
   success: boolean;
   errorMessage?: string;
   costMs?: number;
+  /** 操作类型标签（QUERY / PROCESS / NOTIFY / AI 等） */
+  action?: string;
+  /** 批处理总数（可空） */
+  total?: number;
+  successCount?: number;
+  failedCount?: number;
+  skippedCount?: number;
+  /** 该步骤自由指标（不含 failures/skips，后端已拆出） */
+  metadata?: Record<string, any>;
+  /** 批处理失败明细（前 20 条） */
+  failures?: TaskLogBatchItem[];
+  /** 批处理跳过明细（前 20 条） */
+  skips?: TaskLogBatchItem[];
 }
 
 export interface TaskLogException {
