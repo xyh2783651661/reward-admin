@@ -326,13 +326,25 @@ export function useDailyImage() {
     }
   }
 
-  // ========== 上传（拖拽 + 多文件队列） ==========
+  // ========== 上传（弹框内拖拽 + 多文件队列） ==========
   const fileInputRef = ref<HTMLInputElement>();
   const uploadTasks = ref<UploadTask[]>([]);
   const uploading = ref(false);
+  const uploadDialogVisible = ref(false);
   const isDraggingOver = ref(false);
   let dragCounter = 0;
   let taskUid = 0;
+
+  function openUploadDialog() {
+    uploadDialogVisible.value = true;
+  }
+
+  function closeUploadDialog() {
+    uploadDialogVisible.value = false;
+    dragCounter = 0;
+    isDraggingOver.value = false;
+    if (!uploading.value) uploadTasks.value = [];
+  }
 
   const uploadDoneCount = computed(
     () =>
@@ -649,6 +661,9 @@ export function useDailyImage() {
     uploadTasks,
     uploading,
     uploadDoneCount,
+    uploadDialogVisible,
+    openUploadDialog,
+    closeUploadDialog,
     isDraggingOver,
     triggerUpload,
     handleFileChange,

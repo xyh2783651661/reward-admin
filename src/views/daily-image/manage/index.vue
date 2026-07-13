@@ -71,6 +71,9 @@ const {
   uploadTasks,
   uploading,
   uploadDoneCount,
+  uploadDialogVisible,
+  openUploadDialog,
+  closeUploadDialog,
   isDraggingOver,
   triggerUpload,
   handleFileChange,
@@ -88,8 +91,7 @@ const {
   handleBatchDownload,
   handleBatchDownloadLinks,
   // URL helpers
-  getDailyImageThumbnailUrl,
-  getDailyImagePreviewUrl
+  getDailyImageThumbnailUrl
 } = useDailyImage();
 
 const sourceOptions = [
@@ -195,24 +197,7 @@ function uploadStatusLabel(status: string) {
 </script>
 
 <template>
-  <div
-    class="daily-image-page"
-    @dragenter.prevent="handleDragEnter"
-    @dragover.prevent
-    @dragleave.prevent="handleDragLeave"
-    @drop.prevent="handleDrop"
-  >
-    <!-- 拖拽投放遮罩 -->
-    <Transition name="fade">
-      <div v-if="isDraggingOver" class="drop-overlay">
-        <div class="drop-overlay__box">
-          <el-icon :size="48"><Upload /></el-icon>
-          <p class="drop-overlay__title">松开鼠标上传图片</p>
-          <p class="drop-overlay__hint">支持一次拖入多张图片</p>
-        </div>
-      </div>
-    </Transition>
-
+  <div class="daily-image-page">
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <div class="toolbar__left">
@@ -257,18 +242,10 @@ function uploadStatusLabel(status: string) {
           type="primary"
           :loading="uploading"
           :icon="useRenderIcon(Upload)"
-          @click="triggerUpload"
+          @click="openUploadDialog"
         >
           上传图片
         </el-button>
-        <input
-          ref="fileInputRef"
-          type="file"
-          accept="image/*"
-          multiple
-          class="hidden-input"
-          @change="handleFileChange"
-        />
       </div>
     </div>
 
@@ -359,7 +336,7 @@ function uploadStatusLabel(status: string) {
           {{
             keyword
               ? "搜索仅筛选当前页，可尝试翻页或清空关键字"
-              : "点击上传按钮，或直接把图片拖到页面上"
+              : "点击上传按钮，在弹框中选择或拖入图片"
           }}
         </p>
         <el-button
@@ -367,7 +344,7 @@ function uploadStatusLabel(status: string) {
           v-perms="'dailyImage:manage:upload'"
           type="primary"
           :icon="useRenderIcon(Upload)"
-          @click="triggerUpload"
+          @click="openUploadDialog"
         >
           上传图片
         </el-button>
@@ -459,7 +436,7 @@ function uploadStatusLabel(status: string) {
       @close="closeDrawer"
     >
       <div v-if="drawerItem" v-loading="drawerLoading" class="drawer-body">
-        <!-- 大图（点击全屏原图预览） -->
+        <!-- 缩略图（点击才加载原图进入全屏预览） -->
         <button
           class="drawer-body__preview"
           type="button"
@@ -467,12 +444,13 @@ function uploadStatusLabel(status: string) {
           @click="openFullPreviewById(drawerItem.id)"
         >
           <img
-            :src="getDailyImagePreviewUrl(drawerItem.id)"
+            :src="getDailyImageThumbnailUrl(drawerItem.id)"
             :alt="drawerItem.originalName || `图片 ${drawerItem.id}`"
+            loading="lazy"
           />
           <span class="drawer-body__preview-hint">
             <el-icon><ZoomIn /></el-icon>
-            点击全屏查看，可左右切换
+            点击查看原图，可左右切换
           </span>
         </button>
 
@@ -559,9 +537,81 @@ function uploadStatusLabel(status: string) {
       </div>
     </el-drawer>
 
-    <!-- 上传进度浮层 -->
+    <!-- 上传弹框（拖拽 + 多选） -->
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="上传图片"
+      width="520px"
+      :close-on-click-modal="!uploading"
+      @close="closeUploadDialog"
+    >
+      <div
+        class="upload-dropzone"
+        :class="{ 'is-dragover': isDraggingOver }"
+        role="button"
+        tabindex="0"
+        aria-label="点击选择或拖入图片上传"
+        @click="triggerUpload"
+        @keydown.enter="triggerUpload"
+        @dragenter.prevent="handleDragEnter"
+        @dragover.prevent
+        @dragleave.prevent="handleDragLeave"
+        @drop.prevent="handleDrop"
+      >
+        <el-icon :size="40" class="upload-dropzone__icon"><Upload /></el-icon>
+        <p class="upload-dropzone__title">点击选择图片，或拖拽到此处</p>
+        <p class="upload-dropzone__hint">支持一次选择/拖入多张图片</p>
+      </div>
+      <input
+        ref="fileInputRef"
+        type="file"
+        accept="image/*"
+        multiple
+        class="hidden-input"
+        @change="handleFileChange"
+      />
+      <ul v-if="uploadTasks.length > 0" class="upload-dialog-list">
+        <li
+          v-for="task in uploadTasks"
+          :key="task.uid"
+          class="upload-panel__item"
+        >
+          <el-icon
+            class="upload-panel__status-icon"
+            :class="`is-${task.status}`"
+          >
+            <CircleCheckFilled v-if="task.status === 'success'" />
+            <CircleCloseFilled v-else-if="task.status === 'error'" />
+            <LoadingIcon
+              v-else-if="task.status === 'uploading'"
+              class="is-spinning"
+            />
+            <Upload v-else />
+          </el-icon>
+          <span class="upload-panel__name" :title="task.name">
+            {{ task.name }}
+          </span>
+          <span class="upload-panel__state" :class="`is-${task.status}`">
+            {{ task.errorMsg || uploadStatusLabel(task.status) }}
+          </span>
+        </li>
+      </ul>
+      <template #footer>
+        <span v-if="uploadTasks.length > 0" class="upload-dialog-progress">
+          {{ uploadDoneCount }}/{{ uploadTasks.length }}
+        </span>
+        <el-button :disabled="uploading" @click="closeUploadDialog">
+          {{ uploading ? "上传中…" : "关闭" }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 上传进度浮层（弹框关闭后台上传时展示） -->
     <Transition name="slide-up">
-      <div v-if="uploadTasks.length > 0" class="upload-panel">
+      <div
+        v-if="uploadTasks.length > 0 && !uploadDialogVisible"
+        class="upload-panel"
+      >
         <div class="upload-panel__header">
           <span class="upload-panel__title">
             上传队列（{{ uploadDoneCount }}/{{ uploadTasks.length }}）
@@ -571,7 +621,7 @@ function uploadStatusLabel(status: string) {
             size="small"
             :disabled="uploading"
             :icon="useRenderIcon(Close)"
-            aria-label="关闭上传队列"
+            aria-label="关闭上���队列"
             @click="clearUploadTasks"
           />
         </div>
@@ -661,37 +711,59 @@ function uploadStatusLabel(status: string) {
   display: none;
 }
 
-/* ========== 拖拽遮罩 ========== */
-.drop-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(0 0 0 / 45%);
-  backdrop-filter: blur(2px);
-}
-
-.drop-overlay__box {
+/* ========== 上传弹框 ========== */
+.upload-dropzone {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  padding: 48px 64px;
-  color: var(--el-color-primary);
-  background: var(--el-bg-color);
-  border: 2px dashed var(--el-color-primary);
-  border-radius: 16px;
+  justify-content: center;
+  padding: 36px 24px;
+  cursor: pointer;
+  background: var(--el-fill-color-lighter);
+  border: 2px dashed var(--el-border-color);
+  border-radius: 12px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+
+  &:hover,
+  &.is-dragover {
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--el-color-primary);
+    outline-offset: 2px;
+  }
 }
 
-.drop-overlay__title {
-  font-size: 16px;
+.upload-dropzone__icon {
+  color: var(--el-color-primary);
+}
+
+.upload-dropzone__title {
+  font-size: 14px;
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
-.drop-overlay__hint {
+.upload-dropzone__hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.upload-dialog-list {
+  max-height: 220px;
+  padding: 4px 0;
+  margin-top: 12px;
+  overflow-y: auto;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.upload-dialog-progress {
+  margin-right: 12px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 }
@@ -1019,7 +1091,7 @@ function uploadStatusLabel(status: string) {
   img {
     display: block;
     width: 100%;
-    max-height: 300px;
+    max-height: 200px;
     object-fit: contain;
   }
 
