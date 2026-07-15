@@ -53,16 +53,17 @@ jobs:
           retention-days: 90
 
       - name: Upload files to server
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: ${{ env.BUILD_OUTPUT_PATH }}/*
           target: /home/${{ env.SERVER_USER }}/temp-${{ env.APP_NAME }}
+          debug: true
 
       - name: Deploy on server
-        uses: appleboy/ssh-action@v0.1.7
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
