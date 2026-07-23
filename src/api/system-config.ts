@@ -40,3 +40,10 @@ export const deleteSystemConfig = <T = Record<string, any>>(
 ) => {
   return http.request<ApiResult<T>>("delete", `/api/system-configs/${id}`);
 };
+
+export const exportSystemConfigList = (data?: object) => {
+  return http.request<Blob>("post", "/api/system-configs/export-excel", {
+    data,
+    responseType: "blob"
+  });
+};

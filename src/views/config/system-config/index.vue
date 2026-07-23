@@ -7,6 +7,7 @@ import Refresh from "~icons/ep/refresh";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import AddFill from "~icons/ri/add-circle-line";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({
   name: "SystemConfig"
@@ -27,7 +28,9 @@ const {
   handleDelete,
   handleSizeChange,
   handleCurrentChange,
-  handleSelectionChange
+  handleSelectionChange,
+  exportLoading,
+  exportExcel
 } = useSystemConfig();
 </script>
 
@@ -138,6 +141,15 @@ const {
           @click="openDialog()"
         >
           新增配置
+        </el-button>
+        <el-button
+          v-perms="'config:systemConfig:export'"
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">

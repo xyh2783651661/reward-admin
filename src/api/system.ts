@@ -68,7 +68,8 @@ export {
   getSystemConfigOptions,
   addSystemConfig,
   updateSystemConfig,
-  deleteSystemConfig
+  deleteSystemConfig,
+  exportSystemConfigList
 } from "./system-config";
 
 export {
