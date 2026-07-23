@@ -9,12 +9,14 @@ import { deviceDetection } from "@pureadmin/utils";
 import {
   addSystemConfig,
   deleteSystemConfig,
+  exportSystemConfigList,
   getSystemConfigDetail,
   getSystemConfigList,
   getSystemConfigOptions,
   updateSystemConfig
 } from "@/api/system";
 import { computed, h, reactive, ref, toRaw } from "vue";
+import { useTableExport } from "../../composables";
 import type {
   ToggleValue,
   OptionItem,
@@ -488,6 +490,12 @@ export function useSystemConfig() {
 
   function handleSelectionChange(_val: SystemConfigItem[]) {}
 
+  const { exportLoading, exportExcel } = useTableExport(
+    exportSystemConfigList,
+    "系统配置.xlsx",
+    () => toRaw(form)
+  );
+
   void Promise.all([onSearch(), loadOptions()]);
 
   return {
@@ -504,6 +512,8 @@ export function useSystemConfig() {
     handleDelete,
     handleSizeChange,
     handleCurrentChange,
-    handleSelectionChange
+    handleSelectionChange,
+    exportLoading,
+    exportExcel
   };
 }
