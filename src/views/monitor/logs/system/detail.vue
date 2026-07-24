@@ -1,8 +1,6 @@
 <script setup lang="tsx">
 import { computed } from "vue";
-import "vue-json-pretty/lib/styles.css";
-import VueJsonPretty from "vue-json-pretty";
-import type { JSONDataType } from "vue-json-pretty/types/utils";
+import ReJsonField from "@/components/ReJsonField/index.vue";
 
 interface SystemLogDetailItem {
   ip?: string;
@@ -40,22 +38,6 @@ const props = withDefaults(
     data: () => []
   }
 );
-
-const normalizeJsonData = (value: unknown): JSONDataType => {
-  if (value == null) return null;
-  if (Array.isArray(value)) return value;
-
-  switch (typeof value) {
-    case "string":
-    case "number":
-    case "boolean":
-      return value;
-    case "object":
-      return value as Record<string, unknown>;
-    default:
-      return String(value);
-  }
-};
 
 const columns = [
   {
@@ -138,22 +120,22 @@ const dataList = computed(() => {
     {
       title: "响应头",
       name: "responseHeaders",
-      data: normalizeJsonData(item.responseHeaders)
+      data: item.responseHeaders
     },
     {
       title: "响应体",
       name: "responseBody",
-      data: normalizeJsonData(item.responseBody)
+      data: item.responseBody
     },
     {
       title: "请求头",
       name: "requestHeaders",
-      data: normalizeJsonData(item.requestHeaders)
+      data: item.requestHeaders
     },
     {
       title: "请求体",
       name: "requestBody",
-      data: normalizeJsonData(item.requestBody)
+      data: item.requestBody
     }
   ];
 
@@ -163,17 +145,17 @@ const dataList = computed(() => {
       {
         title: "异常类型",
         name: "exceptionType",
-        data: normalizeJsonData(item.exceptionType)
+        data: item.exceptionType
       },
       {
         title: "异常信息",
         name: "exceptionMessage",
-        data: normalizeJsonData(item.exceptionMessage)
+        data: item.exceptionMessage
       },
       {
         title: "异常堆栈",
         name: "exceptionStackTrace",
-        data: normalizeJsonData(item.exceptionStackTrace)
+        data: item.exceptionStackTrace
       }
     );
   }
@@ -195,7 +177,7 @@ const dataList = computed(() => {
         :label="item.title"
       >
         <el-scrollbar max-height="calc(100vh - 240px)">
-          <vue-json-pretty v-model:data="item.data" />
+          <ReJsonField :data="item.data" readonly :deep="3" />
         </el-scrollbar>
       </el-tab-pane>
     </el-tabs>
