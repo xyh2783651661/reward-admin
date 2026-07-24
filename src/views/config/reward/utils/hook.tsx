@@ -104,9 +104,13 @@ export function useRewardConfig(treeRef: Ref) {
     {
       label: "条件",
       prop: "condition",
-      minWidth: 260,
+      minWidth: 220,
       cellRenderer: ({ row }) =>
-        h(ReJsonField, { modelValue: row?.condition ?? "", readonly: true })
+        h(ReJsonField, {
+          modelValue: row?.condition ?? "",
+          readonly: true,
+          compact: true
+        })
     },
     {
       label: "创建时间",

@@ -12,6 +12,16 @@ interface Props {
   data?: unknown;
   /** 只读模式：不显示编辑器，改用树形展示。 */
   readonly?: boolean;
+  /**
+   * 紧凑模式（仅只读有效）：不直接展开完整树，用一个可点击的摘要标签，
+   * 点击后在 popover 里看完整内容。适合在表格 cellRenderer 里使用，
+   * 避免大对象/长数组把行高撑爆。
+   */
+  compact?: boolean;
+  /** 紧凑模式下 popover 的宽度，默认 520。 */
+  popoverWidth?: number | string;
+  /** 只读模式非紧凑时的最大高度（超过则内部滚动），默认 320px。 */
+  maxHeight?: number | string;
   /** textarea 占位符（仅源码编辑模式）。 */
   placeholder?: string;
   /**
@@ -44,6 +54,9 @@ const props = withDefaults(defineProps<Props>(), {
   modelValue: "",
   data: undefined,
   readonly: false,
+  compact: false,
+  popoverWidth: 520,
+  maxHeight: "320px",
   placeholder: '纯文本或 JSON（如 {"key": "value"}）',
   fallback: "text",
   deep: 3,
@@ -211,21 +224,147 @@ const isEmpty = computed(() => {
   if (hasDataProp.value) return props.data == null || props.data === "";
   return !(internal.value ?? "").trim();
 });
+
+/**
+ * 紧凑模式下的摘要文案：
+ * - 对象：{ key1, key2, key3, ...+N }
+ * - 数组：Array(N)
+ * - 标量：直接展示（限长）
+ * - 非 JSON：截断的纯文本
+ */
+const compactSummary = computed<{
+  kind: "object" | "array" | "scalar" | "text" | "empty";
+  label: string;
+  extra?: string;
+}>(() => {
+  if (isEmpty.value) return { kind: "empty", label: "-" };
+
+  const val = resolvedData.value;
+  if (val === null && !hasDataProp.value && !parsedFromString.value) {
+    // 非 JSON 内容
+    const text = fallbackText.value ?? "";
+    const truncated = text.length > 40 ? text.slice(0, 40) + "…" : text;
+    return { kind: "text", label: truncated };
+  }
+  if (val === null) return { kind: "empty", label: "null" };
+  if (Array.isArray(val)) {
+    return {
+      kind: "array",
+      label: `Array(${val.length})`
+    };
+  }
+  if (typeof val === "object") {
+    const entries = Object.entries(val as Record<string, unknown>);
+    // 优先取 description 展示；否则前 3 个键
+    const descKey = props.descriptionKey;
+    const descVal = (val as Record<string, unknown>)[descKey];
+    const keys = entries.map(([k]) => k).filter(k => k !== descKey);
+    const shown = keys.slice(0, 3);
+    const rest = Math.max(0, keys.length - shown.length);
+    const label =
+      typeof descVal === "string" && descVal
+        ? descVal.length > 40
+          ? descVal.slice(0, 40) + "…"
+          : descVal
+        : shown.length
+          ? `{ ${shown.join(", ")}${rest ? `, +${rest}` : ""} }`
+          : "{ }";
+    return {
+      kind: "object",
+      label,
+      extra: `${keys.length} 项`
+    };
+  }
+  // 标量
+  const scalar = String(val);
+  return {
+    kind: "scalar",
+    label: scalar.length > 40 ? scalar.slice(0, 40) + "…" : scalar
+  };
+});
+
+const compactTagType = computed<
+  "info" | "success" | "warning" | "primary" | "danger"
+>(() => {
+  switch (compactSummary.value.kind) {
+    case "array":
+      return "warning";
+    case "object":
+      return "primary";
+    case "scalar":
+      return "success";
+    case "empty":
+      return "info";
+    case "text":
+    default:
+      return "info";
+  }
+});
+
+const maxHeightStyle = computed(() => {
+  const v = props.maxHeight;
+  if (!v) return {};
+  return { maxHeight: typeof v === "number" ? `${v}px` : v, overflow: "auto" };
+});
 </script>
 
 <template>
-  <!-- ==================== 只读模式 ==================== -->
-  <template v-if="readonly">
+  <!-- ==================== 紧凑摘要（只读，表格 cellRenderer 首选） ==================== -->
+  <template v-if="readonly && compact">
     <span v-if="isEmpty" class="text-gray-400">-</span>
-    <vue-json-pretty
+    <template v-else>
+      <el-popover
+        :width="popoverWidth"
+        trigger="click"
+        placement="top-start"
+        :show-arrow="false"
+      >
+        <template #reference>
+          <el-tag
+            :type="compactTagType"
+            effect="light"
+            size="small"
+            class="rj-compact-tag"
+          >
+            {{ compactSummary.label }}
+            <span v-if="compactSummary.extra" class="rj-compact-tag__extra">
+              · {{ compactSummary.extra }}
+            </span>
+          </el-tag>
+        </template>
+        <div class="rj-popover">
+          <vue-json-pretty
+            v-if="resolvedData !== null"
+            :data="resolvedData"
+            :deep="deep"
+            :show-length="showLength"
+            :show-line="showLine"
+            :show-line-number="showLineNumber"
+            :show-icon="showIcon"
+          />
+          <pre v-else class="rj-fallback-text">{{ fallbackText }}</pre>
+        </div>
+      </el-popover>
+    </template>
+  </template>
+
+  <!-- ==================== 只读模式（非紧凑） ==================== -->
+  <template v-else-if="readonly">
+    <span v-if="isEmpty" class="text-gray-400">-</span>
+    <div
       v-else-if="resolvedData !== null"
-      :data="resolvedData"
-      :deep="deep"
-      :show-length="showLength"
-      :show-line="showLine"
-      :show-line-number="showLineNumber"
-      :show-icon="showIcon"
-    />
+      class="rj-readonly"
+      :style="maxHeightStyle"
+    >
+      <vue-json-pretty
+        :data="resolvedData"
+        :deep="deep"
+        :show-length="showLength"
+        :show-line="showLine"
+        :show-line-number="showLineNumber"
+        :show-icon="showIcon"
+      />
+    </div>
     <template v-else-if="fallback === 'text'">
       <pre class="rj-fallback-text">{{ fallbackText }}</pre>
     </template>
@@ -307,6 +446,33 @@ const isEmpty = computed(() => {
   white-space: pre-wrap;
   background: var(--el-fill-color-lighter);
   border-radius: 4px;
+}
+
+.rj-readonly {
+  padding: 4px 8px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 4px;
+}
+
+.rj-compact-tag {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  max-width: 260px;
+  overflow: hidden;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  cursor: pointer;
+
+  &__extra {
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.rj-popover {
+  max-height: 480px;
+  overflow: auto;
 }
 
 .rj-edit {

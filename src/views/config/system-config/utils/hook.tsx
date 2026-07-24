@@ -177,7 +177,9 @@ export function useSystemConfig() {
           );
         }
         if (row.valueType === "json") {
-          return <ReJsonField modelValue={row.configValue ?? ""} readonly />;
+          return (
+            <ReJsonField modelValue={row.configValue ?? ""} readonly compact />
+          );
         }
         return <span class="font-mono">{row.configValue || "-"}</span>;
       }
