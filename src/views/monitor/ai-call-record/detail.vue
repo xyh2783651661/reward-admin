@@ -2,10 +2,8 @@
 import dayjs from "dayjs";
 import MarkdownIt from "markdown-it";
 import { computed, reactive, ref, watch } from "vue";
-import VueJsonPretty from "vue-json-pretty";
-import "vue-json-pretty/lib/styles.css";
+import ReJsonField from "@/components/ReJsonField/index.vue";
 import { useCopyToClipboard } from "@pureadmin/utils";
-import type { JSONDataType } from "vue-json-pretty/types/utils";
 import { message } from "@/utils/message";
 import type { AiCallRecordDetail, AiCallRecordStatus } from "./types";
 
@@ -16,7 +14,6 @@ interface ContentTab {
   name: string;
   label: string;
   content: string;
-  jsonData: JSONDataType | null;
   isJson: boolean;
   canPreviewMarkdown: boolean;
   markdownHtml: string;
@@ -76,21 +73,12 @@ function formatTime(value?: string | null) {
   return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
 }
 
-function toJsonData(value: string): JSONDataType | null {
+function toJsonData(value: string): unknown | null {
   if (!value.trim()) return null;
 
   try {
     const parsed = JSON.parse(value) as unknown;
-
-    if (
-      parsed === null ||
-      Array.isArray(parsed) ||
-      ["string", "number", "boolean"].includes(typeof parsed)
-    ) {
-      return parsed as JSONDataType;
-    }
-
-    return parsed as Record<string, unknown>;
+    return parsed;
   } catch {
     return null;
   }
@@ -114,7 +102,6 @@ function createContentTab(
     name,
     label,
     content,
-    jsonData,
     isJson,
     canPreviewMarkdown: !isJson && !!content.trim(),
     markdownHtml: isJson ? "" : renderMarkdown(content),
@@ -423,12 +410,11 @@ watch(
           max-height="calc(100vh - 320px)"
           class="content-scroll"
         >
-          <vue-json-pretty
+          <ReJsonField
             v-if="tab.isJson"
-            :data="tab.jsonData"
+            :model-value="tab.content"
+            readonly
             :deep="3"
-            :showLength="true"
-            :showLine="true"
           />
           <div
             v-else-if="getViewMode(tab.name) === 'markdown'"
