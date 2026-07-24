@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
+import ReJsonField from "@/components/ReJsonField/index.vue";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
@@ -25,8 +26,9 @@ const props = withDefaults(defineProps<FormProps>(), {
 const ruleFormRef = ref();
 const newFormInline = ref(props.formInline);
 const formOptions = computed(() => props.formOptions);
+const isJsonType = computed(() => newFormInline.value.valueType === "json");
 const configValuePlaceholder = computed(() => {
-  return newFormInline.value.valueType === "json"
+  return isJsonType.value
     ? "请输入合法 JSON，提交时会自动压缩为字符串"
     : "请输入配置值";
 });
@@ -88,7 +90,14 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="配置值" prop="configValue">
+      <ReJsonField
+        v-if="isJsonType"
+        v-model="newFormInline.configValue"
+        :placeholder="configValuePlaceholder"
+        :min-rows="4"
+      />
       <el-input
+        v-else
         v-model="newFormInline.configValue"
         :rows="4"
         :placeholder="configValuePlaceholder"

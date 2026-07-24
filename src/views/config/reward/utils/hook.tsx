@@ -21,66 +21,7 @@ import {
 } from "../../composables/mockData";
 import { useCrudTable, useTreePanel, useTableExport } from "../../composables";
 import { type Ref, ref, h } from "vue";
-
-/**
- * 尝试把 condition 当作 JSON 解析：
- *  - 合法 JSON → 以键值 tag 列表展示（新的规则参数化格式）
- *  - 非 JSON → 直接展示纯文本（旧的中文条件描述）
- */
-function renderCondition(condition?: string) {
-  if (!condition) return h("span", { class: "text-gray-400" }, "-");
-  const trimmed = condition.trim();
-  if (!trimmed.startsWith("{")) {
-    return h(
-      "span",
-      { style: "white-space: pre-wrap; word-break: break-all" },
-      condition
-    );
-  }
-  let obj: Record<string, any> | null = null;
-  try {
-    const parsed = JSON.parse(trimmed);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      obj = parsed;
-    }
-  } catch {
-    // 非法 JSON：退回纯文本
-  }
-  if (!obj) {
-    return h(
-      "span",
-      { style: "white-space: pre-wrap; word-break: break-all" },
-      condition
-    );
-  }
-  // 参数键值以 el-tag 展示；description 单独一行放在下面
-  const { description, ...params } = obj;
-  const paramTags = Object.entries(params).map(([k, v]) =>
-    h(
-      "el-tag",
-      {
-        size: "small",
-        type: "info",
-        effect: "plain",
-        class: "mr-1 mb-1"
-      },
-      () => `${k} = ${typeof v === "object" ? JSON.stringify(v) : String(v)}`
-    )
-  );
-  return h("div", null, [
-    h("div", { class: "flex flex-wrap" }, paramTags),
-    description
-      ? h(
-          "div",
-          {
-            class: "text-xs text-gray-500 mt-1",
-            style: "white-space: pre-wrap"
-          },
-          String(description)
-        )
-      : null
-  ]);
-}
+import ReJsonField from "@/components/ReJsonField/index.vue";
 
 export function useRewardConfig(treeRef: Ref) {
   const formRef = ref();
@@ -164,7 +105,8 @@ export function useRewardConfig(treeRef: Ref) {
       label: "条件",
       prop: "condition",
       minWidth: 260,
-      cellRenderer: ({ row }) => renderCondition(row?.condition)
+      cellRenderer: ({ row }) =>
+        h(ReJsonField, { modelValue: row?.condition ?? "", readonly: true })
     },
     {
       label: "创建时间",
