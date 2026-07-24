@@ -17,6 +17,7 @@ import {
 } from "@/api/system";
 import { computed, h, reactive, ref, toRaw } from "vue";
 import { useTableExport } from "../../composables";
+import ReJsonField from "@/components/ReJsonField/index.vue";
 import type {
   ToggleValue,
   OptionItem,
@@ -169,15 +170,17 @@ export function useSystemConfig() {
       label: "配置值",
       prop: "configValue",
       minWidth: 260,
-      cellRenderer: ({ row }) => (
-        <span class="font-mono">
-          {row.sensitive === 1
-            ? row.configValue
-              ? "******"
-              : "-"
-            : row.configValue || "-"}
-        </span>
-      )
+      cellRenderer: ({ row }) => {
+        if (row.sensitive === 1) {
+          return (
+            <span class="font-mono">{row.configValue ? "******" : "-"}</span>
+          );
+        }
+        if (row.valueType === "json") {
+          return <ReJsonField modelValue={row.configValue ?? ""} readonly />;
+        }
+        return <span class="font-mono">{row.configValue || "-"}</span>;
+      }
     },
     {
       label: "配置分组",
