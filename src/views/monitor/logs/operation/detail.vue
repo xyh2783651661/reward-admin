@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from "vue";
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
+import ReJsonField from "@/components/ReJsonField/index.vue";
 import type { TaskLogDetail, TaskLogStep, TaskLogBatchItem } from "@/api/logs";
 
 const props = defineProps<{
@@ -718,7 +719,7 @@ const activeStepHasExtra = computed(() => {
             "
             class="detail__block"
           >
-            <h4 class="block__title">步骤指标</h4>
+            <h4 class="block__title">步骤���标</h4>
             <div class="meta-grid">
               <div
                 v-for="(v, k) in activeEntry.step.metadata"
@@ -727,9 +728,14 @@ const activeStepHasExtra = computed(() => {
                 :class="{ 'meta-row--block': isLongValue(v) }"
               >
                 <span class="meta-row__key">{{ metaKeyLabel(k) }}</span>
-                <pre v-if="isLongValue(v)" class="meta-row__pre">{{
-                  formatMetaValue(v)
-                }}</pre>
+                <ReJsonField
+                  v-if="isLongValue(v)"
+                  :data="v"
+                  readonly
+                  :deep="2"
+                  max-height="240px"
+                  class="meta-row__json"
+                />
                 <span v-else class="meta-row__value">
                   {{ formatMetaValue(v) }}
                 </span>
@@ -1397,17 +1403,9 @@ const activeStepHasExtra = computed(() => {
   word-break: break-all;
 }
 
-.meta-row__pre {
-  max-height: 160px;
-  padding: 8px 10px;
-  margin: 0;
-  overflow: auto;
-  font-family: var(--el-font-family-mono, monospace);
-  font-size: 11px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  background: var(--el-fill-color);
-  border-radius: 4px;
+.meta-row__json {
+  width: 100%;
+  font-size: 12px;
 }
 
 .item-list {
