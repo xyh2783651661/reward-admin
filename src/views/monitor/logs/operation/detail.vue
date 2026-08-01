@@ -1,84 +1,104 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import dayjs from "dayjs";
-<<<<<<< HEAD
-import type { TaskLogDetail, TaskLogStep, TaskLogBatchItem } from "@/api/logs";
-=======
-import type { TaskLogDetail } from "@/api/logs";
 import { message } from "@/utils/message";
-import { ElIcon } from "element-plus";
-import {
-  CircleCheckFilled,
-  CircleCloseFilled,
-  CopyDocument,
-  Search,
-  Timer
-} from "@element-plus/icons-vue";
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
+import type { TaskLogDetail, TaskLogStep, TaskLogBatchItem } from "@/api/logs";
 
 const props = defineProps<{
   detail: TaskLogDetail;
 }>();
 
-/* ========== 基础数据 ========== */
-const totalTime = computed(() => props.detail?.timeCost ?? 0);
-<<<<<<< HEAD
+/* ==================== 基础数据 ==================== */
 
 const steps = computed<TaskLogStep[]>(() => props.detail?.steps ?? []);
-
-=======
-const steps = computed(() => props.detail?.steps ?? []);
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
-const failedSteps = computed(() => steps.value.filter(s => !s.success));
+const totalTime = computed(() => props.detail?.timeCost ?? 0);
 const exception = computed(() => props.detail?.exception);
+const failedSteps = computed(() => steps.value.filter(s => !s.success));
 
-<<<<<<< HEAD
-// 只看失败步骤开关
-const onlyFailed = ref(false);
-// 步骤名关键字过滤
-const keyword = ref("");
-// 只看有 metadata 的步骤（运维排查产出时最常用）
-const onlyMetadata = ref(false);
-=======
-/* ========== 指标 ========== */
-const slowestStep = computed(() => {
-  let best: { name: string; cost: number; index: number } | null = null;
-  steps.value.forEach((s, i) => {
-    const c = s.costMs ?? 0;
-    if (c > 0 && (!best || c > best.cost)) {
-      best = { name: s.stepName, cost: c, index: i };
-    }
-  });
-  return best;
+/** 瀑布图基准：步骤耗时之和与总耗时取大者，保证条形不越界 */
+const timelineTotal = computed(() => {
+  const sum = steps.value.reduce((acc, s) => acc + (s.costMs ?? 0), 0);
+  return Math.max(sum, totalTime.value, 1);
 });
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
+
+/** 单步最大耗时，用于耗时降序模式的条形归一化 */
+const maxCost = computed(() =>
+  steps.value.reduce((max, s) => Math.max(max, s.costMs ?? 0), 0)
+);
+
+/** 最慢步骤，定位性能瓶颈 */
+const slowestStep = computed<{ step: TaskLogStep; index: number } | null>(
+  () => {
+    let target: { step: TaskLogStep; index: number } | null = null;
+    steps.value.forEach((step, index) => {
+      if (!target || (step.costMs ?? 0) > (target.step.costMs ?? 0)) {
+        target = { step, index };
+      }
+    });
+    return target;
+  }
+);
 
 const avgCost = computed(() => {
-  const costs = steps.value.map(s => s.costMs ?? 0).filter(c => c > 0);
-  if (costs.length === 0) return 0;
-  return Math.round(costs.reduce((a, b) => a + b, 0) / costs.length);
+  if (steps.value.length === 0) return 0;
+  const sum = steps.value.reduce((acc, s) => acc + (s.costMs ?? 0), 0);
+  return Math.round(sum / steps.value.length);
 });
 
-const maxCost = computed(() => slowestStep.value?.cost ?? 0);
-
-// Top3 慢步骤阈值（步骤多时帮助定位瓶颈）
-const SLOW_TOP_N = 3;
-const slowThreshold = computed(() => {
-  const costs = steps.value
-    .map(s => s.costMs ?? 0)
-    .filter(c => c > 0)
-    .sort((a, b) => b - a);
-  if (costs.length <= SLOW_TOP_N) return Infinity;
-  return costs[SLOW_TOP_N - 1];
+/** 批处理汇总：把所有带 total 的步骤合并成一个业务口径 */
+const batchSummary = computed(() => {
+  const batchSteps = steps.value.filter(s => s.total != null);
+  if (batchSteps.length === 0) return null;
+  const total = batchSteps.reduce((acc, s) => acc + (s.total ?? 0), 0);
+  const success = batchSteps.reduce((acc, s) => acc + (s.successCount ?? 0), 0);
+  const failed = batchSteps.reduce((acc, s) => acc + (s.failedCount ?? 0), 0);
+  const skipped = batchSteps.reduce((acc, s) => acc + (s.skippedCount ?? 0), 0);
+  return {
+    total,
+    success,
+    failed,
+    skipped,
+    rate: total > 0 ? Math.round((success / total) * 100) : 0
+  };
 });
 
-function isSlow(ms?: number) {
-  if (!ms || ms <= 0) return false;
-  return ms >= slowThreshold.value;
+/* ==================== 瀑布布局 ==================== */
+
+interface StepEntry {
+  step: TaskLogStep;
+  index: number;
+  cost: number;
+  offset: number;
+  offsetPct: number;
+  widthPct: number;
 }
 
-<<<<<<< HEAD
-/** 判断步骤是否携带任意"批处理/指标"结构化信息 */
+/** 步骤串行执行，按累加偏移生成瀑布/甘特条 */
+const stepEntries = computed<StepEntry[]>(() => {
+  let acc = 0;
+  return steps.value.map((step, index) => {
+    const cost = step.costMs ?? 0;
+    const offset = acc;
+    acc += cost;
+    return {
+      step,
+      index,
+      cost,
+      offset,
+      offsetPct: (offset / timelineTotal.value) * 100,
+      widthPct: Math.max((cost / timelineTotal.value) * 100, 0.8)
+    };
+  });
+});
+
+/* ==================== 过滤 / 排序 ==================== */
+
+const keyword = ref("");
+const onlyFailed = ref(false);
+const onlyMetrics = ref(false);
+const sortMode = ref<"order" | "cost">("order");
+
+/** 步骤是否携带批处理 / 指标等结构化信息 */
 function hasStructured(step: TaskLogStep) {
   return !!(
     step.total != null ||
@@ -91,85 +111,111 @@ function hasStructured(step: TaskLogStep) {
   );
 }
 
-// 应用「只看失败」+「关键字」+「只看指标」过滤后的步骤（保留原始序号）
-=======
-/* ========== 过滤 / 排序 ========== */
-const onlyFailed = ref(false);
-const keyword = ref("");
-const sortMode = ref<"order" | "cost">("order");
-
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
-const visibleSteps = computed(() => {
+const visibleSteps = computed<StepEntry[]>(() => {
   const kw = keyword.value.trim().toLowerCase();
-  const list = steps.value
-    .map((step, index) => ({ step, index }))
-    .filter(({ step }) => {
-      if (onlyFailed.value && step.success) return false;
-      if (kw && !(step.stepName ?? "").toLowerCase().includes(kw)) return false;
-      if (onlyMetadata.value && !hasStructured(step)) return false;
-      return true;
-    });
+  const list = stepEntries.value.filter(({ step }) => {
+    if (onlyFailed.value && step.success) return false;
+    if (onlyMetrics.value && !hasStructured(step)) return false;
+    if (kw) {
+      const haystack = `${step.stepName ?? ""} ${step.action ?? ""} ${
+        step.errorMessage ?? ""
+      }`.toLowerCase();
+      if (!haystack.includes(kw)) return false;
+    }
+    return true;
+  });
   if (sortMode.value === "cost") {
-    return [...list].sort(
-      (a, b) => (b.step.costMs ?? 0) - (a.step.costMs ?? 0)
-    );
+    return [...list].sort((a, b) => b.cost - a.cost);
   }
   return list;
 });
 
-<<<<<<< HEAD
-/** action chip 映射：不同类型给不同色调 */
-const ACTION_COLORS: Record<string, string> = {
-  QUERY: "info",
-  PROCESS: "primary",
-  NOTIFY: "success",
-  AI: "warning"
-};
-
-function actionType(action?: string) {
-  if (!action) return "";
-  return ACTION_COLORS[action.toUpperCase()] || "";
-}
-
-=======
-/* ========== 交互 ========== */
-const listRef = ref<HTMLElement>();
-const highlightIndex = ref(-1);
-
-function toggleOnlyFailed() {
-  if (failedSteps.value.length === 0) return;
-  onlyFailed.value = !onlyFailed.value;
-}
-
-async function locateSlowest() {
-  if (!slowestStep.value) return;
-  // 定位需要目标行可见：清掉过滤条件并回到执行顺序
-  onlyFailed.value = false;
+function resetFilters() {
   keyword.value = "";
+  onlyFailed.value = false;
+  onlyMetrics.value = false;
   sortMode.value = "order";
-  await nextTick();
-  const el = listRef.value?.querySelector<HTMLElement>(
-    `[data-step-index="${slowestStep.value.index}"]`
-  );
-  el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  highlightIndex.value = slowestStep.value.index;
-  setTimeout(() => {
-    highlightIndex.value = -1;
-  }, 2000);
 }
 
-async function copyText(text?: string, label = "内容") {
-  if (!text) return;
-  try {
-    await navigator.clipboard.writeText(text);
-    message(`${label}已复制`, { type: "success" });
-  } catch {
-    message("复制失败", { type: "error" });
+/* ==================== 选中步骤 ==================== */
+
+const activeIndex = ref(-1);
+
+/** 默认定位首个失败步骤，打开即进入排障上下文 */
+function pickDefaultIndex() {
+  const firstFailed = steps.value.findIndex(s => !s.success);
+  if (firstFailed >= 0) {
+    activeIndex.value = firstFailed;
+  } else {
+    activeIndex.value = steps.value.length > 0 ? 0 : -1;
   }
 }
 
-/* ========== 格式化 ========== */
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
+watch(
+  () => props.detail,
+  () => {
+    resetFilters();
+    pickDefaultIndex();
+  },
+  { immediate: true }
+);
+
+const activeEntry = computed<StepEntry | null>(
+  () => stepEntries.value.find(e => e.index === activeIndex.value) ?? null
+);
+
+function selectStep(index: number) {
+  activeIndex.value = index;
+}
+
+function scrollRowIntoView(index: number, smooth = false) {
+  nextTick(() => {
+    document.querySelector(`[data-step-row="${index}"]`)?.scrollIntoView({
+      block: smooth ? "center" : "nearest",
+      behavior: smooth ? "smooth" : "auto"
+    });
+  });
+}
+
+/** 键盘上下键在可见列表内连续排查 */
+function moveActive(delta: number) {
+  const list = visibleSteps.value;
+  if (list.length === 0) return;
+  const pos = list.findIndex(e => e.index === activeIndex.value);
+  const nextPos =
+    pos < 0 ? 0 : Math.min(list.length - 1, Math.max(0, pos + delta));
+  activeIndex.value = list[nextPos].index;
+  scrollRowIntoView(activeIndex.value);
+}
+
+/** 从指标条跳转到目标步骤，同时解除会挡住它的过滤条件 */
+function focusStep(index: number) {
+  const target = steps.value[index];
+  if (!target) return;
+  if (onlyMetrics.value && !hasStructured(target)) onlyMetrics.value = false;
+  if (onlyFailed.value && target.success) onlyFailed.value = false;
+  keyword.value = "";
+  activeIndex.value = index;
+  scrollRowIntoView(index, true);
+}
+
+/* ==================== 异常区 ==================== */
+
+const exceptionOpen = ref(false);
+
+function toggleException() {
+  exceptionOpen.value = !exceptionOpen.value;
+  if (exceptionOpen.value) {
+    nextTick(() => {
+      document
+        .querySelector("[data-exception-block]")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }
+}
+
+/* ==================== 工具函数 ==================== */
+
 function formatTime(t?: string) {
   if (!t) return "-";
   return dayjs(t).format("YYYY-MM-DD HH:mm:ss");
@@ -181,45 +227,44 @@ function formatMs(ms?: number) {
   return `${(ms / 1000).toFixed(2)} s`;
 }
 
-function barWidth(ms?: number) {
-  if (!ms || maxCost.value === 0) return 0;
-  return Math.max(2, Math.round((ms / maxCost.value) * 100));
+/** 步骤在整次执行中的耗时占比 */
+function percentOfTotal(ms?: number) {
+  if (!ms || timelineTotal.value === 0) return 0;
+  return Math.round((ms / timelineTotal.value) * 100);
 }
 
-function pctOfTotal(ms?: number) {
-  if (!ms || totalTime.value === 0) return null;
-  const p = (ms / totalTime.value) * 100;
-  if (p < 1) return "<1%";
-  return `${Math.round(p)}%`;
+/** 耗时降序模式下按最慢步骤归一化条宽 */
+function costBarWidth(cost: number) {
+  if (maxCost.value <= 0) return 0.8;
+  return Math.max((cost / maxCost.value) * 100, 0.8);
 }
 
-/** 批处理成功率 */
+/** 步骤对应的真实时钟时间，便于和其他系统日志对齐 */
+function clockAt(offsetMs: number) {
+  if (!props.detail?.startTime) return null;
+  return dayjs(props.detail.startTime)
+    .add(offsetMs, "millisecond")
+    .format("HH:mm:ss.SSS");
+}
+
 function successRate(step: TaskLogStep) {
-  const t = step.total ?? 0;
-  if (t <= 0) return 0;
-  return Math.round(((step.successCount ?? 0) / t) * 100);
+  const total = step.total ?? 0;
+  if (total <= 0) return 0;
+  return Math.round(((step.successCount ?? 0) / total) * 100);
 }
 
-/** metadata 值格式化 —— 数字/布尔/字符串直接展示，对象/数组转 JSON */
-function formatMetaValue(v: any): string {
-  if (v == null) return "-";
-  if (typeof v === "boolean") return v ? "是" : "否";
-  if (typeof v === "number") return String(v);
-  if (typeof v === "string") return v;
-  try {
-    return JSON.stringify(v);
-  } catch {
-    return String(v);
-  }
+const ACTION_COLORS: Record<string, string> = {
+  QUERY: "info",
+  PROCESS: "primary",
+  NOTIFY: "success",
+  AI: "warning"
+};
+
+function actionType(action?: string) {
+  if (!action) return "info";
+  return ACTION_COLORS[action.toUpperCase()] || "info";
 }
 
-/** metadata 值是否过长需要用等宽显示 */
-function isLongValue(v: any) {
-  const s = formatMetaValue(v);
-  return s.length > 60 || (typeof v === "object" && v != null);
-}
-
-/** metadata 键的友好中文映射，可按需扩展 */
 const META_KEY_LABEL: Record<string, string> = {
   total: "总数",
   success: "成功",
@@ -253,396 +298,517 @@ function metaKeyLabel(k: string) {
   return META_KEY_LABEL[k] || k;
 }
 
+function formatMetaValue(v: any): string {
+  if (v == null) return "-";
+  if (typeof v === "boolean") return v ? "是" : "否";
+  if (typeof v === "number") return String(v);
+  if (typeof v === "string") return v;
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
+}
+
+function isLongValue(v: any) {
+  if (typeof v === "object" && v != null) return true;
+  return formatMetaValue(v).length > 48;
+}
+
 function batchItemLabel(item: TaskLogBatchItem) {
   if (item.note) return item.note;
   const idPart = item.id != null && item.id !== "" ? `[${item.id}] ` : "";
   return `${idPart}${item.reason ?? ""}`;
 }
+
+/** 复制文本，便于把调用方法 / 堆栈 / 步骤数据贴进工单 */
+async function copyText(text?: string, label = "内容") {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    message(`${label}已复制`, { type: "success" });
+  } catch {
+    message("复制失败，请手动选择文本", { type: "error" });
+  }
+}
+
+function copyStepJson() {
+  if (!activeEntry.value) return;
+  copyText(JSON.stringify(activeEntry.value.step, null, 2), "步骤数据");
+}
+
+/** 选中步骤是否除了耗时与结果外没有任何额外信息 */
+const activeStepHasExtra = computed(() => {
+  const step = activeEntry.value?.step;
+  if (!step) return false;
+  return !!(
+    step.errorMessage ||
+    step.total != null ||
+    step.failures?.length ||
+    step.skips?.length ||
+    (step.metadata && Object.keys(step.metadata).length > 0)
+  );
+});
 </script>
 
 <template>
   <div class="task-detail">
-    <!-- ===== 顶部概要带 ===== -->
-    <header class="summary" :class="detail?.success ? 'is-ok' : 'is-fail'">
+    <!-- ========== 概要带 ========== -->
+    <header class="summary">
       <div class="summary__main">
-        <ElIcon :size="34" class="summary__status-icon">
-          <CircleCheckFilled v-if="detail?.success" />
-          <CircleCloseFilled v-else />
-        </ElIcon>
-        <div class="summary__titles">
-          <div class="summary__task">
-            <span class="summary__name">{{ detail?.taskName || "-" }}</span>
-            <el-tag
+        <span
+          class="status-pill"
+          :class="detail?.success ? 'is-success' : 'is-fail'"
+        >
+          <i class="status-pill__dot" />
+          {{ detail?.success ? "执行成功" : "执行失败" }}
+        </span>
+        <div class="summary__title">
+          <h2>{{ detail?.taskName || "未命名任务" }}</h2>
+          <p v-if="detail?.description">{{ detail.description }}</p>
+        </div>
+      </div>
+
+      <dl class="summary__facts">
+        <div class="fact">
+          <dt>总耗时</dt>
+          <dd class="fact__strong">{{ formatMs(detail?.timeCost) }}</dd>
+        </div>
+        <div class="fact">
+          <dt>开始</dt>
+          <dd>{{ formatTime(detail?.startTime) }}</dd>
+        </div>
+        <div class="fact">
+          <dt>结束</dt>
+          <dd>{{ formatTime(detail?.endTime) }}</dd>
+        </div>
+        <div class="fact fact--wide">
+          <dt>调用方法</dt>
+          <dd class="fact__code">
+            <code :title="detail?.classMethod">
+              {{ detail?.classMethod || "-" }}
+            </code>
+            <el-button
+              v-if="detail?.classMethod"
+              link
+              type="primary"
               size="small"
-              :type="detail?.success ? 'success' : 'danger'"
-              effect="dark"
+              @click="copyText(detail.classMethod, '调用方法')"
             >
-              {{ detail?.success ? "执行成功" : "执行失败" }}
-            </el-tag>
-          </div>
-          <p v-if="detail?.description" class="summary__desc">
-            {{ detail.description }}
-          </p>
-          <button
-            v-if="detail?.classMethod"
-            type="button"
-            class="summary__method"
-            title="点击复制调用方法"
-            @click="copyText(detail.classMethod, '调用方法')"
-          >
-            <code>{{ detail.classMethod }}</code>
-            <ElIcon :size="13"><CopyDocument /></ElIcon>
-          </button>
+              复制
+            </el-button>
+          </dd>
         </div>
-      </div>
-      <div class="summary__side">
-        <div class="summary__cost">
-          <span class="summary__cost-value">{{ formatMs(totalTime) }}</span>
-          <span class="summary__cost-label">总耗时</span>
-        </div>
-        <div class="summary__times">
-          <span>{{ formatTime(detail?.startTime) }}</span>
-          <span class="summary__times-sep">→</span>
-          <span>{{ formatTime(detail?.endTime) }}</span>
-        </div>
-      </div>
+      </dl>
     </header>
 
-<<<<<<< HEAD
-      <!-- 步骤过滤工具栏 -->
-      <div class="step-toolbar mt-3">
-=======
-    <!-- ===== 指标条 ===== -->
-    <div v-if="steps.length > 0" class="stats">
-      <div class="stat">
-        <span class="stat__value">{{ steps.length }}</span>
-        <span class="stat__label">步骤总数</span>
+    <!-- ========== 指标条 ========== -->
+    <section class="metrics" aria-label="执行指标概览">
+      <div class="metric">
+        <span class="metric__label">步骤总数</span>
+        <span class="metric__value">{{ steps.length }}</span>
       </div>
+
       <button
         type="button"
-        class="stat"
-        :class="{
-          'is-danger': failedSteps.length > 0,
-          'is-active': onlyFailed
-        }"
+        class="metric metric--action"
+        :class="{ 'is-danger': failedSteps.length > 0 }"
         :disabled="failedSteps.length === 0"
-        :title="failedSteps.length > 0 ? '点击只看失败步骤' : ''"
-        @click="toggleOnlyFailed"
+        @click="onlyFailed = true"
       >
-        <span class="stat__value">{{ failedSteps.length }}</span>
-        <span class="stat__label">失败步骤</span>
+        <span class="metric__label">失败步骤</span>
+        <span class="metric__value">{{ failedSteps.length }}</span>
+        <span class="metric__hint">
+          {{ failedSteps.length > 0 ? "点击只看失败" : "全部步骤成功" }}
+        </span>
       </button>
+
       <button
+        v-if="slowestStep"
         type="button"
-        class="stat is-clickable"
-        :disabled="!slowestStep"
-        title="点击定位最慢步骤"
-        @click="locateSlowest"
+        class="metric metric--action"
+        @click="focusStep(slowestStep.index)"
       >
-        <span class="stat__value">{{ formatMs(slowestStep?.cost) }}</span>
-        <span class="stat__label stat__label--ellipsis">
-          最慢·{{ slowestStep?.name || "-" }}
+        <span class="metric__label">最慢步骤</span>
+        <span class="metric__value metric__value--sm">
+          {{ formatMs(slowestStep.step.costMs) }}
+        </span>
+        <span class="metric__hint" :title="slowestStep.step.stepName">
+          {{ slowestStep.step.stepName }}
         </span>
       </button>
-      <div class="stat">
-        <span class="stat__value">{{ formatMs(avgCost) }}</span>
-        <span class="stat__label">平均步骤耗时</span>
-      </div>
-    </div>
 
-    <!-- ===== 步骤列表 ===== -->
-    <section v-if="steps.length > 0" class="steps-section">
-      <div class="steps-toolbar">
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
-        <el-input
-          v-model="keyword"
-          placeholder="搜索步骤名"
-          clearable
-          size="small"
-          class="steps-toolbar__search"
-          :prefix-icon="Search"
-        />
-        <el-switch
-          v-model="onlyFailed"
-          :disabled="failedSteps.length === 0"
-          size="small"
-          inline-prompt
-          active-text="只看失败"
-          inactive-text="全部"
-        />
-<<<<<<< HEAD
-        <el-switch
-          v-model="onlyMetadata"
-          size="small"
-          inline-prompt
-          active-text="只看指标"
-          inactive-text="全部步骤"
-        />
-        <span class="step-count-hint">
-          显示 {{ visibleSteps.length }} / {{ steps.length }}
-=======
-        <el-segmented
-          v-model="sortMode"
-          size="small"
-          :options="[
-            { label: '执行顺序', value: 'order' },
-            { label: '耗时降序', value: 'cost' }
-          ]"
-        />
-        <span class="steps-toolbar__count">
-          {{ visibleSteps.length }} / {{ steps.length }}
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
+      <div class="metric">
+        <span class="metric__label">平均步骤耗时</span>
+        <span class="metric__value metric__value--sm">
+          {{ formatMs(avgCost) }}
+        </span>
+        <span class="metric__hint">共 {{ steps.length }} 步</span>
+      </div>
+
+      <div v-if="batchSummary" class="metric">
+        <span class="metric__label">批处理成功率</span>
+        <span class="metric__value metric__value--sm">
+          {{ batchSummary.rate }}%
+        </span>
+        <span class="metric__hint">
+          {{ batchSummary.success }}/{{ batchSummary.total }}
+          <template v-if="batchSummary.failed">
+            · 失败 {{ batchSummary.failed }}
+          </template>
+          <template v-if="batchSummary.skipped">
+            · 跳过 {{ batchSummary.skipped }}
+          </template>
         </span>
       </div>
 
-      <el-empty
-        v-if="visibleSteps.length === 0"
-        :image-size="60"
-        description="没有匹配的步骤"
-      />
-      <ol v-else ref="listRef" class="step-list">
-        <li
-          v-for="{ step, index } in visibleSteps"
-          :key="index"
-          class="step-row"
-          :class="{
-            'is-fail': !step.success,
-            'is-highlight': highlightIndex === index
-          }"
-          :data-step-index="index"
-        >
-<<<<<<< HEAD
-          <div
-            class="step-card"
-            :class="{
-              'is-fail': !step.success,
-              'is-slow': isSlow(step.costMs)
-            }"
-          >
-            <div class="step-header">
-              <span class="step-name">{{ step.stepName }}</span>
-              <div class="step-tags">
-                <el-tag
-                  v-if="step.action"
-                  size="small"
-                  :type="(actionType(step.action) as any) || 'info'"
-                  effect="light"
-                >
-                  {{ step.action }}
-                </el-tag>
-                <el-tag
-                  v-if="isSlow(step.costMs)"
-                  size="small"
-                  type="warning"
-                  effect="dark"
-                >
-                  耗时较长
-                </el-tag>
-                <el-tag
-                  size="small"
-                  :type="step.success ? 'success' : 'danger'"
-                  effect="plain"
-                >
-                  {{ step.success ? "成功" : "失败" }}
-                </el-tag>
-              </div>
-            </div>
-
-            <div class="step-meta">
-              <span class="step-cost"> 耗时 {{ formatMs(step.costMs) }} </span>
-              <span class="step-pct">占比 {{ percent(step.costMs) }}%</span>
-              <el-progress
-                :percentage="percent(step.costMs)"
-                :stroke-width="6"
-                :color="step.success ? '#67c23a' : '#f56c6c'"
-                :show-text="false"
-                class="step-bar"
-              />
-            </div>
-
-            <!-- 批处理指标：total/success/failed/skipped -->
-            <div v-if="step.total != null" class="batch-stats">
-              <div class="batch-numbers">
-                <span class="batch-item">
-                  总数 <b>{{ step.total }}</b>
-                </span>
-                <span class="batch-item batch-success">
-                  成功 <b>{{ step.successCount ?? 0 }}</b>
-                </span>
-                <span v-if="step.failedCount" class="batch-item batch-fail">
-                  失败 <b>{{ step.failedCount }}</b>
-                </span>
-                <span v-if="step.skippedCount" class="batch-item batch-skip">
-                  跳过 <b>{{ step.skippedCount }}</b>
-                </span>
-                <span class="batch-item batch-rate">
-                  成功率 <b>{{ successRate(step) }}%</b>
-                </span>
-              </div>
-              <el-progress
-                :percentage="successRate(step)"
-                :stroke-width="4"
-                :color="step.failedCount ? '#f56c6c' : '#67c23a'"
-                :show-text="false"
-                class="batch-bar"
-              />
-            </div>
-
-            <!-- 步骤 metadata 折叠面板 -->
-            <el-collapse
-              v-if="
-                (step.metadata && Object.keys(step.metadata).length > 0) ||
-                (step.failures && step.failures.length > 0) ||
-                (step.skips && step.skips.length > 0)
-              "
-              class="step-extras"
-            >
-              <el-collapse-item name="metadata">
-                <template #title>
-                  <span class="collapse-title">
-                    <span class="collapse-dot" />
-                    步骤指标
-                    <el-tag
-                      v-if="step.failures?.length"
-                      size="small"
-                      type="danger"
-                      effect="plain"
-                    >
-                      {{ step.failures.length }} 条失败
-                    </el-tag>
-                    <el-tag
-                      v-if="step.skips?.length"
-                      size="small"
-                      type="info"
-                      effect="plain"
-                    >
-                      {{ step.skips.length }} 条跳过
-                    </el-tag>
-                  </span>
-                </template>
-
-                <div
-                  v-if="step.metadata && Object.keys(step.metadata).length > 0"
-                  class="meta-grid"
-                >
-                  <div
-                    v-for="(v, k) in step.metadata"
-                    :key="k"
-                    class="meta-row"
-                    :class="{ 'meta-row-block': isLongValue(v) }"
-                  >
-                    <span class="meta-key">{{ metaKeyLabel(k) }}</span>
-                    <span class="meta-value">
-                      <pre v-if="isLongValue(v)" class="meta-pre">{{
-                        formatMetaValue(v)
-                      }}</pre>
-                      <template v-else>{{ formatMetaValue(v) }}</template>
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  v-if="step.failures && step.failures.length > 0"
-                  class="batch-items"
-                >
-                  <div class="batch-items-title batch-items-fail">
-                    失败明细（前 {{ step.failures.length }} 条）
-                  </div>
-                  <ul class="batch-items-list">
-                    <li v-for="(item, i) in step.failures" :key="'f' + i">
-                      {{ batchItemLabel(item) }}
-                    </li>
-                  </ul>
-                </div>
-
-                <div
-                  v-if="step.skips && step.skips.length > 0"
-                  class="batch-items"
-                >
-                  <div class="batch-items-title batch-items-skip">
-                    跳过明细（前 {{ step.skips.length }} 条）
-                  </div>
-                  <ul class="batch-items-list">
-                    <li v-for="(item, i) in step.skips" :key="'s' + i">
-                      {{ batchItemLabel(item) }}
-                    </li>
-                  </ul>
-                </div>
-              </el-collapse-item>
-            </el-collapse>
-
-            <div v-if="step.errorMessage" class="step-error">
-              <el-alert
-                :title="step.errorMessage"
-                type="error"
-                :closable="false"
-                show-icon
-              />
-=======
-          <span class="step-row__no">{{ index + 1 }}</span>
-          <span
-            class="step-row__dot"
-            :class="step.success ? 'is-ok' : 'is-fail'"
-            :aria-label="step.success ? '成功' : '失败'"
-          />
-          <div class="step-row__body">
-            <div class="step-row__line">
-              <span class="step-row__name">{{ step.stepName }}</span>
-              <span
-                v-if="isSlow(step.costMs)"
-                class="step-row__slow"
-                title="耗时 Top3"
-              >
-                <ElIcon :size="12"><Timer /></ElIcon>慢
-              </span>
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
-            </div>
-            <p v-if="step.errorMessage" class="step-row__error">
-              {{ step.errorMessage }}
-            </p>
-          </div>
-          <div class="step-row__cost">
-            <span class="step-row__bar-track">
-              <span
-                class="step-row__bar"
-                :class="step.success ? 'is-ok' : 'is-fail'"
-                :style="{ width: `${barWidth(step.costMs)}%` }"
-              />
-            </span>
-            <span class="step-row__ms">{{ formatMs(step.costMs) }}</span>
-            <span class="step-row__pct">{{
-              pctOfTotal(step.costMs) ?? ""
-            }}</span>
-          </div>
-        </li>
-      </ol>
+      <button
+        v-if="exception"
+        type="button"
+        class="metric metric--action is-danger"
+        @click="toggleException"
+      >
+        <span class="metric__label">异常</span>
+        <span class="metric__value metric__value--sm">
+          {{ exception.type || "未知类型" }}
+        </span>
+        <span class="metric__hint">点击查看堆栈</span>
+      </button>
     </section>
 
-    <!-- ===== 异常信息 ===== -->
-    <section v-if="exception" class="exception">
-      <div class="exception__head">
-        <div class="exception__title">
-          <ElIcon :size="16" class="exception__icon">
-            <CircleCloseFilled />
-          </ElIcon>
-          <span>异常信息</span>
-          <code class="exception__type">{{ exception.type || "-" }}</code>
+    <!-- ========== 主体：瀑布列表 + 步骤详情 ========== -->
+    <div v-if="steps.length > 0" class="workspace">
+      <!-- 左：步骤瀑布 -->
+      <section class="pane pane--list" aria-label="执行步骤列表">
+        <div class="pane__head">
+          <el-input
+            v-model="keyword"
+            placeholder="搜索步骤名 / 类型 / 错误"
+            clearable
+            size="small"
+            class="pane__search"
+          />
+          <el-radio-group v-model="sortMode" size="small">
+            <el-radio-button value="order">执行顺序</el-radio-button>
+            <el-radio-button value="cost">耗时降序</el-radio-button>
+          </el-radio-group>
+          <el-checkbox
+            v-model="onlyFailed"
+            :disabled="failedSteps.length === 0"
+            size="small"
+          >
+            只看失败
+          </el-checkbox>
+          <el-checkbox v-model="onlyMetrics" size="small">
+            只看有指标
+          </el-checkbox>
+          <span class="pane__count">
+            {{ visibleSteps.length }} / {{ steps.length }}
+          </span>
         </div>
-        <el-button
-          v-if="exception.stackTrace"
-          size="small"
-          :icon="CopyDocument"
-          @click="copyText(exception.stackTrace, '堆栈信息')"
+
+        <!-- 时间刻度：让瀑布条可读 -->
+        <div v-if="sortMode === 'order'" class="ruler">
+          <span>0</span>
+          <span>{{ formatMs(Math.round(timelineTotal / 2)) }}</span>
+          <span>{{ formatMs(timelineTotal) }}</span>
+        </div>
+
+        <el-empty
+          v-if="visibleSteps.length === 0"
+          :image-size="60"
+          description="没有匹配的步骤"
         >
-          复制堆栈
-        </el-button>
-      </div>
+          <el-button size="small" @click="resetFilters">清除筛选</el-button>
+        </el-empty>
+
+        <ul
+          v-else
+          class="step-list"
+          tabindex="0"
+          @keydown.down.prevent="moveActive(1)"
+          @keydown.up.prevent="moveActive(-1)"
+        >
+          <li v-for="entry in visibleSteps" :key="entry.index">
+            <button
+              type="button"
+              class="step-row"
+              :class="{
+                'is-active': entry.index === activeIndex,
+                'is-fail': !entry.step.success
+              }"
+              :data-step-row="entry.index"
+              @click="selectStep(entry.index)"
+            >
+              <span class="step-row__no">{{ entry.index + 1 }}</span>
+              <i
+                class="step-row__dot"
+                :class="entry.step.success ? 'is-success' : 'is-fail'"
+              />
+              <span class="step-row__name" :title="entry.step.stepName">
+                {{ entry.step.stepName }}
+              </span>
+              <el-tag
+                v-if="entry.step.action"
+                size="small"
+                :type="actionType(entry.step.action) as any"
+                effect="plain"
+                class="step-row__action"
+              >
+                {{ entry.step.action }}
+              </el-tag>
+              <span v-if="entry.step.total != null" class="step-row__batch">
+                {{ entry.step.successCount ?? 0 }}/{{ entry.step.total }}
+                <em v-if="entry.step.failedCount" class="is-fail-text">
+                  失败 {{ entry.step.failedCount }}
+                </em>
+              </span>
+
+              <!-- 瀑布条：执行顺序按时间偏移定位，耗时模式左对齐比长短 -->
+              <span class="step-row__track">
+                <span
+                  class="step-row__bar"
+                  :class="{
+                    'is-fail': !entry.step.success,
+                    'is-slowest': slowestStep?.index === entry.index
+                  }"
+                  :style="{
+                    left: sortMode === 'order' ? `${entry.offsetPct}%` : '0%',
+                    width:
+                      sortMode === 'order'
+                        ? `${entry.widthPct}%`
+                        : `${costBarWidth(entry.cost)}%`
+                  }"
+                />
+              </span>
+              <span class="step-row__cost">{{ formatMs(entry.cost) }}</span>
+            </button>
+          </li>
+        </ul>
+
+        <p class="pane__tip">
+          点击任意步骤查看右侧详情，选中列表后可用 ↑ / ↓ 键连续排查
+        </p>
+      </section>
+
+      <!-- 右：选中步骤详情 -->
+      <section class="pane pane--detail" aria-label="步骤详情">
+        <template v-if="activeEntry">
+          <div class="detail__head">
+            <div class="detail__title">
+              <span class="detail__no">步骤 {{ activeEntry.index + 1 }}</span>
+              <h3>{{ activeEntry.step.stepName }}</h3>
+            </div>
+            <div class="detail__badges">
+              <el-tag
+                size="small"
+                :type="activeEntry.step.success ? 'success' : 'danger'"
+              >
+                {{ activeEntry.step.success ? "成功" : "失败" }}
+              </el-tag>
+              <el-tag
+                v-if="activeEntry.step.action"
+                size="small"
+                :type="actionType(activeEntry.step.action) as any"
+                effect="plain"
+              >
+                {{ activeEntry.step.action }}
+              </el-tag>
+              <el-button link type="primary" size="small" @click="copyStepJson">
+                复制数据
+              </el-button>
+            </div>
+          </div>
+
+          <!-- 时间定位 -->
+          <div class="detail__timing">
+            <div class="timing-item">
+              <span class="timing-item__label">耗时</span>
+              <span class="timing-item__value">
+                {{ formatMs(activeEntry.cost) }}
+              </span>
+            </div>
+            <div class="timing-item">
+              <span class="timing-item__label">占总耗时</span>
+              <span class="timing-item__value">
+                {{ percentOfTotal(activeEntry.cost) }}%
+              </span>
+            </div>
+            <div class="timing-item">
+              <span class="timing-item__label">起始偏移</span>
+              <span class="timing-item__value">
+                T+{{ formatMs(activeEntry.offset) }}
+              </span>
+            </div>
+            <div v-if="clockAt(activeEntry.offset)" class="timing-item">
+              <span class="timing-item__label">约发生于</span>
+              <span class="timing-item__value">
+                {{ clockAt(activeEntry.offset) }}
+              </span>
+            </div>
+          </div>
+          <el-progress
+            :percentage="percentOfTotal(activeEntry.cost)"
+            :stroke-width="4"
+            :show-text="false"
+            :color="activeEntry.step.success ? undefined : '#f56c6c'"
+          />
+
+          <!-- 错误信息优先展示 -->
+          <el-alert
+            v-if="activeEntry.step.errorMessage"
+            :title="activeEntry.step.errorMessage"
+            type="error"
+            :closable="false"
+            show-icon
+            class="detail__error"
+          />
+
+          <!-- 批处理统计 -->
+          <div v-if="activeEntry.step.total != null" class="detail__block">
+            <h4 class="block__title">批处理结果</h4>
+            <div class="batch-grid">
+              <div class="batch-cell">
+                <span class="batch-cell__label">总数</span>
+                <span class="batch-cell__value">
+                  {{ activeEntry.step.total }}
+                </span>
+              </div>
+              <div class="batch-cell">
+                <span class="batch-cell__label">成功</span>
+                <span class="batch-cell__value is-success">
+                  {{ activeEntry.step.successCount ?? 0 }}
+                </span>
+              </div>
+              <div class="batch-cell">
+                <span class="batch-cell__label">失败</span>
+                <span
+                  class="batch-cell__value"
+                  :class="{ 'is-fail': activeEntry.step.failedCount }"
+                >
+                  {{ activeEntry.step.failedCount ?? 0 }}
+                </span>
+              </div>
+              <div class="batch-cell">
+                <span class="batch-cell__label">跳过</span>
+                <span class="batch-cell__value is-muted">
+                  {{ activeEntry.step.skippedCount ?? 0 }}
+                </span>
+              </div>
+              <div class="batch-cell">
+                <span class="batch-cell__label">成功率</span>
+                <span class="batch-cell__value is-primary">
+                  {{ successRate(activeEntry.step) }}%
+                </span>
+              </div>
+            </div>
+            <el-progress
+              :percentage="successRate(activeEntry.step)"
+              :stroke-width="4"
+              :show-text="false"
+              :color="activeEntry.step.failedCount ? '#e6a23c' : '#67c23a'"
+            />
+          </div>
+
+          <!-- 指标 metadata -->
+          <div
+            v-if="
+              activeEntry.step.metadata &&
+              Object.keys(activeEntry.step.metadata).length > 0
+            "
+            class="detail__block"
+          >
+            <h4 class="block__title">步骤指标</h4>
+            <div class="meta-grid">
+              <div
+                v-for="(v, k) in activeEntry.step.metadata"
+                :key="k"
+                class="meta-row"
+                :class="{ 'meta-row--block': isLongValue(v) }"
+              >
+                <span class="meta-row__key">{{ metaKeyLabel(k) }}</span>
+                <pre v-if="isLongValue(v)" class="meta-row__pre">{{
+                  formatMetaValue(v)
+                }}</pre>
+                <span v-else class="meta-row__value">
+                  {{ formatMetaValue(v) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 失败明细 -->
+          <div
+            v-if="activeEntry.step.failures?.length"
+            class="detail__block detail__block--fail"
+          >
+            <h4 class="block__title">
+              失败明细
+              <span class="block__count">
+                {{ activeEntry.step.failures.length }} 条
+              </span>
+            </h4>
+            <ul class="item-list">
+              <li v-for="(item, i) in activeEntry.step.failures" :key="'f' + i">
+                {{ batchItemLabel(item) }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- 跳过明细 -->
+          <div v-if="activeEntry.step.skips?.length" class="detail__block">
+            <h4 class="block__title">
+              跳过明细
+              <span class="block__count">
+                {{ activeEntry.step.skips.length }} 条
+              </span>
+            </h4>
+            <ul class="item-list item-list--muted">
+              <li v-for="(item, i) in activeEntry.step.skips" :key="'s' + i">
+                {{ batchItemLabel(item) }}
+              </li>
+            </ul>
+          </div>
+
+          <p v-if="!activeStepHasExtra" class="detail__empty-hint">
+            该步骤未上报额外指标，仅记录了执行结果与耗时。
+          </p>
+        </template>
+
+        <el-empty
+          v-else
+          :image-size="60"
+          description="从左侧选择一个步骤查看详情"
+        />
+      </section>
+    </div>
+
+    <!-- ========== 异常区 ========== -->
+    <section v-if="exception" data-exception-block class="exception">
+      <button type="button" class="exception__head" @click="toggleException">
+        <span class="exception__title">
+          异常信息
+          <code>{{ exception.type || "-" }}</code>
+        </span>
+        <span class="exception__toggle">
+          {{ exceptionOpen ? "收起" : "展开堆栈" }}
+        </span>
+      </button>
       <p class="exception__message">{{ exception.message || "-" }}</p>
-      <el-collapse v-if="exception.stackTrace" class="exception__collapse">
-        <el-collapse-item title="堆栈信息" name="stack">
-          <pre class="exception__stack">{{ exception.stackTrace }}</pre>
-        </el-collapse-item>
-      </el-collapse>
+      <template v-if="exceptionOpen && exception.stackTrace">
+        <div class="exception__bar">
+          <span>堆栈信息</span>
+          <el-button
+            link
+            type="primary"
+            size="small"
+            @click="copyText(exception.stackTrace, '堆栈信息')"
+          >
+            复制堆栈
+          </el-button>
+        </div>
+        <pre class="exception__stack">{{ exception.stackTrace }}</pre>
+      </template>
     </section>
 
     <el-empty
@@ -652,417 +818,557 @@ function batchItemLabel(item: TaskLogBatchItem) {
   </div>
 </template>
 
-<style scoped>
-/* ===== 响应式 ===== */
+<style scoped lang="scss">
+/* ========== 窄屏降级 ========== */
+@media (width <= 1200px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pane--detail {
+    position: static;
+    max-height: none;
+  }
+
+  .step-list {
+    max-height: 40vh;
+  }
+
+  .step-row__track {
+    flex-basis: 80px;
+  }
+}
+
 @media (width <= 768px) {
-  .stats {
-    grid-template-columns: repeat(2, 1fr);
+  .summary {
+    position: static;
   }
 
-  .summary__side {
-    align-items: flex-start;
-  }
-
-  .step-row {
-    flex-wrap: wrap;
-  }
-
-  .step-row__cost {
-    width: 100%;
-    padding-left: 46px;
+  .step-row__batch,
+  .step-row__action {
+    display: none;
   }
 }
 
 .task-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
-  max-width: 1080px;
-  max-height: 82vh;
-  padding: 0 4px 16px;
-  margin: 0 auto;
+  max-height: 78vh;
+  padding: 0 4px 4px;
   overflow-y: auto;
+  font-variant-numeric: tabular-nums;
 }
 
-/* ===== 顶部概要带 ===== */
+/* ========== 概要带 ========== */
 .summary {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  margin-bottom: 12px;
+  padding: 12px 16px;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-left-width: 4px;
   border-radius: 10px;
-}
-
-.summary.is-ok {
-  border-left-color: var(--el-color-success);
-}
-
-.summary.is-fail {
-  border-left-color: var(--el-color-danger);
 }
 
 .summary__main {
   display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  min-width: 0;
-}
-
-.summary.is-ok .summary__status-icon {
-  color: var(--el-color-success);
-}
-
-.summary.is-fail .summary__status-icon {
-  color: var(--el-color-danger);
-}
-
-.summary__titles {
-  min-width: 0;
-}
-
-.summary__task {
-  display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+  min-width: 0;
 }
 
-.summary__name {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.summary__desc {
-  margin-top: 2px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.summary__method {
+.status-pill {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 6px;
   align-items: center;
-  padding: 0;
-  margin-top: 6px;
-  color: var(--el-text-color-secondary);
-  cursor: pointer;
-  background: none;
-  border: none;
-}
-
-.summary__method:hover {
-  color: var(--el-color-primary);
-}
-
-.summary__method code {
-  padding: 2px 8px;
+  padding: 4px 10px;
   font-size: 12px;
-  color: var(--el-color-primary);
-  word-break: break-all;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
+  font-weight: 600;
+  border-radius: 999px;
+
+  &.is-success {
+    color: var(--el-color-success);
+    background: var(--el-color-success-light-9);
+  }
+
+  &.is-fail {
+    color: var(--el-color-danger);
+    background: var(--el-color-danger-light-9);
+  }
 }
 
-.summary__side {
+.status-pill__dot {
+  width: 6px;
+  height: 6px;
+  background: currentcolor;
+  border-radius: 50%;
+}
+
+.summary__title {
+  min-width: 0;
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--el-text-color-primary);
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.summary__facts {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
 }
 
-.summary__cost {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-}
-
-.summary__cost-value {
-  font-size: 24px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-primary);
-}
-
-.summary__cost-label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.summary__times {
-  display: flex;
-  gap: 6px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-secondary);
-}
-
-.summary__times-sep {
-  color: var(--el-text-color-placeholder);
-}
-
-/* ===== 指标条 ===== */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.stat {
+.fact {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  align-items: flex-start;
+
+  dt {
+    font-size: 11px;
+    color: var(--el-text-color-secondary);
+  }
+
+  dd {
+    margin: 0;
+    font-size: 13px;
+    color: var(--el-text-color-primary);
+  }
+}
+
+.fact__strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.fact--wide {
+  max-width: 420px;
+}
+
+.fact__code {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   min-width: 0;
-  padding: 10px 14px;
-  font: inherit;
+
+  code {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--el-font-family-mono, monospace);
+    font-size: 12px;
+    color: var(--el-color-primary);
+    white-space: nowrap;
+  }
+}
+
+/* ========== 指标条 ========== */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
   text-align: left;
   background: var(--el-fill-color-lighter);
   border: 1px solid transparent;
   border-radius: 8px;
 }
 
-button.stat {
+.metric--action {
+  font: inherit;
   cursor: pointer;
   transition:
-    border-color 0.2s,
-    background 0.2s;
+    border-color 0.18s,
+    background 0.18s;
+
+  &:hover:not(:disabled) {
+    background: var(--el-fill-color);
+    border-color: var(--el-color-primary-light-5);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--el-color-primary);
+    outline-offset: 1px;
+  }
 }
 
-button.stat:disabled {
-  cursor: default;
-}
-
-button.stat:not(:disabled):hover {
-  border-color: var(--el-color-primary-light-5);
-}
-
-.stat.is-danger .stat__value {
+.metric.is-danger .metric__value {
   color: var(--el-color-danger);
 }
 
-.stat.is-active {
-  background: var(--el-color-danger-light-9);
-  border-color: var(--el-color-danger-light-5);
+.metric__label {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
 }
 
-.stat__value {
-  font-size: 18px;
+.metric__value {
+  font-size: 20px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
   color: var(--el-text-color-primary);
 }
 
-.stat__label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+.metric__value--sm {
+  font-size: 15px;
 }
 
-.stat__label--ellipsis {
-  max-width: 100%;
+.metric__hint {
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
   white-space: nowrap;
 }
 
-/* ===== 步骤列表 ===== */
-.steps-section {
-  margin-bottom: 16px;
+/* ========== 主体双栏 ========== */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
 }
 
-.steps-toolbar {
+.pane {
+  padding: 12px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+}
+
+.pane__head {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 10px 12px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 8px 8px 0 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
-.steps-toolbar__search {
-  width: 220px;
+.pane__search {
+  width: 200px;
 }
 
-.steps-toolbar__count {
+.pane__count {
   margin-left: auto;
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
   color: var(--el-text-color-secondary);
 }
 
+.pane__tip {
+  padding-top: 8px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.ruler {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 74px 4px 0;
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--el-text-color-disabled);
+}
+
+/* ========== 步骤行 ========== */
 .step-list {
+  max-height: 52vh;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
   list-style: none;
-  border: 1px solid var(--el-border-color-lighter);
-  border-top: none;
-  border-radius: 0 0 8px 8px;
 }
 
 .step-row {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 8px 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
-  transition: background 0.3s;
-}
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 
-.step-row:first-child {
-  border-top: none;
-}
+  &:hover {
+    background: var(--el-fill-color-lighter);
+  }
 
-.step-row:hover {
-  background: var(--el-fill-color-light);
-}
+  &.is-active {
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary-light-5);
+  }
 
-.step-row.is-fail {
-  background: var(--el-color-danger-light-9);
-}
+  &.is-fail .step-row__name {
+    color: var(--el-color-danger);
+  }
 
-.step-row.is-highlight {
-  background: var(--el-color-warning-light-8);
+  &:focus-visible {
+    outline: 2px solid var(--el-color-primary);
+    outline-offset: -2px;
+  }
 }
 
 .step-row__no {
-  min-width: 28px;
-  padding-top: 2px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-placeholder);
+  flex-shrink: 0;
+  width: 26px;
+  font-size: 11px;
+  color: var(--el-text-color-disabled);
   text-align: right;
 }
 
 .step-row__dot {
   flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  margin-top: 7px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-}
 
-.step-row__dot.is-ok {
-  background: var(--el-color-success);
-}
+  &.is-success {
+    background: var(--el-color-success);
+  }
 
-.step-row__dot.is-fail {
-  background: var(--el-color-danger);
-}
-
-.step-row__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.step-row__line {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  &.is-fail {
+    background: var(--el-color-danger);
+  }
 }
 
 .step-row__name {
+  flex: 1 1 auto;
+  min-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 13px;
   color: var(--el-text-color-primary);
-  word-break: break-all;
+  white-space: nowrap;
 }
 
-.step-row.is-fail .step-row__name {
-  font-weight: 600;
-}
-
-.step-row__slow {
-  display: inline-flex;
+.step-row__action {
   flex-shrink: 0;
-  gap: 2px;
-  align-items: center;
-<<<<<<< HEAD
+}
+
+.step-row__batch {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+
+  em {
+    font-style: normal;
+  }
+
+  .is-fail-text {
+    margin-left: 4px;
+    color: var(--el-color-danger);
+  }
+}
+
+.step-row__track {
+  position: relative;
+  flex: 0 0 130px;
+  height: 8px;
+  background: var(--el-fill-color);
+  border-radius: 4px;
+}
+
+.step-row__bar {
+  position: absolute;
+  top: 0;
+  min-width: 2px;
+  height: 8px;
+  background: var(--el-color-primary);
+  border-radius: 4px;
+
+  &.is-slowest {
+    background: var(--el-color-warning);
+  }
+
+  &.is-fail {
+    background: var(--el-color-danger);
+  }
+}
+
+.step-row__cost {
+  flex: 0 0 66px;
   font-size: 12px;
+  color: var(--el-text-color-regular);
+  text-align: right;
+}
+
+/* ========== 右栏详情 ========== */
+.pane--detail {
+  position: sticky;
+  top: 92px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 66vh;
+  overflow-y: auto;
+}
+
+.detail__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.detail__title {
+  min-width: 0;
+
+  h3 {
+    margin: 2px 0 0;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--el-text-color-primary);
+    word-break: break-all;
+  }
+}
+
+.detail__no {
+  font-size: 11px;
   color: var(--el-text-color-secondary);
 }
 
-.step-bar {
-  flex: 1;
-  max-width: 200px;
-}
-
-/* 批处理指标 */
-.batch-stats {
-  padding: 8px 10px;
-  margin-top: 10px;
-  background: var(--el-fill-color-light);
-  border-radius: 6px;
-}
-
-.batch-numbers {
+.detail__badges {
   display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  font-size: 12px;
-  color: var(--el-text-color-regular);
+  flex-shrink: 0;
+  gap: 6px;
+  align-items: center;
 }
 
-.batch-item b {
-  margin-left: 4px;
+.detail__timing {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+  padding: 10px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
+}
+
+.timing-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timing-item__label {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.timing-item__value {
   font-size: 13px;
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
-.batch-success b {
-  color: var(--el-color-success);
+.detail__error {
+  align-items: flex-start;
 }
 
-.batch-fail b {
+.detail__block {
+  padding-top: 10px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.detail__block--fail .item-list {
   color: var(--el-color-danger);
 }
 
-.batch-skip b {
-  color: var(--el-color-info);
-}
-
-.batch-rate b {
-  color: var(--el-color-primary);
-}
-
-.batch-bar {
-  margin-top: 6px;
-}
-
-/* metadata 折叠 */
-.step-extras {
-  margin-top: 10px;
-  border-top: 1px dashed var(--el-border-color-lighter);
-}
-
-.collapse-title {
-  display: inline-flex;
+.block__title {
+  display: flex;
   gap: 8px;
   align-items: center;
+  margin: 0 0 8px;
   font-size: 13px;
+  font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
-.collapse-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: var(--el-color-primary);
-  border-radius: 50%;
+.block__count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--el-text-color-secondary);
+}
+
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.batch-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.batch-cell__label {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.batch-cell__value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+
+  &.is-success {
+    color: var(--el-color-success);
+  }
+
+  &.is-fail {
+    color: var(--el-color-danger);
+  }
+
+  &.is-primary {
+    color: var(--el-color-primary);
+  }
+
+  &.is-muted {
+    color: var(--el-text-color-secondary);
+  }
 }
 
 .meta-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 6px 16px;
-  padding: 4px 0 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 14px;
 }
 
 .meta-row {
@@ -1073,170 +1379,80 @@ button.stat:not(:disabled):hover {
   line-height: 1.6;
 }
 
-.meta-row-block {
+.meta-row--block {
   flex-direction: column;
   grid-column: 1 / -1;
   gap: 4px;
   align-items: stretch;
 }
 
-.meta-key {
-  min-width: 74px;
+.meta-row__key {
+  flex-shrink: 0;
   color: var(--el-text-color-secondary);
 }
 
-.meta-value {
+.meta-row__value {
   font-weight: 500;
   color: var(--el-text-color-primary);
   word-break: break-all;
 }
 
-.meta-pre {
+.meta-row__pre {
   max-height: 160px;
   padding: 8px 10px;
   margin: 0;
   overflow: auto;
-  font-family:
-    "Fira Code", "JetBrains Mono", Menlo, Consolas, "Courier New", monospace;
-  font-size: 12px;
+  font-family: var(--el-font-family-mono, monospace);
+  font-size: 11px;
+  line-height: 1.5;
   white-space: pre-wrap;
-  background: var(--el-fill-color-darker);
+  background: var(--el-fill-color);
   border-radius: 4px;
 }
 
-.batch-items {
-  padding-top: 6px;
-  margin-top: 6px;
-  border-top: 1px dashed var(--el-border-color-lighter);
-}
-
-.batch-items-title {
-  margin-bottom: 4px;
+.item-list {
+  max-height: 180px;
+  padding-left: 18px;
+  margin: 0;
+  overflow-y: auto;
   font-size: 12px;
-  font-weight: 600;
+  line-height: 1.7;
+  color: var(--el-text-color-regular);
+
+  li {
+    word-break: break-all;
+  }
 }
 
-.batch-items-fail {
-  color: var(--el-color-danger);
+.item-list--muted {
+  color: var(--el-text-color-secondary);
 }
 
-.batch-items-skip {
-  color: var(--el-color-info);
-}
-
-.batch-items-list {
-  padding-left: 20px;
+.detail__empty-hint {
+  padding: 8px 0 0;
   margin: 0;
   font-size: 12px;
-  color: var(--el-text-color-regular);
+  color: var(--el-text-color-secondary);
 }
 
-.batch-items-list li {
-  padding: 2px 0;
-  word-break: break-all;
-}
-
-.step-error {
-  margin-top: 8px;
-}
-
-.exception-block {
-  padding: 16px;
-  background: var(--el-color-danger-light-9);
-  border: 1px solid var(--el-color-danger-light-5);
-  border-radius: 8px;
-}
-
-.exception-type,
-.exception-message {
-  margin-bottom: 8px;
-  font-size: 13px;
-}
-
-.exception-type code {
-  padding: 2px 6px;
-  font-size: 12px;
-  color: var(--el-color-danger);
-  background: var(--el-fill-color-light);
-=======
-  padding: 0 6px;
-  font-size: 11px;
-  color: var(--el-color-warning);
-  background: var(--el-color-warning-light-9);
-  border: 1px solid var(--el-color-warning-light-5);
->>>>>>> 1accd8e (refactor: redesign task log step detail with ops-focused layout)
-  border-radius: 4px;
-}
-
-.step-row__error {
-  margin-top: 2px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--el-color-danger);
-  word-break: break-all;
-}
-
-.step-row__cost {
-  display: flex;
-  flex-shrink: 0;
-  gap: 8px;
-  align-items: center;
-  width: 240px;
-  padding-top: 2px;
-}
-
-.step-row__bar-track {
-  flex: 1;
-  height: 6px;
-  overflow: hidden;
-  background: var(--el-fill-color);
-  border-radius: 3px;
-}
-
-.step-row__bar {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-}
-
-.step-row__bar.is-ok {
-  background: var(--el-color-primary);
-}
-
-.step-row__bar.is-fail {
-  background: var(--el-color-danger);
-}
-
-.step-row__ms {
-  min-width: 64px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-regular);
-  text-align: right;
-}
-
-.step-row__pct {
-  min-width: 34px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-placeholder);
-  text-align: right;
-}
-
-/* ===== 异常区 ===== */
+/* ========== 异常区 ========== */
 .exception {
-  padding: 14px 16px;
+  padding: 12px 16px;
   background: var(--el-color-danger-light-9);
-  border: 1px solid var(--el-color-danger-light-5);
+  border: 1px solid var(--el-color-danger-light-7);
   border-radius: 10px;
 }
 
 .exception__head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
 .exception__title {
@@ -1245,58 +1461,50 @@ button.stat:not(:disabled):hover {
   align-items: center;
   font-size: 14px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.exception__icon {
   color: var(--el-color-danger);
+
+  code {
+    padding: 2px 6px;
+    font-family: var(--el-font-family-mono, monospace);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--el-text-color-regular);
+    background: var(--el-fill-color-light);
+    border-radius: 4px;
+  }
 }
 
-.exception__type {
-  padding: 2px 8px;
+.exception__toggle {
   font-size: 12px;
-  color: var(--el-color-danger);
-  word-break: break-all;
-  background: var(--el-bg-color);
-  border-radius: 4px;
+  color: var(--el-color-primary);
 }
 
 .exception__message {
-  margin-top: 8px;
+  margin: 8px 0 0;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--el-text-color-regular);
+  color: var(--el-text-color-primary);
   word-break: break-all;
 }
 
-.exception__collapse {
-  --el-collapse-header-bg-color: transparent;
-  --el-collapse-content-bg-color: transparent;
-
-  margin-top: 8px;
-  border: none;
-}
-
-.exception__collapse :deep(.el-collapse-item__header) {
-  font-size: 13px;
-  background: transparent;
-  border: none;
-}
-
-.exception__collapse :deep(.el-collapse-item__wrap) {
-  background: transparent;
-  border: none;
+.exception__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .exception__stack {
-  max-height: 320px;
+  max-height: 300px;
   padding: 12px;
   margin: 0;
   overflow: auto;
+  font-family: var(--el-font-family-mono, monospace);
   font-size: 12px;
   line-height: 1.6;
-  color: #e5e5e5;
-  word-break: break-all;
+  color: #f0f0f0;
   white-space: pre-wrap;
   background: #1e1e1e;
   border-radius: 6px;
