@@ -34,7 +34,10 @@ const typeMetaMap: Record<
 };
 
 const isUnread = computed(() => props.noticeItem.read === false);
-const isActionable = computed(() => Boolean(props.noticeItem.path));
+// 公告类无 path 也可在抽屉内打开详情，同样属于可点击项
+const isActionable = computed(
+  () => Boolean(props.noticeItem.path) || props.noticeItem.type === "notify"
+);
 const typeMeta = computed(
   () => typeMetaMap[props.noticeItem.type] ?? typeMetaMap.notify
 );
