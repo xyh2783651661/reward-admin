@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
+import { reactive, ref, computed, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
 import {
@@ -13,7 +13,7 @@ import type {
   CheckRecordPageReq
 } from "../types";
 
-function formatTime(value?: string | null) {
+export function formatTime(value?: string | null) {
   return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
 }
 
@@ -37,6 +37,25 @@ function getHttpStatusType(status?: number) {
   return "info";
 }
 
+export const CHECK_TYPE_LABELS: Record<string, string> = {
+  ACTIVE_PROBE: "主动探测",
+  PASSIVE_FAILURE: "被动检测-失败",
+  PASSIVE_SUCCESS: "被动检测-成功",
+  BALANCE_QUERY: "余额查询"
+};
+
+export const REASON_LABELS: Record<string, string> = {
+  OK: "正常",
+  INSUFFICIENT_BALANCE: "余额不足",
+  QUOTA_EXCEEDED: "配额超限",
+  AUTH_FAILED: "认证失败",
+  RATE_LIMIT: "频率限制",
+  NETWORK_ERROR: "网络错误",
+  PROVIDER_ERROR: "供应商错误",
+  UNKNOWN_ERROR: "未知错误",
+  BALANCE_LOW: "余额预警"
+};
+
 function buildRequest(form: Record<string, any>): CheckRecordPageReq {
   const payload: CheckRecordPageReq = {
     current: Number(form.current || 1),
@@ -56,9 +75,9 @@ function buildRequest(form: Record<string, any>): CheckRecordPageReq {
   return payload;
 }
 
-export function useCheckRecord(_tableRef?: Ref) {
+export function useCheckRecord(_tableRef?: Ref, initialProvider?: string) {
   const form = reactive({
-    provider: "",
+    provider: initialProvider || "",
     checkType: "",
     status: "",
     reason: "",
@@ -69,6 +88,20 @@ export function useCheckRecord(_tableRef?: Ref) {
 
   const dataList = ref<CheckRecordItem[]>([]);
   const loading = ref(true);
+
+  /** 详情抽屉 */
+  const drawerVisible = ref(false);
+  const drawerItem = ref<CheckRecordItem | null>(null);
+  const drawerIndex = computed(() =>
+    drawerItem.value
+      ? dataList.value.findIndex(i => i.id === drawerItem.value!.id)
+      : -1
+  );
+
+  /** 更多筛选是否激活（有值） */
+  const hasAdvancedFilters = computed(
+    () => Boolean(form.checkType) || Boolean(form.reason)
+  );
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -92,30 +125,18 @@ export function useCheckRecord(_tableRef?: Ref) {
     {
       label: "供应商",
       prop: "provider",
-      minWidth: 120
+      minWidth: 110
     },
     {
       label: "检测类型",
       prop: "checkType",
       minWidth: 120,
-      cellRenderer: ({ row, props }) => {
-        const labelMap: Record<string, string> = {
-          ACTIVE_PROBE: "主动探测",
-          PASSIVE_FAILURE: "被动检测-失败",
-          PASSIVE_SUCCESS: "被动检测-成功",
-          BALANCE_QUERY: "余额查询"
-        };
-        return (
-          <el-tag size={props.size} effect="plain">
-            {labelMap[row.checkType] || row.checkType}
-          </el-tag>
-        );
-      }
+      formatter: ({ checkType }) => CHECK_TYPE_LABELS[checkType] || checkType
     },
     {
       label: "结果",
       prop: "status",
-      minWidth: 100,
+      minWidth: 90,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
@@ -129,26 +150,13 @@ export function useCheckRecord(_tableRef?: Ref) {
     {
       label: "故障原因",
       prop: "reason",
-      minWidth: 120,
-      formatter: ({ reason }) => {
-        const map: Record<string, string> = {
-          OK: "正常",
-          INSUFFICIENT_BALANCE: "余额不足",
-          QUOTA_EXCEEDED: "配额超限",
-          AUTH_FAILED: "认证失败",
-          RATE_LIMIT: "频率限制",
-          NETWORK_ERROR: "网络错误",
-          PROVIDER_ERROR: "供应商错误",
-          UNKNOWN_ERROR: "未知错误",
-          BALANCE_LOW: "余额预警"
-        };
-        return map[reason || ""] || reason || "-";
-      }
+      minWidth: 110,
+      formatter: ({ reason }) => REASON_LABELS[reason || ""] || reason || "-"
     },
     {
-      label: "HTTP状态",
+      label: "HTTP",
       prop: "httpStatus",
-      minWidth: 100,
+      minWidth: 80,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
@@ -162,7 +170,7 @@ export function useCheckRecord(_tableRef?: Ref) {
     {
       label: "耗时",
       prop: "costTimeMs",
-      minWidth: 100,
+      minWidth: 90,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
@@ -174,24 +182,15 @@ export function useCheckRecord(_tableRef?: Ref) {
       )
     },
     {
-      label: "余额",
-      prop: "balanceAmount",
-      minWidth: 120,
-      formatter: ({ balanceAmount, balanceCurrency }) =>
-        balanceAmount != null
-          ? `${balanceAmount} ${balanceCurrency || ""}`
-          : "-"
-    },
-    {
       label: "错误信息",
       prop: "errorMessage",
-      minWidth: 220,
+      minWidth: 200,
       formatter: ({ errorMessage }) => errorMessage || "-"
     },
     {
       label: "检测时间",
       prop: "createdTime",
-      minWidth: 180,
+      minWidth: 165,
       formatter: ({ createdTime }) => formatTime(createdTime)
     }
   ];
@@ -205,6 +204,24 @@ export function useCheckRecord(_tableRef?: Ref) {
   function handleCurrentChange(val: number) {
     form.current = val;
     onSearch();
+  }
+
+  /** 行点击打开详情抽屉 */
+  function openDetail(row: CheckRecordItem) {
+    drawerItem.value = row;
+    drawerVisible.value = true;
+  }
+
+  function navigateDetail(delta: number) {
+    const next = drawerIndex.value + delta;
+    if (next >= 0 && next < dataList.value.length) {
+      drawerItem.value = dataList.value[next];
+    }
+  }
+
+  /** 失败行高亮 */
+  function rowClassName({ row }: { row: CheckRecordItem }) {
+    return row.status === "FAIL" ? "check-row-fail" : "";
   }
 
   async function loadDropdownOptions() {
@@ -259,6 +276,9 @@ export function useCheckRecord(_tableRef?: Ref) {
   function resetForm(formEl) {
     if (!formEl) return;
     formEl.resetFields();
+    form.provider = "";
+    form.checkType = "";
+    form.reason = "";
     form.current = 1;
     form.size = 10;
     onSearch();
@@ -275,6 +295,13 @@ export function useCheckRecord(_tableRef?: Ref) {
     dataList,
     pagination,
     dropdownOptions,
+    drawerVisible,
+    drawerItem,
+    drawerIndex,
+    hasAdvancedFilters,
+    openDetail,
+    navigateDetail,
+    rowClassName,
     onSearch,
     onExport,
     resetForm,

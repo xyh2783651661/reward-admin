@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
+import { reactive, ref, computed, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
@@ -16,21 +16,22 @@ import type {
   AlertRecordPageReq
 } from "../types";
 
-function formatTime(value?: string | null) {
+export function formatTime(value?: string | null) {
   return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
 }
 
-function getAlertLevelType(level?: string) {
+export const ALERT_TYPE_LABELS: Record<string, string> = {
+  PROVIDER_UNAVAILABLE: "供应商不可用",
+  PROVIDER_RECOVERED: "供应商已恢复",
+  ALL_PROVIDERS_DOWN: "所有供应商不可用",
+  BALANCE_LOW: "余额不足预警"
+};
+
+export function getAlertLevelType(level?: string) {
   if (level === "INFO") return "info";
   if (level === "WARN") return "warning";
   if (level === "ERROR") return "danger";
   if (level === "CRITICAL") return "danger";
-  return "info";
-}
-
-function getAlertStatusType(status?: string) {
-  if (status === "OPEN") return "danger";
-  if (status === "RESOLVED") return "success";
   return "info";
 }
 
@@ -53,9 +54,9 @@ function buildRequest(form: Record<string, any>): AlertRecordPageReq {
   return payload;
 }
 
-export function useAlertRecord(_tableRef?: Ref) {
+export function useAlertRecord(_tableRef?: Ref, initialProvider?: string) {
   const form = reactive({
-    provider: "",
+    provider: initialProvider || "",
     alertType: "",
     alertLevel: "",
     status: "",
@@ -66,6 +67,26 @@ export function useAlertRecord(_tableRef?: Ref) {
 
   const dataList = ref<AlertRecordItem[]>([]);
   const loading = ref(true);
+  /** 表格勾选行 */
+  const selectedRows = ref<AlertRecordItem[]>([]);
+
+  /** 详情抽屉 */
+  const drawerVisible = ref(false);
+  const drawerItem = ref<AlertRecordItem | null>(null);
+  const drawerIndex = computed(() =>
+    drawerItem.value
+      ? dataList.value.findIndex(i => i.id === drawerItem.value!.id)
+      : -1
+  );
+
+  /** 勾选中的 OPEN 告警 */
+  const selectedOpenRows = computed(() =>
+    selectedRows.value.filter(row => row.status === "OPEN")
+  );
+
+  const hasAdvancedFilters = computed(
+    () => Boolean(form.alertType) || Boolean(form.alertLevel)
+  );
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -87,37 +108,31 @@ export function useAlertRecord(_tableRef?: Ref) {
 
   const columns: TableColumnList = [
     {
+      type: "selection",
+      width: 50,
+      align: "left",
+      selectable: (row: AlertRecordItem) => row.status === "OPEN"
+    },
+    {
       label: "供应商",
       prop: "provider",
-      minWidth: 120
+      minWidth: 110
     },
     {
       label: "告警类型",
       prop: "alertType",
-      minWidth: 150,
-      cellRenderer: ({ row, props }) => {
-        const labelMap: Record<string, string> = {
-          PROVIDER_UNAVAILABLE: "供应商不可用",
-          PROVIDER_RECOVERED: "供应商已恢复",
-          ALL_PROVIDERS_DOWN: "所有供应商不可用",
-          BALANCE_LOW: "余额不足预警"
-        };
-        return (
-          <el-tag size={props.size} effect="plain">
-            {labelMap[row.alertType] || row.alertType}
-          </el-tag>
-        );
-      }
+      minWidth: 140,
+      formatter: ({ alertType }) => ALERT_TYPE_LABELS[alertType] || alertType
     },
     {
-      label: "告警级别",
+      label: "级别",
       prop: "alertLevel",
-      minWidth: 100,
+      minWidth: 90,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
           type={getAlertLevelType(row.alertLevel)}
-          effect="plain"
+          effect={row.alertLevel === "CRITICAL" ? "dark" : "plain"}
         >
           {row.alertLevel}
         </el-tag>
@@ -126,11 +141,11 @@ export function useAlertRecord(_tableRef?: Ref) {
     {
       label: "状态",
       prop: "status",
-      minWidth: 100,
+      minWidth: 90,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
-          type={getAlertStatusType(row.status)}
+          type={row.status === "OPEN" ? "danger" : "success"}
           effect="plain"
         >
           {row.status === "OPEN" ? "未解决" : "已解决"}
@@ -143,38 +158,20 @@ export function useAlertRecord(_tableRef?: Ref) {
       minWidth: 200
     },
     {
-      label: "内容",
-      prop: "content",
-      minWidth: 260,
-      formatter: ({ content }) => content || "-"
-    },
-    {
       label: "发送次数",
       prop: "sentCount",
-      minWidth: 100
-    },
-    {
-      label: "首次告警",
-      prop: "firstSentTime",
-      minWidth: 180,
-      formatter: ({ firstSentTime }) => formatTime(firstSentTime)
+      minWidth: 90
     },
     {
       label: "最后告警",
       prop: "lastSentTime",
-      minWidth: 180,
+      minWidth: 165,
       formatter: ({ lastSentTime }) => formatTime(lastSentTime)
-    },
-    {
-      label: "解决时间",
-      prop: "resolvedTime",
-      minWidth: 180,
-      formatter: ({ resolvedTime }) => formatTime(resolvedTime)
     },
     {
       label: "操作",
       fixed: "right",
-      width: 120,
+      width: 100,
       slot: "operation"
     }
   ];
@@ -188,6 +185,30 @@ export function useAlertRecord(_tableRef?: Ref) {
   function handleCurrentChange(val: number) {
     form.current = val;
     onSearch();
+  }
+
+  function handleSelectionChange(rows: AlertRecordItem[]) {
+    selectedRows.value = rows;
+  }
+
+  function openDetail(row: AlertRecordItem) {
+    drawerItem.value = row;
+    drawerVisible.value = true;
+  }
+
+  function navigateDetail(delta: number) {
+    const next = drawerIndex.value + delta;
+    if (next >= 0 && next < dataList.value.length) {
+      drawerItem.value = dataList.value[next];
+    }
+  }
+
+  /** OPEN 行左侧描边 */
+  function rowClassName({ row }: { row: AlertRecordItem }) {
+    if (row.status !== "OPEN") return "alert-row-resolved";
+    return row.alertLevel === "CRITICAL" || row.alertLevel === "ERROR"
+      ? "alert-row-open is-severe"
+      : "alert-row-open";
   }
 
   async function loadDropdownOptions() {
@@ -209,6 +230,7 @@ export function useAlertRecord(_tableRef?: Ref) {
       pagination.total = data.total ?? 0;
       pagination.pageSize = data.size ?? form.size;
       pagination.currentPage = data.current ?? form.current;
+      selectedRows.value = [];
     } catch (error) {
       console.error("加载告警记录失败", error);
       dataList.value = [];
@@ -221,33 +243,8 @@ export function useAlertRecord(_tableRef?: Ref) {
 
   async function onResolve(row: AlertRecordItem) {
     try {
-      await ElMessageBox.confirm("确认解决该告警？", "提示", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning"
-      });
-
-      const { data } = await resolveAlert<AlertRecordItem>(row.id);
-      Object.assign(row, data);
-      message("告警已解决", { type: "success" });
-    } catch (error) {
-      if (error !== "cancel") {
-        console.error("解决告警失败", error);
-        message("解决告警失败", { type: "error" });
-      }
-    }
-  }
-
-  async function onBatchResolve() {
-    try {
-      const openAlerts = dataList.value.filter(item => item.status === "OPEN");
-      if (!openAlerts.length) {
-        message("没有未解决的告警", { type: "warning" });
-        return;
-      }
-
       await ElMessageBox.confirm(
-        `确认解决当前页 ${openAlerts.length} 条未解决告警？`,
+        `确认解决告警「${row.title || row.provider}」？`,
         "提示",
         {
           confirmButtonText: "确定",
@@ -256,7 +253,44 @@ export function useAlertRecord(_tableRef?: Ref) {
         }
       );
 
-      const providers = [...new Set(openAlerts.map(item => item.provider))];
+      const { data } = await resolveAlert<AlertRecordItem>(row.id);
+      Object.assign(row, data);
+      if (drawerItem.value?.id === row.id) {
+        Object.assign(drawerItem.value, data);
+      }
+      message("告警已解决", { type: "success" });
+      onSearch();
+    } catch (error) {
+      if (error !== "cancel") {
+        console.error("解决告警失败", error);
+        message("解决告警失败", { type: "error" });
+      }
+    }
+  }
+
+  /** 批量解决：优先勾选行；未勾选时回退为当前页全部 OPEN */
+  async function onBatchResolve() {
+    try {
+      const targets = selectedOpenRows.value.length
+        ? selectedOpenRows.value
+        : dataList.value.filter(item => item.status === "OPEN");
+      if (!targets.length) {
+        message("没有未解决的告警", { type: "warning" });
+        return;
+      }
+
+      const scope = selectedOpenRows.value.length ? "已勾选" : "当前页";
+      await ElMessageBox.confirm(
+        `确认解决${scope} ${targets.length} 条未解决告警？`,
+        "提示",
+        {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }
+      );
+
+      const providers = [...new Set(targets.map(item => item.provider))];
       const { data } = await batchResolveAlerts<number>(providers);
       message(`成功解决 ${data} 条告警`, { type: "success" });
       onSearch();
@@ -291,6 +325,9 @@ export function useAlertRecord(_tableRef?: Ref) {
   function resetForm(formEl) {
     if (!formEl) return;
     formEl.resetFields();
+    form.provider = "";
+    form.alertType = "";
+    form.alertLevel = "";
     form.current = 1;
     form.size = 10;
     onSearch();
@@ -307,6 +344,16 @@ export function useAlertRecord(_tableRef?: Ref) {
     dataList,
     pagination,
     dropdownOptions,
+    selectedRows,
+    selectedOpenRows,
+    drawerVisible,
+    drawerItem,
+    drawerIndex,
+    hasAdvancedFilters,
+    openDetail,
+    navigateDetail,
+    rowClassName,
+    handleSelectionChange,
     onSearch,
     onExport,
     onResolve,
