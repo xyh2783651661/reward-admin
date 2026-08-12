@@ -11,25 +11,31 @@ defineOptions({
 const activeTab = ref("status");
 
 /**
- * 跨 Tab 联动：来源状态卡片上的「查看流水 / 查看告警」
+ * 跨 Tab 联动：来源状态卡片上的「查看流水 / 查看告警"
  * 会切换到对应 Tab 并把 provider 作为初始筛选传入。
- * 子组件通过 initial-provider prop 在挂载时消费（v-if 保证每次切换均重新挂载）。
+ * 子组件通过 initial-provider / initial-pool prop 在挂载时消费（v-if 保证每次切换均重新挂载）。
  */
 const pendingProvider = ref("");
+const pendingPool = ref("");
 
-function gotoCheckRecord(provider: string) {
-  pendingProvider.value = provider;
+function gotoCheckRecord(payload: { provider: string; poolName?: string }) {
+  pendingProvider.value = payload.provider;
+  pendingPool.value = payload.poolName || "";
   activeTab.value = "checkRecord";
 }
 
-function gotoAlertRecord(provider: string) {
-  pendingProvider.value = provider;
+function gotoAlertRecord(payload: { provider: string; poolName?: string }) {
+  pendingProvider.value = payload.provider;
+  pendingPool.value = payload.poolName || "";
   activeTab.value = "alertRecord";
 }
 
 function handleTabChange() {
   // 手动切 Tab（非卡片联动）时清空遗留的筛选，避免误带入
-  if (activeTab.value === "status") pendingProvider.value = "";
+  if (activeTab.value === "status") {
+    pendingProvider.value = "";
+    pendingPool.value = "";
+  }
 }
 </script>
 
@@ -52,14 +58,16 @@ function handleTabChange() {
         <CheckRecord
           v-if="activeTab === 'checkRecord'"
           :initial-provider="pendingProvider"
-          @consumed="pendingProvider = ''"
+          :initial-pool="pendingPool"
+          @consumed="() => { pendingProvider = ''; pendingPool = ''; }"
         />
       </el-tab-pane>
       <el-tab-pane label="告警记录" name="alertRecord">
         <AlertRecord
           v-if="activeTab === 'alertRecord'"
           :initial-provider="pendingProvider"
-          @consumed="pendingProvider = ''"
+          :initial-pool="pendingPool"
+          @consumed="() => { pendingProvider = ''; pendingPool = ''; }"
         />
       </el-tab-pane>
     </el-tabs>

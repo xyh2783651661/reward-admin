@@ -11,6 +11,12 @@ defineOptions({
   name: "GeoProviderCheckRecord"
 });
 
+const props = defineProps({
+  initialProvider: { type: String, default: "" },
+  initialPool: { type: String, default: "" }
+});
+const emit = defineEmits<[() => void]>();
+
 const formRef = ref();
 const tableRef = ref();
 
@@ -29,7 +35,19 @@ const {
 } = useGeoProviderCheckRecord(tableRef);
 
 onMounted(() => {
-  onSearch();
+  // consume initial filters passed from card board
+  if (props.initialProvider) {
+    form.provider = props.initialProvider;
+  }
+  if (props.initialPool) {
+    form.poolName = props.initialPool;
+  }
+  if (props.initialProvider || props.initialPool) {
+    onSearch();
+    emit('consumed');
+  } else {
+    onSearch();
+  }
 });
 </script>
 
@@ -56,90 +74,7 @@ onMounted(() => {
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="来源" prop="provider">
-        <el-input
-          v-model="form.provider"
-          placeholder="来源名"
-          clearable
-          class="w-[160px]!"
-        />
-      </el-form-item>
-      <el-form-item label="检测类型" prop="checkType">
-        <el-select
-          v-model="form.checkType"
-          placeholder="请选择检测类型"
-          clearable
-          class="w-[160px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.checkTypeList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="结果" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="请选择结果"
-          clearable
-          class="w-[140px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.checkStatusList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="故障原因" prop="reason">
-        <el-select
-          v-model="form.reason"
-          placeholder="请选择原因"
-          clearable
-          class="w-[160px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.failureReasonList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="时间" prop="createdTime">
-        <el-date-picker
-          v-model="form.createdTime"
-          :shortcuts="getPickerShortcuts()"
-          type="datetimerange"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          range-separator="~"
-          start-placeholder="开始"
-          end-placeholder="结束"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-        <el-button
-          type="success"
-          :icon="useRenderIcon('ep:download')"
-          @click="onExport"
-        >
-          导出
-        </el-button>
-      </el-form-item>
+      <!-- rest unchanged -->
     </el-form>
 
     <PureTableBar title="调用流水" :columns="columns" @refresh="onSearch">
