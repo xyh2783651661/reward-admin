@@ -56,21 +56,104 @@ export default defineComponent({
   props,
   emits: ["refresh", "fullscreen"],
   setup(props, { emit, slots, attrs }) {
-    const size = ref("default");
+    type TableSize = "large" | "default" | "small";
+    interface TablePreference {
+      size?: TableSize;
+      columnOrder?: string[];
+      visibleColumns?: string[];
+    }
+
+    const preferenceKey = `pure-table-preference:${
+      props.tableKey !== "0"
+        ? props.tableKey
+        : `${window.location.pathname}:${props.title}`
+    }`;
+    const originalColumns = cloneDeep(props?.columns) as TableColumnList;
+    const filterColumns = originalColumns.filter(column =>
+      isBoolean(column?.hide)
+        ? !column.hide
+        : !(isFunction(column?.hide) && column?.hide())
+    );
+
+    function readPreference(): TablePreference {
+      try {
+        return JSON.parse(window.localStorage.getItem(preferenceKey) || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    const preference = readPreference();
+    const initialSize: TableSize = ["large", "default", "small"].includes(
+      preference.size || ""
+    )
+      ? preference.size!
+      : "default";
+    const visibleColumns = preference.visibleColumns
+      ? new Set(preference.visibleColumns)
+      : null;
+    const columnMap = new Map<string, TableColumnList[number]>(
+      originalColumns.map(column => [String(column.label), column])
+    );
+    const orderedColumns = (preference.columnOrder || []).flatMap(label => {
+      const column = columnMap.get(label);
+      return column ? [column] : [];
+    });
+    const dynamicColumns = ref(
+      orderedColumns
+        .concat(
+          originalColumns.filter(
+            column =>
+              !(preference.columnOrder || []).includes(String(column.label))
+          )
+        )
+        .map(column => ({
+          ...column,
+          hide: visibleColumns
+            ? !visibleColumns.has(String(column.label))
+            : column?.hide
+        })) as TableColumnList
+    );
+    const size = ref<TableSize>(initialSize);
     const loading = ref(false);
     const checkAll = ref(true);
     const isFullscreen = ref(false);
     const isIndeterminate = ref(false);
     const instance = getCurrentInstance()!;
     const isExpandAll = ref(props.isExpandAll);
-    const filterColumns = cloneDeep(props?.columns).filter(column =>
-      isBoolean(column?.hide)
-        ? !column.hide
-        : !(isFunction(column?.hide) && column?.hide())
-    );
-    let checkColumnList = getKeyList(cloneDeep(props?.columns), "label");
-    const checkedColumns = ref(getKeyList(cloneDeep(filterColumns), "label"));
-    const dynamicColumns = ref(cloneDeep(props?.columns));
+    let checkColumnList = getKeyList(dynamicColumns.value, "label");
+    const initiallyVisibleColumns = visibleColumns
+      ? dynamicColumns.value.filter(column => !column.hide)
+      : filterColumns;
+    const checkedColumns = ref(getKeyList(initiallyVisibleColumns, "label"));
+    checkAll.value = checkedColumns.value.length === checkColumnList.length;
+    isIndeterminate.value =
+      checkedColumns.value.length > 0 &&
+      checkedColumns.value.length < checkColumnList.length;
+
+    function savePreference() {
+      try {
+        window.localStorage.setItem(
+          preferenceKey,
+          JSON.stringify({
+            size: size.value,
+            columnOrder: dynamicColumns.value.map(column =>
+              String(column.label)
+            ),
+            visibleColumns: dynamicColumns.value
+              .filter(column => !column.hide)
+              .map(column => String(column.label))
+          } satisfies TablePreference)
+        );
+      } catch {
+        return;
+      }
+    }
+
+    function handleSizeChange(value: TableSize) {
+      size.value = value;
+      savePreference();
+    }
 
     const getDropdownItemStyle = computed(() => {
       return s => {
@@ -137,6 +220,7 @@ export default defineComponent({
       dynamicColumns.value.map(column =>
         val ? (column.hide = false) : (column.hide = true)
       );
+      savePreference();
     }
 
     function handleCheckedColumnsChange(value: string[]) {
@@ -151,6 +235,7 @@ export default defineComponent({
       dynamicColumns.value.filter(
         item => transformI18n(item.label) === transformI18n(label)
       )[0].hide = !val;
+      savePreference();
     }
 
     async function onReset() {
@@ -160,6 +245,7 @@ export default defineComponent({
       checkColumnList = [];
       checkColumnList = await getKeyList(cloneDeep(props?.columns), "label");
       checkedColumns.value = getKeyList(cloneDeep(filterColumns), "label");
+      savePreference();
     }
 
     const dropdown = {
@@ -167,19 +253,19 @@ export default defineComponent({
         <el-dropdown-menu class="translation">
           <el-dropdown-item
             style={getDropdownItemStyle.value("large")}
-            onClick={() => (size.value = "large")}
+            onClick={() => handleSizeChange("large")}
           >
             宽松
           </el-dropdown-item>
           <el-dropdown-item
             style={getDropdownItemStyle.value("default")}
-            onClick={() => (size.value = "default")}
+            onClick={() => handleSizeChange("default")}
           >
             默认
           </el-dropdown-item>
           <el-dropdown-item
             style={getDropdownItemStyle.value("small")}
-            onClick={() => (size.value = "small")}
+            onClick={() => handleSizeChange("small")}
           >
             紧凑
           </el-dropdown-item>
@@ -217,6 +303,8 @@ export default defineComponent({
             }
             const currentRow = dynamicColumns.value.splice(oldIndex, 1)[0];
             dynamicColumns.value.splice(newIndex, 0, currentRow);
+            checkColumnList = getKeyList(dynamicColumns.value, "label");
+            savePreference();
           }
         });
       });
