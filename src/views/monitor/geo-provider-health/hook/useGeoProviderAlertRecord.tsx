@@ -65,10 +65,14 @@ function buildRequest(
   return payload;
 }
 
-export function useGeoProviderAlertRecord(_tableRef?: Ref) {
+export function useGeoProviderAlertRecord(
+  _tableRef?: Ref,
+  initialProvider = "",
+  initialPoolName = ""
+) {
   const form = reactive({
-    poolName: "",
-    provider: "",
+    poolName: initialPoolName,
+    provider: initialProvider,
     alertType: "",
     alertLevel: "",
     status: "",

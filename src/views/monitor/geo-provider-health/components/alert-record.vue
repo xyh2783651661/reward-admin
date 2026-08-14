@@ -11,6 +11,13 @@ defineOptions({
   name: "GeoProviderAlertRecord"
 });
 
+const props = defineProps<{
+  initialProvider?: string;
+  initialPoolName?: string;
+}>();
+
+const emit = defineEmits<{ (e: "consumed"): void }>();
+
 const formRef = ref();
 const tableRef = ref();
 
@@ -28,10 +35,15 @@ const {
   resetForm,
   handleSizeChange,
   handleCurrentChange
-} = useGeoProviderAlertRecord(tableRef);
+} = useGeoProviderAlertRecord(
+  tableRef,
+  props.initialProvider,
+  props.initialPoolName
+);
 
 onMounted(() => {
   onSearch();
+  if (props.initialProvider || props.initialPoolName) emit("consumed");
 });
 </script>
 

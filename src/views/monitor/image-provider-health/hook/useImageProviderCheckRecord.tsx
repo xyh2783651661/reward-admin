@@ -59,9 +59,12 @@ function buildRequest(
   return payload;
 }
 
-export function useImageProviderCheckRecord(_tableRef?: Ref) {
+export function useImageProviderCheckRecord(
+  _tableRef?: Ref,
+  initialProvider = ""
+) {
   const form = reactive({
-    provider: "",
+    provider: initialProvider,
     checkType: "",
     status: "",
     reason: "",

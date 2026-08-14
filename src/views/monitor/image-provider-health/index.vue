@@ -12,10 +12,10 @@ const {
   pendingProvider,
   gotoCheckRecord,
   gotoAlertRecord,
-  consumeProvider,
+  consumeContext,
   clearProviderContext,
   showStatus,
-  handleTabChange
+  handleTabClick
 } = useProviderHealthNavigation();
 </script>
 
@@ -56,7 +56,7 @@ const {
       v-model="activeTab"
       type="border-card"
       class="provider-health-tabs"
-      @tab-change="handleTabChange"
+      @tab-click="handleTabClick"
     >
       <el-tab-pane label="Provider 状态" name="status">
         <ProviderStatus
@@ -70,7 +70,7 @@ const {
           v-if="activeTab === 'checkRecord'"
           :key="`checkRecord-${activeProvider}`"
           :initial-provider="pendingProvider"
-          @consumed="consumeProvider"
+          @consumed="consumeContext"
         />
       </el-tab-pane>
       <el-tab-pane label="告警记录" name="alertRecord">
@@ -78,7 +78,7 @@ const {
           v-if="activeTab === 'alertRecord'"
           :key="`alertRecord-${activeProvider}`"
           :initial-provider="pendingProvider"
-          @consumed="consumeProvider"
+          @consumed="consumeContext"
         />
       </el-tab-pane>
     </el-tabs>

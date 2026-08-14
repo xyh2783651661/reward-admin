@@ -1,77 +1,66 @@
 import { ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
 
 type ProviderHealthTab = "status" | "checkRecord" | "alertRecord";
 
-const validTabs: ProviderHealthTab[] = ["status", "checkRecord", "alertRecord"];
-
 export function useProviderHealthNavigation() {
-  const route = useRoute();
-  const router = useRouter();
-  const queryTab = String(route.query.tab ?? "status") as ProviderHealthTab;
-  const activeTab = ref<ProviderHealthTab>(
-    validTabs.includes(queryTab) ? queryTab : "status"
-  );
-  const activeProvider = ref(String(route.query.provider ?? ""));
-  const pendingProvider = ref(activeProvider.value);
+  const activeTab = ref<ProviderHealthTab>("status");
+  const activeProvider = ref("");
+  const activePoolName = ref("");
+  const pendingProvider = ref("");
+  const pendingPoolName = ref("");
 
-  function syncQuery() {
-    const query = { ...route.query };
-    delete query.tab;
-    delete query.provider;
-    if (activeTab.value !== "status") query.tab = activeTab.value;
-    if (activeProvider.value) query.provider = activeProvider.value;
-    void router.replace({ query });
-  }
-
-  function gotoCheckRecord(provider = "") {
+  function setRecordContext(
+    tab: Exclude<ProviderHealthTab, "status">,
+    provider = "",
+    poolName = ""
+  ) {
     activeProvider.value = provider;
+    activePoolName.value = poolName;
     pendingProvider.value = provider;
-    activeTab.value = "checkRecord";
-    syncQuery();
+    pendingPoolName.value = poolName;
+    activeTab.value = tab;
   }
 
-  function gotoAlertRecord(provider = "") {
-    activeProvider.value = provider;
-    pendingProvider.value = provider;
-    activeTab.value = "alertRecord";
-    syncQuery();
+  function gotoCheckRecord(provider = "", poolName = "") {
+    setRecordContext("checkRecord", provider, poolName);
   }
 
-  function consumeProvider() {
+  function gotoAlertRecord(provider = "", poolName = "") {
+    setRecordContext("alertRecord", provider, poolName);
+  }
+
+  function consumeContext() {
     pendingProvider.value = "";
+    pendingPoolName.value = "";
   }
 
   function clearProviderContext() {
     activeProvider.value = "";
+    activePoolName.value = "";
     pendingProvider.value = "";
-    syncQuery();
+    pendingPoolName.value = "";
   }
 
   function showStatus() {
-    activeTab.value = "status";
     clearProviderContext();
+    activeTab.value = "status";
   }
 
-  function handleTabChange() {
-    if (activeTab.value === "status") {
-      activeProvider.value = "";
-      pendingProvider.value = "";
-    } else {
-      pendingProvider.value = activeProvider.value;
-    }
-    syncQuery();
+  function handleTabClick() {
+    clearProviderContext();
   }
 
   return {
     activeTab,
     activeProvider,
+    activePoolName,
     pendingProvider,
+    pendingPoolName,
     gotoCheckRecord,
     gotoAlertRecord,
-    consumeProvider,
+    consumeContext,
     clearProviderContext,
     showStatus,
-    handleTabChange
+    handleTabClick
   };
 }

@@ -9,13 +9,15 @@ defineOptions({ name: "GeoProviderHealth" });
 const {
   activeTab,
   activeProvider,
+  activePoolName,
   pendingProvider,
+  pendingPoolName,
   gotoCheckRecord,
   gotoAlertRecord,
-  consumeProvider,
+  consumeContext,
   clearProviderContext,
   showStatus,
-  handleTabChange
+  handleTabClick
 } = useProviderHealthNavigation();
 </script>
 
@@ -56,7 +58,7 @@ const {
       v-model="activeTab"
       type="border-card"
       class="provider-health-tabs"
-      @tab-change="handleTabChange"
+      @tab-click="handleTabClick"
     >
       <el-tab-pane label="Provider 状态" name="status">
         <ProviderStatus
@@ -68,17 +70,19 @@ const {
       <el-tab-pane label="检测流水" name="checkRecord">
         <CheckRecord
           v-if="activeTab === 'checkRecord'"
-          :key="`checkRecord-${activeProvider}`"
+          :key="`checkRecord-${activePoolName}-${activeProvider}`"
           :initial-provider="pendingProvider"
-          @consumed="consumeProvider"
+          :initial-pool-name="pendingPoolName"
+          @consumed="consumeContext"
         />
       </el-tab-pane>
       <el-tab-pane label="告警记录" name="alertRecord">
         <AlertRecord
           v-if="activeTab === 'alertRecord'"
-          :key="`alertRecord-${activeProvider}`"
+          :key="`alertRecord-${activePoolName}-${activeProvider}`"
           :initial-provider="pendingProvider"
-          @consumed="consumeProvider"
+          :initial-pool-name="pendingPoolName"
+          @consumed="consumeContext"
         />
       </el-tab-pane>
     </el-tabs>

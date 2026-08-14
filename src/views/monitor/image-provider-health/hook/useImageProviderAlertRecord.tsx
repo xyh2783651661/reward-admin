@@ -55,9 +55,12 @@ function buildRequest(
   return payload;
 }
 
-export function useImageProviderAlertRecord(_tableRef?: Ref) {
+export function useImageProviderAlertRecord(
+  _tableRef?: Ref,
+  initialProvider = ""
+) {
   const form = reactive({
-    provider: "",
+    provider: initialProvider,
     alertType: "",
     alertLevel: "",
     status: "",

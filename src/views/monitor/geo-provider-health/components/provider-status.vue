@@ -17,8 +17,8 @@ defineOptions({
 });
 
 const emit = defineEmits<{
-  (e: "view-records", provider: string): void;
-  (e: "view-alerts", provider: string): void;
+  (e: "view-records", provider: string, poolName?: string): void;
+  (e: "view-alerts", provider: string, poolName?: string): void;
 }>();
 
 const {
@@ -294,14 +294,14 @@ onMounted(() => {
             size="small"
             link
             type="primary"
-            @click="$emit('view-records', item.provider)"
+            @click="emit('view-records', item.provider, item.poolName)"
             >流水</el-button
           >
           <el-button
             size="small"
             link
             type="danger"
-            @click="$emit('view-alerts', item.provider)"
+            @click="emit('view-alerts', item.provider, item.poolName)"
             >告警</el-button
           >
         </footer>

@@ -11,6 +11,10 @@ defineOptions({
   name: "ImageProviderCheckRecord"
 });
 
+const props = defineProps<{ initialProvider?: string }>();
+
+const emit = defineEmits<{ (e: "consumed"): void }>();
+
 const formRef = ref();
 const tableRef = ref();
 
@@ -26,10 +30,11 @@ const {
   resetForm,
   handleSizeChange,
   handleCurrentChange
-} = useImageProviderCheckRecord(tableRef);
+} = useImageProviderCheckRecord(tableRef, props.initialProvider);
 
 onMounted(() => {
   onSearch();
+  if (props.initialProvider) emit("consumed");
 });
 </script>
 

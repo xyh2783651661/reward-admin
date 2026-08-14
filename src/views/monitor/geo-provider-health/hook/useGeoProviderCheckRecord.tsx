@@ -61,10 +61,14 @@ function buildRequest(
   return payload;
 }
 
-export function useGeoProviderCheckRecord(_tableRef?: Ref) {
+export function useGeoProviderCheckRecord(
+  _tableRef?: Ref,
+  initialProvider = "",
+  initialPoolName = ""
+) {
   const form = reactive({
-    poolName: "",
-    provider: "",
+    poolName: initialPoolName,
+    provider: initialProvider,
     checkType: "",
     status: "",
     reason: "",
