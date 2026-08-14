@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { computed, reactive, ref, onMounted } from "vue";
+import { computed, reactive, ref } from "vue";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
 import {
@@ -142,21 +142,6 @@ export function useImageProviderStatus() {
       Object.assign(statsOverview, data);
     } catch (error) {
       console.error("加载统计概览失败", error);
-    }
-  }
-
-  async function loadDropdown() {
-    try {
-      // reuse the health page to get providers
-      const { data } =
-        await getImageProviderHealthPage<ImageProviderHealthItem>({ current: 1, size: 100 });
-      dataList.value = (data.records ?? []).map(item => ({ ...item, _probing: false, _resetting: false, _toggling: false }));
-      // clean selections
-      const names = new Set(dataList.value.map(i => i.provider));
-      selectedProviders.value = selectedProviders.value.filter(p => names.has(p));
-      await loadStats();
-    } catch (error) {
-      console.error("加载图片来源下拉/数据失败", error);
     }
   }
 
@@ -304,10 +289,6 @@ export function useImageProviderStatus() {
       batchWorking.value = false;
     }
   }
-
-  onMounted(() => {
-    loadDropdown();
-  });
 
   return {
     loading,

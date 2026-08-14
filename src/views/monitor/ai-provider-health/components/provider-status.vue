@@ -104,10 +104,14 @@ onMounted(() => {
         <span class="stat-chip__value">{{ statsOverview.suspendedCount }}</span>
         <span class="stat-chip__label">已暂停</span>
       </button>
-      <div class="stat-chip is-static is-alert">
+      <button
+        type="button"
+        class="stat-chip is-alert"
+        @click="emit('view-alerts', '')"
+      >
         <span class="stat-chip__value">{{ statsOverview.openAlertCount }}</span>
         <span class="stat-chip__label">未解决告警</span>
-      </div>
+      </button>
       <div class="stats-strip__spacer" />
       <el-button
         :icon="useRenderIcon(Refresh)"
