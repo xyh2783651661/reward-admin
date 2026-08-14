@@ -255,7 +255,7 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar :columns="columns" @refresh="onSearch">
+    <PureTableBar title="访问日志" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-button
           type="primary"

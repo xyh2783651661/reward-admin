@@ -82,7 +82,7 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar :columns="columns" @refresh="onSearch">
+    <PureTableBar title="邮件发送记录" :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           row-key="id"

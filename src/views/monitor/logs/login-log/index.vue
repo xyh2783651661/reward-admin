@@ -84,7 +84,7 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar :columns="columns" @refresh="onSearch">
+    <PureTableBar title="登录日志" :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           row-key="id"

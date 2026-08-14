@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { ElMessage } from "element-plus";
+import { isExternalUrl } from "@/utils/navigation";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
 
@@ -30,6 +32,15 @@ const treeData = ref(props.menuTree);
 
 function getRef() {
   return ruleFormRef.value;
+}
+
+function testExternalLink() {
+  const url = newFormInline.value.frameSrc?.trim();
+  if (!isExternalUrl(url)) {
+    ElMessage.warning("请输入有效的 http 或 https 外链地址");
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 defineExpose({ getRef });
@@ -96,7 +107,12 @@ defineExpose({ getRef });
         <el-input
           v-model="newFormInline.frameSrc"
           placeholder="外链地址，无则留空"
-        />
+          clearable
+        >
+          <template #append>
+            <el-button @click="testExternalLink">测试打开</el-button>
+          </template>
+        </el-input>
       </el-form-item>
     </template>
     <el-form-item v-if="newFormInline.menuType === 2" label="权限标识">

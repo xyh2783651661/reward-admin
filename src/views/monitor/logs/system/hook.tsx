@@ -71,7 +71,16 @@ export function useSystemLog(_tableRef: Ref) {
       minWidth: 100
     },
     {
-      label: "TraceId",
+      headerRenderer: () => (
+        <span class="flex-c">
+          TraceId
+          <iconifyIconOffline
+            icon={Info}
+            class="ml-1 cursor-help"
+            v-tippy={{ content: "双击 TraceId 可快速复制" }}
+          />
+        </span>
+      ),
       prop: "traceId",
       minWidth: 180
     },
@@ -240,13 +249,14 @@ export function useSystemLog(_tableRef: Ref) {
     }
   };
 
-  /** 拷贝请求接口，表格单元格被双击时触发 */
+  /** 双击快速复制请求接口或 TraceId */
   function handleCellDblclick(row, { property }) {
-    if (property !== "uri") return;
-    const uri = row?.uri ?? "";
-    update(uri);
+    if (!["uri", "traceId"].includes(property)) return;
+    const value = row?.[property] ?? "";
+    if (!value) return;
+    update(value);
     copied.value
-      ? message(`${uri} 已拷贝`, { type: "success" })
+      ? message(`${value} 已拷贝`, { type: "success" })
       : message("拷贝失败", { type: "warning" });
   }
 

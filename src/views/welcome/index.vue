@@ -23,6 +23,7 @@ import {
   getWorkbenchTodos,
   getWorkbenchTrends
 } from "@/api/workbench";
+import { navigateTo as navigate } from "@/utils/navigation";
 import type {
   SummaryTrend,
   WorkbenchActivityItem,
@@ -153,7 +154,7 @@ const hasTrendData = computed(
 );
 
 function navigateTo(path?: string) {
-  if (path) void router.push(path);
+  navigate(router, path);
 }
 function formatValue(card: WorkbenchSummaryCard) {
   const number = Number(card.value);

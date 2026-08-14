@@ -110,7 +110,7 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar :columns="columns" @refresh="onSearch">
+    <PureTableBar title="任务执行日志" :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           ref="tableRef"

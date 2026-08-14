@@ -93,7 +93,16 @@ export function useMailRecipient(treeRef: Ref) {
 
   const columns: TableColumnList = [
     { label: "ID", prop: "id" },
-    { label: "邮件", prop: "email", minWidth: 180 },
+    {
+      label: "邮件",
+      prop: "email",
+      minWidth: 200,
+      cellRenderer: ({ row }) => (
+        <el-link type="primary" underline={false} href={"mailto:" + row.email}>
+          {row.email || "-"}
+        </el-link>
+      )
+    },
     { label: "姓名", prop: "name" },
     {
       label: "状态",

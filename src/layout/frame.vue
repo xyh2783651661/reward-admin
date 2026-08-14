@@ -2,6 +2,7 @@
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
 import { ref, unref, watch, onMounted, nextTick, computed } from "vue";
+import { isExternalUrl } from "@/utils/navigation";
 
 defineOptions({
   name: "LayFrame"
@@ -38,8 +39,8 @@ const isMixedContent = computed(() => {
 });
 
 function openInNewTab() {
-  if (frameSrc.value) {
-    window.open(frameSrc.value, "_blank", "noopener");
+  if (frameSrc.value && isExternalUrl(frameSrc.value)) {
+    window.open(frameSrc.value, "_blank", "noopener,noreferrer");
   }
 }
 

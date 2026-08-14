@@ -15,6 +15,7 @@ import BellIcon from "~icons/ep/bell";
 import RefreshIcon from "~icons/ep/refresh";
 import BackIcon from "~icons/ep/arrow-left";
 import DoneIcon from "~icons/ep/check";
+import { navigateTo } from "@/utils/navigation";
 
 /** 未读轮询间隔，页面不可见时自动跳过 */
 const POLL_INTERVAL = 60_000;
@@ -214,7 +215,7 @@ function handleNoticeAction(item: NoticeListItem) {
 
   if (item.path) {
     drawerVisible.value = false;
-    router.push(item.path);
+    navigateTo(router, item.path);
   }
 }
 

@@ -47,6 +47,30 @@ export function useUser() {
     { label: "手机号", prop: "phone", minWidth: 120 },
     { label: "邮箱", prop: "email", minWidth: 160 },
     {
+      label: "角色",
+      prop: "roleIds",
+      minWidth: 180,
+      cellRenderer: ({ row }) => {
+        const roleIds = row.roleIds ?? [];
+        if (!roleIds.length)
+          return (
+            <span class="text-[var(--el-text-color-placeholder)]">未分配</span>
+          );
+        return (
+          <div class="flex flex-wrap justify-center gap-1">
+            {roleIds.map(roleId => {
+              const role = roleOptions.value.find(item => item.id === roleId);
+              return (
+                <el-tag key={roleId} size="small" effect="plain">
+                  {role?.roleName ?? "角色 " + roleId}
+                </el-tag>
+              );
+            })}
+          </div>
+        );
+      }
+    },
+    {
       label: "状态",
       prop: "status",
       width: 90,
@@ -64,7 +88,11 @@ export function useUser() {
   async function onSearch() {
     loading.value = true;
     try {
-      const { data } = await getUserPage(form);
+      const [{ data }, { data: roles }] = await Promise.all([
+        getUserPage(form),
+        getRoleAll()
+      ]);
+      roleOptions.value = roles ?? [];
       dataList.value = data.records ?? [];
       pagination.total = data.total;
       pagination.pageSize = data.size;
