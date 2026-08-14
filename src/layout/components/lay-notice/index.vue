@@ -39,6 +39,7 @@ const detailData = ref<Record<string, any> | null>(null);
 /** 列表筛选 */
 const keyword = ref("");
 const unreadOnly = ref(false);
+const highPriorityOnly = ref(false);
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -50,6 +51,14 @@ const noticesNum = computed(() =>
 
 const totalNum = computed(() =>
   notices.value.reduce((total, tab) => total + tab.list.length, 0)
+);
+
+const highPriorityNum = computed(() =>
+  notices.value.reduce(
+    (total, tab) =>
+      total + tab.list.filter(item => item.status === "danger").length,
+    0
+  )
 );
 
 const activeTab = computed(() =>
@@ -74,6 +83,7 @@ const filteredList = computed(() => {
 
   return list.filter(item => {
     if (unreadOnly.value && item.read !== false) return false;
+    if (highPriorityOnly.value && item.status !== "danger") return false;
     if (!kw) return true;
     return (
       String(item.title ?? "")
@@ -87,7 +97,8 @@ const filteredList = computed(() => {
 });
 
 const hasFilter = computed(
-  () => unreadOnly.value || keyword.value.trim() !== ""
+  () =>
+    unreadOnly.value || highPriorityOnly.value || keyword.value.trim() !== ""
 );
 
 /** 过滤后为空时的文案，区分「本身没有」和「被筛掉了」 */
@@ -153,6 +164,7 @@ function handleDrawerClosed() {
   closeDetail();
   keyword.value = "";
   unreadOnly.value = false;
+  highPriorityOnly.value = false;
 }
 
 function updateNoticeRead(item: NoticeListItem) {
@@ -302,6 +314,12 @@ onBeforeUnmount(() => {
                   ·
                   <b class="notice-panel__unread">{{ noticesNum }} 条未读</b>
                 </template>
+                <template v-if="highPriorityNum">
+                  ·
+                  <b class="notice-panel__priority"
+                    >{{ highPriorityNum }} 条高优先级</b
+                  >
+                </template>
               </template>
               <template v-else>{{ t("status.pureNoMessage") }}</template>
             </p>
@@ -361,6 +379,11 @@ onBeforeUnmount(() => {
               class="notice-panel__search"
             />
             <el-checkbox v-model="unreadOnly" size="small" label="只看未读" />
+            <el-checkbox
+              v-model="highPriorityOnly"
+              size="small"
+              label="只看高优先级"
+            />
           </div>
         </div>
 
@@ -515,6 +538,10 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 18px;
   color: var(--el-text-color-secondary);
+}
+
+.notice-panel__priority {
+  color: var(--el-color-danger);
 }
 
 .notice-panel__unread {
