@@ -146,7 +146,7 @@ export function useSysNotice(_tableRef?: Ref) {
 
   const noticeStats = computed(() => {
     const initialStats = {
-      total: dataList.value.length,
+      total: pagination.total,
       published: 0,
       draft: 0,
       withdrawn: 0,
