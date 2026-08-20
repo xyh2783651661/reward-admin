@@ -230,22 +230,24 @@ export function useRewardUser(treeRef: Ref) {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        function chores() {
-          message(`您${title}了用户为${curData.nickName}的这条数据`, {
-            type: "success"
-          });
-          done();
-          onSearch();
-        }
         FormRef.validate(valid => {
           if (valid) {
             const api = title === "新增" ? addRewardUser : updateRewardUser;
             api(curData)
               .then(r => {
-                message(r.msg, { type: r.code === 200 ? "success" : "error" });
+                if (r.code === 200) {
+                  message(
+                    r.msg || `您${title}了用户为${curData.nickName}的这条数据`,
+                    { type: "success" }
+                  );
+                  done();
+                  onSearch();
+                } else {
+                  message(r.msg || "操作失败", { type: "error" });
+                }
               })
-              .finally(() => {
-                chores();
+              .catch(() => {
+                message("操作失败，请稍后重试", { type: "error" });
               });
           }
         });
