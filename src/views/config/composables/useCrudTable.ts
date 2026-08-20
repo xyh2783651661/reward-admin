@@ -73,7 +73,12 @@ export function useCrudTable<TForm extends Record<string, any>>(
             ? config.deleteMessage(row)
             : `已删除ID为${row.id}的数据`;
           message(msg, { type: "success" });
+        } else {
+          message(r.msg || "删除失败", { type: "error" });
         }
+      })
+      .catch(() => {
+        message("删除失败，请稍后重试", { type: "error" });
       })
       .finally(() => {
         onSearch();
