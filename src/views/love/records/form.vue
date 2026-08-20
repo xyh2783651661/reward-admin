@@ -141,7 +141,7 @@ defineExpose({ getRef });
     <el-form-item label="日期" prop="recordDate">
       <el-date-picker
         v-model="newFormInline.recordDate"
-        type="recordDate"
+        type="date"
         value-format="YYYY-MM-DD"
         placeholder="请选择日期"
         clearable
@@ -238,9 +238,9 @@ defineExpose({ getRef });
   position: relative;
   width: 100px;
   height: 100px;
-  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
 
   &:hover {
     .media-preview-overlay {
@@ -253,12 +253,12 @@ defineExpose({ getRef });
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgb(0 0 0 / 50%);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: rgb(0 0 0 / 50%);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -269,15 +269,15 @@ defineExpose({ getRef });
 }
 
 .upload-trigger {
-  width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
   border: 1px dashed var(--el-border-color);
   border-radius: 8px;
-  cursor: pointer;
   transition: border-color 0.3s;
 
   &:hover {
