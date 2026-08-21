@@ -719,7 +719,7 @@ const activeStepHasExtra = computed(() => {
             "
             class="detail__block"
           >
-            <h4 class="block__title">步骤���标</h4>
+            <h4 class="block__title">步骤执行指标</h4>
             <div class="meta-grid">
               <div
                 v-for="(v, k) in activeEntry.step.metadata"
