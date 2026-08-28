@@ -298,12 +298,15 @@ GET /api/workbench/trends?range=7d
 
 #### tabs
 
-| 字段      | 类型   | 说明                                         |
-| --------- | ------ | -------------------------------------------- |
-| key       | string | 分组唯一标识，固定使用 `notify/message/todo` |
-| name      | string | 分组名称                                     |
-| emptyText | string | 空状态文案                                   |
-| list      | array  | 当前分组消息列表                             |
+| 字段      | 类型    | 说明                                                                         |
+| --------- | ------- | ---------------------------------------------------------------------------- |
+| key       | string  | 分组唯一标识，固定使用 `notify/message/todo`                                 |
+| name      | string  | 分组名称                                                                     |
+| emptyText | string  | 空状态文案                                                                   |
+| list      | array   | 当前分组消息列表（notify 仅返回首页 20 条，其余分组为全量）                  |
+| total     | number  | 该分组数据总量（notify 为全部可见公告数，过滤后口径）                        |
+| unread    | number  | 该分组未读数（notify 为全部可见公告未读口径，用于角标；message/todo 恒为 0） |
+| hasMore   | boolean | 是否还有更多可加载（notify 超过首页条数时为 true；message/todo 恒为 false）  |
 
 #### list item
 
@@ -325,6 +328,52 @@ GET /api/workbench/trends?range=7d
 - 前端右上角角标可以直接统计 `read = false` 的总数
 - `notify` 分组中的 `read` 受可选请求头 `X-User-Id` 影响
 - `path` 非空时，点击后可直接做路由跳转
+
+### 3.2 GET /api/notifications/notify-page（通知分组分页 / 下滑加载更多）
+
+`notify` 分组数据量可能较大（全部可见公告上限 200 条），面板仅返回首页 20 条。
+前端在通知分组内滚动到底部时，调用本接口加载下一页，实现「下滑动态加载更多」。
+
+支持关键字 / 未读 / 高优先级过滤，过滤后口径与列表一致；返回总量与未读数供前端展示「共 N 条」「未读角标」。
+
+请求参数（query）：
+
+| 参数         | 类型    | 必填 | 说明                              |
+| ------------ | ------- | ---- | --------------------------------- |
+| page         | int     | 否   | 页码，默认 1                      |
+| size         | int     | 否   | 每页条数，默认 20，最大 100       |
+| keyword      | string  | 否   | 标题/描述模糊匹配（不区分大小写） |
+| unreadOnly   | boolean | 否   | 仅返回未读                        |
+| priorityOnly | boolean | 否   | 仅返回高优先级（status = danger） |
+
+成功响应示例：
+
+```json
+{
+  "code": 200,
+  "msg": "success",
+  "success": true,
+  "data": {
+    "list": [
+      { "id": "notify-12", "title": "系统配置已同步到预发环境", "read": false }
+    ],
+    "total": 86,
+    "unread": 12,
+    "hasMore": true
+  }
+}
+```
+
+字段说明：
+
+| 字段    | 类型    | 说明                                                             |
+| ------- | ------- | ---------------------------------------------------------------- |
+| list    | array   | 当前页通知条目，结构与 3.1 的 list item 一致                     |
+| total   | number  | 过滤后的数据总量，用于「共 N 条」                                |
+| unread  | number  | 全部可见公告中的未读条数（**不过滤**），用于角标，与面板口径一致 |
+| hasMore | boolean | 是否还有下一页                                                   |
+
+实现说明：翻页在内存中对已加载的全部可见公告做过滤 + 切片，不引入额外数据库查询。
 
 ## 4. TypeScript 类型建议
 
