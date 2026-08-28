@@ -1,5 +1,8 @@
 import { http } from "@/utils/http";
-import type { NoticeTabItem } from "@/layout/components/lay-notice/data";
+import type {
+  NoticeTabItem,
+  NoticeListItem
+} from "@/layout/components/lay-notice/data";
 import type { ApiResult, ApiPageResult } from "./types";
 
 type NoticeClientType = "web" | "android" | "ios" | "mini";
@@ -9,7 +12,25 @@ interface NoticePanelData {
   tabs: NoticeTabItem[];
 }
 
+/** 通知面板「通知」分组分页结果 */
+interface NoticePageData {
+  list: NoticeListItem[];
+  total: number;
+  unread: number;
+  hasMore: boolean;
+}
+
 interface NoticePanelOptions {
+  clientType?: NoticeClientType;
+}
+
+/** 通知分页查询参数 */
+interface NotifyPageParams {
+  page?: number;
+  size?: number;
+  keyword?: string;
+  unreadOnly?: boolean;
+  priorityOnly?: boolean;
   clientType?: NoticeClientType;
 }
 
@@ -24,6 +45,29 @@ const getNoticePanel = (options?: NoticePanelOptions) => {
     {
       headers: options?.clientType
         ? { "X-Client-Type": options.clientType }
+        : undefined
+    }
+  );
+};
+
+/** 通知面板「通知」分组分页加载（下滑加载更多），支持关键字/未读/高优先级过滤 */
+const getNotifyPage = (params?: NotifyPageParams) => {
+  const query: Record<string, unknown> = {
+    page: params?.page ?? 1,
+    size: params?.size ?? 20
+  };
+  if (params?.keyword) query.keyword = params.keyword;
+  if (params?.unreadOnly !== undefined) query.unreadOnly = params.unreadOnly;
+  if (params?.priorityOnly !== undefined)
+    query.priorityOnly = params.priorityOnly;
+
+  return http.request<ApiResult<NoticePageData>>(
+    "get",
+    "/api/notifications/notify-page",
+    {
+      params: query,
+      headers: params?.clientType
+        ? { "X-Client-Type": params.clientType }
         : undefined
     }
   );
@@ -135,5 +179,16 @@ export const getUnreadCount = () => {
   );
 };
 
-export { getNoticePanel, markNotificationRead, markAllNotificationsRead };
-export type { NoticeClientType, NoticePanelData, NoticePanelOptions };
+export {
+  getNoticePanel,
+  getNotifyPage,
+  markNotificationRead,
+  markAllNotificationsRead
+};
+export type {
+  NoticeClientType,
+  NoticePanelData,
+  NoticePanelOptions,
+  NoticePageData,
+  NotifyPageParams
+};

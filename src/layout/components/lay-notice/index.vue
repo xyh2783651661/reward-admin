@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   getNoticePanel,
+  getNotifyPage,
   getSysNoticeDetail,
   markAllNoticeRead,
   markNoticeRead
@@ -29,6 +30,12 @@ const notices = ref<NoticeTabItem[]>([]);
 const activeKey = ref("");
 const generatedAt = ref("");
 
+/** 通知分组分页状态（下滑加载更多） */
+const NOTIFY_PAGE_SIZE = 20;
+const notifyPageNum = ref(1);
+const notifyLoadingMore = ref(false);
+const scrollEl = ref<HTMLElement | null>(null);
+
 /** 抽屉：通知中心主体 */
 const drawerVisible = ref(false);
 /** 抽屉内二级视图：公告详情（不再叠加第二个抽屉） */
@@ -43,14 +50,21 @@ const highPriorityOnly = ref(false);
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-// 未读数统一从 notices 现算：右上角 badge、概要、分段计数全部同源，
-// 避免旧实现里 getUnreadCount 与 getNoticePanel 双数据源之间偏差导致的对不上问题。
+// 未读数优先取服务端口径（notify 为全部可见公告未读，不过滤），保证分页后角标仍然准确；
+// 其它分组（message/todo）本地未读恒为 0，降级用现算。
 const noticesNum = computed(() =>
-  notices.value.reduce((sum, tab) => sum + countTabUnread(tab), 0)
+  notices.value.reduce(
+    (sum, tab) => sum + (tab.unread != null ? tab.unread : countTabUnread(tab)),
+    0
+  )
 );
 
+// 总数优先取服务端口径（过滤后总量），无值时降级用已加载列表长度。
 const totalNum = computed(() =>
-  notices.value.reduce((total, tab) => total + tab.list.length, 0)
+  notices.value.reduce(
+    (total, tab) => total + (tab.total != null ? tab.total : tab.list.length),
+    0
+  )
 );
 
 const highPriorityNum = computed(() =>
@@ -68,7 +82,7 @@ const activeTab = computed(() =>
 /** 分段控件选项，标题上直接带未读数 */
 const segmentOptions = computed(() =>
   notices.value.map(tab => {
-    const unread = countTabUnread(tab);
+    const unread = tab.unread != null ? tab.unread : countTabUnread(tab);
     return {
       value: tab.key,
       label: unread > 0 ? `${tab.name} ${unread}` : tab.name
@@ -78,7 +92,16 @@ const segmentOptions = computed(() =>
 
 /** 当前 tab 经「只看未读 + 关键字」过滤后的列表 */
 const filteredList = computed(() => {
-  const list = activeTab.value?.list ?? [];
+  const tab = activeTab.value;
+  if (!tab) return [];
+
+  // 通知分组：服务端已完成过滤 + 分页（含未读/高优先级/关键字），直接渲染已加载列表
+  if (tab.key === "notify") {
+    return tab.list ?? [];
+  }
+
+  // 消息/待办分组：数据量小，沿用本地筛选
+  const list = tab.list ?? [];
   const kw = keyword.value.trim().toLowerCase();
 
   return list.filter(item => {
@@ -94,6 +117,13 @@ const filteredList = computed(() => {
         .includes(kw)
     );
   });
+});
+
+// 筛选条件或切换 tab 时，若处于通知分组则按筛选重新拉取首页
+watch([keyword, unreadOnly, highPriorityOnly, activeKey], () => {
+  if (activeKey.value === "notify" && getNotifyTab()) {
+    void applyNotifyFilter();
+  }
 });
 
 const hasFilter = computed(
@@ -146,11 +176,97 @@ async function loadNotices(silent = false) {
     notices.value = tabs;
     generatedAt.value = data.generatedAt ?? "";
     activeKey.value = hasActiveKey ? activeKey.value : (tabs[0]?.key ?? "");
+    notifyPageNum.value = 1;
+    // 若当前在通知分组且带了筛选条件，按筛选重新拉首页，保证列表与筛选一致
+    if (activeKey.value === "notify" && hasActiveFilter()) {
+      void applyNotifyFilter();
+    }
   } catch (error) {
     console.error(error);
     if (!silent) message("加载通知中心失败", { type: "error" });
   } finally {
     if (!silent) loading.value = false;
+  }
+}
+
+/** 当前是否有激活的筛选条件 */
+function hasActiveFilter() {
+  return (
+    keyword.value.trim() !== "" || unreadOnly.value || highPriorityOnly.value
+  );
+}
+
+/** 取当前通知分组的引用（不可变更新） */
+function getNotifyTab(): NoticeTabItem | undefined {
+  return notices.value.find(t => t.key === "notify");
+}
+
+/** 更新通知分组字段（不可变替换，触发响应） */
+function patchNotifyTab(patch: Partial<NoticeTabItem>) {
+  notices.value = notices.value.map(t =>
+    t.key === "notify" ? { ...t, ...patch } : t
+  );
+}
+
+/** 按当前筛选条件加载通知首页（替换列表） */
+async function applyNotifyFilter() {
+  const tab = getNotifyTab();
+  if (!tab) return;
+  try {
+    const { data } = await getNotifyPage({
+      page: 1,
+      size: NOTIFY_PAGE_SIZE,
+      keyword: keyword.value.trim() || undefined,
+      unreadOnly: unreadOnly.value || undefined,
+      priorityOnly: highPriorityOnly.value || undefined
+    });
+    notifyPageNum.value = 1;
+    patchNotifyTab({
+      list: data.list,
+      total: data.total,
+      unread: data.unread,
+      hasMore: data.hasMore
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/** 通知分组下滑加载更多 */
+async function loadMoreNotify() {
+  const tab = getNotifyTab();
+  if (!tab?.hasMore || notifyLoadingMore.value) return;
+  notifyLoadingMore.value = true;
+  try {
+    const next = notifyPageNum.value + 1;
+    const { data } = await getNotifyPage({
+      page: next,
+      size: NOTIFY_PAGE_SIZE,
+      keyword: keyword.value.trim() || undefined,
+      unreadOnly: unreadOnly.value || undefined,
+      priorityOnly: highPriorityOnly.value || undefined
+    });
+    notifyPageNum.value = next;
+    patchNotifyTab({
+      list: [...(tab.list ?? []), ...data.list],
+      total: data.total,
+      unread: data.unread,
+      hasMore: data.hasMore
+    });
+  } catch (error) {
+    console.error(error);
+    message("加载更多通知失败", { type: "error" });
+  } finally {
+    notifyLoadingMore.value = false;
+  }
+}
+
+/** 通知列表滚动到底部时触发加载更多 */
+function onNotifyScroll(e: Event) {
+  if (activeKey.value !== "notify") return;
+  const el = e.target as HTMLElement;
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 40) {
+    void loadMoreNotify();
   }
 }
 
@@ -393,7 +509,12 @@ onBeforeUnmount(() => {
             :description="t('status.pureNoMessage')"
             :image-size="72"
           />
-          <el-scrollbar v-else class="notice-panel__scroll">
+          <div
+            v-else
+            ref="scrollEl"
+            class="notice-panel__scroll"
+            @scroll="onNotifyScroll"
+          >
             <div class="notice-panel__list">
               <NoticeList
                 :list="filteredList"
@@ -401,8 +522,20 @@ onBeforeUnmount(() => {
                 @action="handleNoticeAction"
                 @mark-read="handleMarkRead"
               />
+              <div
+                v-if="activeKey === 'notify' && activeTab?.hasMore"
+                class="notice-panel__more"
+              >
+                <span
+                  v-if="notifyLoadingMore"
+                  class="notice-panel__more-loading"
+                >
+                  加载中…
+                </span>
+                <span v-else class="notice-panel__more-hint">下滑加载更多</span>
+              </div>
             </div>
-          </el-scrollbar>
+          </div>
         </div>
 
         <footer v-if="generatedAt" class="notice-panel__foot">
@@ -594,6 +727,19 @@ onBeforeUnmount(() => {
 
 .notice-panel__scroll {
   height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.notice-panel__more {
+  padding: 10px 0 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  text-align: center;
+}
+
+.notice-panel__more-loading {
+  color: var(--el-color-primary);
 }
 
 .notice-panel__list {
