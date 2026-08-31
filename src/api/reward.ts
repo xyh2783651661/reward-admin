@@ -173,6 +173,14 @@ export const getRewardConfigRuleDownloadUrl = () => {
   return "/api/reward-configs/download/rule";
 };
 
+// Reward Config Options (rewardType, status, etc.)
+export const getRewardConfigOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/api/reward-configs/options"
+  );
+};
+
 // Reward Subject
 export const getRewardSubjectList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/reward-subjects/page", {
@@ -200,6 +208,14 @@ export const updateRewardSubject = (data?: object) => {
 
 export const deleteRewardSubject = (id: string | number) => {
   return http.request<ApiResult>("delete", `/api/reward-subjects/${id}`);
+};
+
+// Reward Subject Options (subjectType, stage, status, etc.)
+export const getRewardSubjectOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/api/reward-subjects/options"
+  );
 };
 
 // Reward User

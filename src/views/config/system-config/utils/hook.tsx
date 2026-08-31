@@ -131,10 +131,12 @@ export function useSystemConfig() {
     current: 1,
     size: 10,
     configKey: "",
+    configValue: "",
     configGroup: "",
     valueType: "",
     status: "",
-    sensitive: ""
+    sensitive: "",
+    description: ""
   });
   const formRef = ref();
   const dataList = ref<SystemConfigItem[]>([]);

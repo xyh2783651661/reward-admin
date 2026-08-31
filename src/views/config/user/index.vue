@@ -54,6 +54,8 @@ const {
   rowStyle,
   dataList,
   pagination,
+  roleOptions,
+  statusOptions,
   onSearch,
   resetForm,
   openDialog,
@@ -111,8 +113,27 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="已启用" value="1" />
-          <el-option label="已停用" value="0" />
+          <el-option
+            v-for="o in statusOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="角色：" prop="role">
+        <el-select
+          v-model="form.role"
+          placeholder="全部角色"
+          clearable
+          class="w-[180px]!"
+        >
+          <el-option
+            v-for="o in roleOptions"
+            :key="o.id"
+            :label="o.roleName"
+            :value="o.id"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>

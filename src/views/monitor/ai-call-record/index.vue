@@ -93,10 +93,10 @@ onMounted(() => {
           class="w-[150px]!"
         >
           <el-option
-            v-for="item in statusOptions"
-            :key="item"
-            :label="item"
-            :value="item"
+            v-for="o in statusOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
           />
         </el-select>
       </el-form-item>

@@ -62,6 +62,8 @@ const {
   isExpandAll,
   isSelectAll,
   treeSearchValue,
+  rewardTypeOptions,
+  statusOptions,
   onSearch,
   exportExcel,
   resetForm,
@@ -111,9 +113,12 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="BASE" value="BASE" />
-          <el-option label="EXTRA" value="EXTRA" />
-          <el-option label="SPECIAL" value="SPECIAL" />
+          <el-option
+            v-for="o in rewardTypeOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="数值：" prop="rewardValue">
@@ -132,6 +137,14 @@ onMounted(() => {
           class="w-[180px]!"
         />
       </el-form-item>
+      <el-form-item label="条件：" prop="condition">
+        <el-input
+          v-model="form.condition"
+          placeholder="请输入条件表达式"
+          clearable
+          class="w-[220px]!"
+        />
+      </el-form-item>
       <el-form-item label="状态：" prop="status">
         <el-select
           v-model="form.status"
@@ -139,8 +152,12 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="已启用" value="1" />
-          <el-option label="已停用" value="0" />
+          <el-option
+            v-for="o in statusOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>

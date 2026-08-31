@@ -54,9 +54,9 @@ const {
         >
           <el-option
             v-for="key in ruleKeyOptions"
-            :key="key"
-            :label="key"
-            :value="key"
+            :key="key.value"
+            :label="key.label"
+            :value="key.value"
           />
         </el-select>
       </el-form-item>

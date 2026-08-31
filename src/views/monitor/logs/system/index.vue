@@ -19,6 +19,8 @@ const tableRef = ref();
 const {
   form,
   loading,
+  optionsLoading,
+  successOptions,
   columns,
   dataList,
   pagination,
@@ -224,10 +226,15 @@ const {
           v-model="form.success"
           placeholder="请选择状态"
           clearable
+          :loading="optionsLoading"
           class="w-[120px]!"
         >
-          <el-option label="成功" value="true" />
-          <el-option label="失败" value="false" />
+          <el-option
+            v-for="o in successOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="请求时间" prop="requestTime">

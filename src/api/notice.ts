@@ -105,6 +105,14 @@ export const getSysNoticePage = (data?: object) => {
   });
 };
 
+/** 公告筛选选项（类型、优先级、平台、状态等） */
+export const getSysNoticeOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/api/notice/sysNotice/options"
+  );
+};
+
 /** 公告详情 */
 export const getSysNoticeDetail = (id: string | number) => {
   return http.request<ApiResult<Record<string, any>>>(

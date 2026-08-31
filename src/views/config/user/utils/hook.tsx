@@ -16,12 +16,13 @@ import {
   resetPwdRewardUser,
   updateRewardUser
 } from "@/api/system";
+import { getUserOptions, getRoleAll } from "@/api/rbac";
 import {
   mockLoadTreeData,
   mockRoleMenuCheckedIds
 } from "../../composables/mockData";
 import { useCrudTable, useTreePanel } from "../../composables";
-import { type Ref, reactive, ref, h } from "vue";
+import { type Ref, reactive, ref, h, onMounted } from "vue";
 import userAvatar from "@/assets/user.jpg";
 import ReCropperPreview from "@/components/ReCropperPreview";
 import {
@@ -38,7 +39,8 @@ export function useRewardUser(treeRef: Ref) {
   const avatarInfo = ref();
   const ruleFormRef = ref();
   const cropRef = ref();
-  const roleOptions = ref([]);
+  const roleOptions = ref<Array<{ id: any; roleName: string }>>([]);
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
   const { switchStyle } = usePublicHooks();
 
   const {
@@ -60,6 +62,7 @@ export function useRewardUser(treeRef: Ref) {
       avatar: "",
       phone: "",
       birthday: "",
+      role: "",
       status: ""
     },
     deleteMessage: row => `已删除ID为${row.id}的数据`
@@ -383,6 +386,25 @@ export function useRewardUser(treeRef: Ref) {
     });
   }
 
+  async function loadUserOptions() {
+    try {
+      const { data } = await getUserOptions();
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+    try {
+      const { data } = await getRoleAll();
+      roleOptions.value = (data ?? []) as Array<{ id: any; roleName: string }>;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadUserOptions();
+  });
+
   return {
     form,
     isShow,
@@ -397,6 +419,8 @@ export function useRewardUser(treeRef: Ref) {
     pagination,
     isExpandAll,
     isSelectAll,
+    roleOptions,
+    statusOptions,
     handleUpdate,
     buttonClass,
     handleUpload,

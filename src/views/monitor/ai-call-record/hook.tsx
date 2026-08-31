@@ -1,9 +1,13 @@
 import dayjs from "dayjs";
-import { reactive, ref, toRaw, type Ref } from "vue";
+import { reactive, ref, toRaw, type Ref, onMounted } from "vue";
 import { addDialog } from "@/components/ReDialog";
 import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
-import { getAiCallRecordDetail, getAiCallRecordPage } from "@/api/system";
+import {
+  getAiCallRecordDetail,
+  getAiCallRecordPage,
+  getAiCallRecordOptions
+} from "@/api/system";
 import Detail from "./detail.vue";
 import type {
   AiCallRecordDetail,
@@ -88,14 +92,7 @@ export function useAiCallRecord(_tableRef?: Ref) {
     background: true
   });
 
-  const statusOptions = [
-    "SUCCESS",
-    "FAILED",
-    "ERROR",
-    "RUNNING",
-    "PROCESSING",
-    "PENDING"
-  ];
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const columns: TableColumnList = [
     {
@@ -170,6 +167,46 @@ export function useAiCallRecord(_tableRef?: Ref) {
       label: "Response Tokens",
       prop: "responseTokens",
       minWidth: 130
+    },
+    {
+      label: "总 Tokens",
+      prop: "totalTokens",
+      minWidth: 110,
+      formatter: ({ totalTokens }) =>
+        totalTokens != null ? `${totalTokens}` : "-"
+    },
+    {
+      label: "实际模型",
+      prop: "remoteModel",
+      minWidth: 160,
+      formatter: ({ remoteModel }) => remoteModel || "-"
+    },
+    {
+      label: "结束原因",
+      prop: "finishReason",
+      minWidth: 130,
+      formatter: ({ finishReason }) => finishReason || "-"
+    },
+    {
+      label: "重试次数",
+      prop: "retryCount",
+      minWidth: 100,
+      formatter: ({ retryCount }) =>
+        retryCount != null ? `${retryCount}` : "-"
+    },
+    {
+      label: "调用模式",
+      prop: "streamMode",
+      minWidth: 110,
+      cellRenderer: ({ row, props }) => (
+        <el-tag
+          size={props.size}
+          type={row.streamMode === 1 ? "warning" : "info"}
+          effect="plain"
+        >
+          {row.streamMode === 1 ? "流式" : "同步"}
+        </el-tag>
+      )
     },
     {
       label: "Prompt 预览",
@@ -261,6 +298,19 @@ export function useAiCallRecord(_tableRef?: Ref) {
     form.size = 10;
     onSearch();
   }
+
+  async function loadStatusOptions() {
+    try {
+      const { data } = await getAiCallRecordOptions();
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadStatusOptions();
+  });
 
   return {
     form,

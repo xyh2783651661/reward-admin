@@ -11,6 +11,7 @@ import {
   deleteRewardConfig,
   exportRewardConfigList,
   getRewardConfigList,
+  getRewardConfigOptions,
   // getRoleMenu,
   // getRoleMenuIds,
   updateRewardConfig
@@ -20,13 +21,15 @@ import {
   mockRoleMenuCheckedIds
 } from "../../composables/mockData";
 import { useCrudTable, useTreePanel, useTableExport } from "../../composables";
-import { type Ref, ref, h } from "vue";
+import { type Ref, ref, h, onMounted } from "vue";
 import ReJsonField from "@/components/ReJsonField/index.vue";
 
 export function useRewardConfig(treeRef: Ref) {
   const formRef = ref();
   const switchLoadMap = ref({});
   const { switchStyle } = usePublicHooks();
+  const rewardTypeOptions = ref<Array<{ value: any; label: string }>>([]);
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const {
     form,
@@ -47,6 +50,7 @@ export function useRewardConfig(treeRef: Ref) {
       rewardType: "",
       rewardKey: "",
       rewardValue: "",
+      condition: "",
       status: ""
     }
   });
@@ -216,6 +220,20 @@ export function useRewardConfig(treeRef: Ref) {
     });
   }
 
+  async function loadRewardConfigOptions() {
+    try {
+      const { data } = await getRewardConfigOptions();
+      rewardTypeOptions.value = data?.rewardTypeOptions ?? [];
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadRewardConfigOptions();
+  });
+
   return {
     form,
     isShow,
@@ -232,6 +250,8 @@ export function useRewardConfig(treeRef: Ref) {
     isExpandAll,
     isSelectAll,
     treeSearchValue,
+    rewardTypeOptions,
+    statusOptions,
     onSearch,
     exportExcel,
     resetForm,

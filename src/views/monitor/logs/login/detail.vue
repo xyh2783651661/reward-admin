@@ -156,33 +156,72 @@ const previewWidth = computed(() => {
 const attachmentPaths = computed(() =>
   splitAttachmentPaths(props.record.attachmentPaths)
 );
-const templateSummary = computed(() => {
-  if (props.record.templateCode && props.record.type) {
-    return `${props.record.templateCode} / ${props.record.type}`;
-  }
-
-  return props.record.templateCode || props.record.type || "-";
-});
 const statusType = computed(() => {
   switch (props.record.status) {
     case 1:
       return "success";
     case 2:
       return "danger";
-    default:
+    case 3:
+    case 4:
       return "warning";
+    case 5:
+    case 6:
+      return "info";
+    default:
+      return "info";
   }
 });
 const statusText = computed(() => {
   switch (props.record.status) {
-    case 1:
-      return "发送成功";
-    case 2:
-      return "发送失败";
-    default:
+    case 0:
       return "待发送";
+    case 1:
+      return "成功";
+    case 2:
+      return "失败";
+    case 3:
+      return "发送中";
+    case 4:
+      return "重试中";
+    case 5:
+      return "已取消";
+    case 6:
+      return "状态未知";
+    default:
+      return "未知";
   }
 });
+const mqStatusType = computed(() => {
+  switch (props.record.mqStatus) {
+    case 0:
+      return "info";
+    case 1:
+      return "warning";
+    case 2:
+      return "success";
+    case 3:
+      return "danger";
+    default:
+      return "info";
+  }
+});
+const mqStatusText = computed(() => {
+  switch (props.record.mqStatus) {
+    case 0:
+      return "待投递";
+    case 1:
+      return "投递中";
+    case 2:
+      return "已投递";
+    case 3:
+      return "投递失败";
+    default:
+      return "未知";
+  }
+});
+const fmtTime = (t?: string) =>
+  t ? dayjs(t).format("YYYY-MM-DD HH:mm:ss") : "-";
 
 const resizeIframe = async () => {
   await nextTick();
@@ -313,27 +352,68 @@ const rawHtmlContent = computed(() => props.record.content || "");
       <el-descriptions-item label="抄送">
         {{ props.record.cc || "-" }}
       </el-descriptions-item>
+      <el-descriptions-item label="消息ID">
+        {{ props.record.messageId || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="邮件类型">
+        {{ props.record.type || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="模板编码">
+        {{ props.record.templateCode || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="供应商">
+        {{ props.record.provider || "-" }}
+      </el-descriptions-item>
       <el-descriptions-item label="状态">
         <el-tag :type="statusType" effect="plain">{{ statusText }}</el-tag>
       </el-descriptions-item>
-      <el-descriptions-item label="发送次数">
-        {{ props.record.sendAttempts ?? "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="发送时间">
-        {{
-          props.record.lastSendTime
-            ? dayjs(props.record.lastSendTime).format("YYYY-MM-DD HH:mm:ss")
-            : "-"
-        }}
-      </el-descriptions-item>
-      <el-descriptions-item label="模板/类型">
-        {{ templateSummary }}
+      <el-descriptions-item label="MQ状态">
+        <el-tag :type="mqStatusType" effect="plain">{{ mqStatusText }}</el-tag>
       </el-descriptions-item>
       <el-descriptions-item label="优先级">
         {{ props.record.priority ?? "-" }}
       </el-descriptions-item>
+      <el-descriptions-item label="供应商消息ID">
+        {{ props.record.providerMessageId || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="发送次数">
+        {{ props.record.sendAttempts ?? "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="发布次数">
+        {{ props.record.publishAttempts ?? "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="最大重试次数">
+        {{ props.record.maxRetryCount ?? "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item label="发送时间">
+        {{ fmtTime(props.record.lastSendTime) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="最后尝试时间">
+        {{ fmtTime(props.record.lastAttemptTime) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="发布时间">
+        {{ fmtTime(props.record.publishedTime) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="下次重试时间">
+        {{ fmtTime(props.record.nextRetryTime) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="完成时间">
+        {{ fmtTime(props.record.finishedTime) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="创建时间">
+        {{ fmtTime(props.record.createdTime) }}
+      </el-descriptions-item>
+      <el-descriptions-item label="更新时间">
+        {{ fmtTime(props.record.updatedTime) }}
+      </el-descriptions-item>
       <el-descriptions-item :span="2" label="失败原因">
         {{ props.record.errorMessage || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item :span="2" label="最后错误码">
+        {{ props.record.lastErrorCode || "-" }}
+      </el-descriptions-item>
+      <el-descriptions-item :span="2" label="最后错误类型">
+        {{ props.record.lastErrorType || "-" }}
       </el-descriptions-item>
       <el-descriptions-item
         v-if="attachmentPaths.length"

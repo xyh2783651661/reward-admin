@@ -11,6 +11,7 @@ import {
   getAccessLogsFilterOptions,
   exportAccessLogsList
 } from "@/api/system";
+import { getAccessLogOptions } from "@/api/logs";
 import Info from "~icons/ri/question-line";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 
@@ -40,6 +41,8 @@ export function useSystemLog(_tableRef: Ref) {
   const exportLoading = ref(false);
   const { copied, update } = useCopyToClipboard();
   const { tagStyle } = usePublicHooks();
+  const optionsLoading = ref(false);
+  const successOptions = ref<{ value: string; label: string }[]>([]);
 
   const filterOptions = ref({
     modules: [] as string[],
@@ -288,20 +291,27 @@ export function useSystemLog(_tableRef: Ref) {
   }
 
   async function loadFilterOptions() {
+    optionsLoading.value = true;
     try {
-      const { data } = await getAccessLogsFilterOptions();
+      const [accessOpts, successOpts] = await Promise.all([
+        getAccessLogsFilterOptions(),
+        getAccessLogOptions()
+      ]);
       filterOptions.value = {
-        modules: data?.modules ?? [],
-        methods: data?.methods ?? [],
-        actions: data?.actions ?? [],
-        resourceTypes: data?.resourceTypes ?? [],
-        bizTypes: data?.bizTypes ?? [],
-        operatorNames: data?.operatorNames ?? [],
-        ipLocations: data?.ipLocations ?? [],
-        browserTypes: data?.browserTypes ?? []
+        modules: accessOpts.data?.modules ?? [],
+        methods: accessOpts.data?.methods ?? [],
+        actions: accessOpts.data?.actions ?? [],
+        resourceTypes: accessOpts.data?.resourceTypes ?? [],
+        bizTypes: accessOpts.data?.bizTypes ?? [],
+        operatorNames: accessOpts.data?.operatorNames ?? [],
+        ipLocations: accessOpts.data?.ipLocations ?? [],
+        browserTypes: accessOpts.data?.browserTypes ?? []
       };
+      successOptions.value = successOpts.data?.successOptions ?? [];
     } catch (error) {
       console.error("加载筛选选项失败", error);
+    } finally {
+      optionsLoading.value = false;
     }
   }
 
@@ -320,6 +330,8 @@ export function useSystemLog(_tableRef: Ref) {
   return {
     form,
     loading,
+    optionsLoading,
+    successOptions,
     columns,
     dataList,
     pagination,

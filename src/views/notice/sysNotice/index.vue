@@ -24,6 +24,9 @@ const {
   pagination,
   noticeStats,
   platformOptions,
+  noticeTypeOptions,
+  priorityOptions,
+  statusOptions,
   onSearch,
   resetForm,
   openDialog,
@@ -88,8 +91,12 @@ const {
           clearable
           class="w-[150px]!"
         >
-          <el-option label="功能更新" :value="1" />
-          <el-option label="系统公告" :value="2" />
+          <el-option
+            v-for="o in noticeTypeOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="优先级" prop="priority">
@@ -99,10 +106,12 @@ const {
           clearable
           class="w-[150px]!"
         >
-          <el-option label="信息" :value="4" />
-          <el-option label="普通" :value="5" />
-          <el-option label="警告" :value="7" />
-          <el-option label="紧急" :value="9" />
+          <el-option
+            v-for="o in priorityOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="平台" prop="platformMask">
@@ -127,9 +136,12 @@ const {
           clearable
           class="w-[150px]!"
         >
-          <el-option label="草稿" :value="0" />
-          <el-option label="已发布" :value="1" />
-          <el-option label="已撤回" :value="2" />
+          <el-option
+            v-for="o in statusOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>

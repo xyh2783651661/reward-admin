@@ -36,11 +36,13 @@ export {
   deleteRewardConfig,
   exportRewardConfigList,
   getRewardConfigRuleDownloadUrl,
+  getRewardConfigOptions,
   getRewardSubjectList,
   getRewardSubjectAllList,
   addRewardSubject,
   updateRewardSubject,
   deleteRewardSubject,
+  getRewardSubjectOptions,
   getRewardUserList,
   getRewardUserPage,
   addRewardUser,
@@ -58,7 +60,8 @@ export {
   deleteMailRecipient,
   getMailRecipientUserList,
   updateMailRecipientUser,
-  getMailSendRecordsList
+  getMailSendRecordsList,
+  getMailRecipientOptions
 } from "./mail";
 
 export {
@@ -99,7 +102,11 @@ export {
   getTaskLogStats
 } from "./logs";
 
-export { getAiCallRecordPage, getAiCallRecordDetail } from "./ai";
+export {
+  getAiCallRecordPage,
+  getAiCallRecordDetail,
+  getAiCallRecordOptions
+} from "./ai";
 
 export {
   getSysNoticePage,

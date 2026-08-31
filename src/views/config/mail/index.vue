@@ -61,6 +61,7 @@ const {
   isExpandAll,
   isSelectAll,
   treeSearchValue,
+  enabledOptions,
   onSearch,
   resetForm,
   openDialog,
@@ -117,8 +118,12 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="已启用" value="true" />
-          <el-option label="已禁用" value="false" />
+          <el-option
+            v-for="o in enabledOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>

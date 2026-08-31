@@ -9,6 +9,7 @@ import { deviceDetection } from "@pureadmin/utils";
 import {
   addMorningGreeting,
   deleteMorningGreeting,
+  getMorningGreetingOptions,
   getMorningGreetingPage,
   updateMorningGreeting
 } from "@/api/morning-greeting";
@@ -21,6 +22,7 @@ export function useMorningGreeting(_treeRef?: Ref) {
   const switchLoadMap = ref({});
   const { switchStyle } = usePublicHooks();
   const userOptions = ref<{ id: number; nickName: string }[]>([]);
+  const enabledOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const {
     form,
@@ -50,6 +52,12 @@ export function useMorningGreeting(_treeRef?: Ref) {
       userOptions.value = (data ?? []) as { id: number; nickName: string }[];
     } catch {
       userOptions.value = [];
+    }
+    try {
+      const { data } = await getMorningGreetingOptions();
+      enabledOptions.value = data?.enabledOptions ?? [];
+    } catch (e) {
+      console.error(e);
     }
   });
 
@@ -207,6 +215,7 @@ export function useMorningGreeting(_treeRef?: Ref) {
     pagination,
     columns,
     userOptions,
+    enabledOptions,
     onSearch,
     resetForm,
     openDialog,

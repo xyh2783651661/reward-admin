@@ -10,7 +10,7 @@ interface FormItemProps {
 
 interface FormProps {
   formInline: FormItemProps;
-  ruleKeyOptions?: string[];
+  ruleKeyOptions?: { label: string; value: string }[];
   ruleTypeOptions?: { label: string; value: string }[];
 }
 

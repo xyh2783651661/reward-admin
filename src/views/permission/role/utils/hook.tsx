@@ -12,11 +12,12 @@ import {
   getMenuTree,
   getRoleDetail,
   assignRoleMenus,
+  getRoleOptions,
   type SysRoleVo,
   type SysRoleReq,
   type SysMenuVo
 } from "@/api/rbac";
-import { h, reactive, ref } from "vue";
+import { h, reactive, ref, onMounted } from "vue";
 
 export function useRole() {
   const formRef = ref();
@@ -24,6 +25,7 @@ export function useRole() {
   const loading = ref(true);
   const dataList = ref<SysRoleVo[]>([]);
   const menuTree = ref<SysMenuVo[]>([]);
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const form = reactive<SysRoleReq>({
     roleName: "",
@@ -248,6 +250,19 @@ export function useRole() {
     onSearch();
   }
 
+  async function loadRoleOptions() {
+    try {
+      const { data } = await getRoleOptions();
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadRoleOptions();
+  });
+
   void onSearch();
 
   return {
@@ -256,6 +271,7 @@ export function useRole() {
     columns,
     dataList,
     pagination,
+    statusOptions,
     onSearch,
     resetForm,
     openDialog,

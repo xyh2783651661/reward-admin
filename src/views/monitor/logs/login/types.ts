@@ -12,6 +12,19 @@ interface MailSendRecordItem {
   templateCode?: string;
   type?: string;
   priority?: number;
+  provider?: string;
+  providerMessageId?: string;
+  mqStatus?: number;
+  messageId?: string;
+  publishedTime?: string;
+  nextPublishTime?: string;
+  publishAttempts?: number;
+  nextRetryTime?: string;
+  maxRetryCount?: number;
+  lastAttemptTime?: string;
+  lastErrorCode?: string;
+  lastErrorType?: string;
+  finishedTime?: string;
   createdTime?: string;
   updatedTime?: string;
 }

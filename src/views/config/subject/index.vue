@@ -47,6 +47,9 @@ const {
   columns,
   dataList,
   pagination,
+  subjectTypeOptions,
+  stageOptions,
+  statusOptions,
   onSearch,
   resetForm,
   openDialog,
@@ -91,8 +94,12 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="CORE" value="CORE" />
-          <el-option label="GENERAL" value="GENERAL" />
+          <el-option
+            v-for="o in subjectTypeOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="学段：" prop="stage">
@@ -102,10 +109,12 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="小学" value="小学" />
-          <el-option label="初中" value="初中" />
-          <el-option label="高中" value="高中" />
-          <el-option label="大学" value="大学" />
+          <el-option
+            v-for="o in stageOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item label="状态：" prop="status">
@@ -115,8 +124,12 @@ onMounted(() => {
           clearable
           class="w-[180px]!"
         >
-          <el-option label="已启用" value="1" />
-          <el-option label="已停用" value="0" />
+          <el-option
+            v-for="o in statusOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>

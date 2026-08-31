@@ -25,10 +25,12 @@ interface SystemConfigPageReq {
   current: number;
   size: number;
   configKey: string;
+  configValue: string;
   configGroup: string;
   valueType: SystemConfigValueType | "";
   status: ToggleValue | "";
   sensitive: ToggleValue | "";
+  description: string;
 }
 
 interface SystemConfigOptions {

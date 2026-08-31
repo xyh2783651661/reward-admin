@@ -17,7 +17,7 @@ import { ref, onMounted, h } from "vue";
 
 export function usePocketMoneyRule() {
   const formRef = ref();
-  const ruleKeyOptions = ref<string[]>([]);
+  const ruleKeyOptions = ref<{ label: string; value: string }[]>([]);
   const ruleTypeOptions = ref<{ label: string; value: string }[]>([]);
 
   const {

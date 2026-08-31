@@ -10,17 +10,21 @@ import {
   addRewardSubject,
   deleteRewardSubject,
   getRewardSubjectList,
+  getRewardSubjectOptions,
   // getRoleMenu,
   // getRoleMenuIds,
   updateRewardSubject
 } from "@/api/system";
 import { useCrudTable } from "../../composables";
-import { ref, h } from "vue";
+import { ref, h, onMounted } from "vue";
 
 export function useRewardSubject() {
   const formRef = ref();
   const switchLoadMap = ref({});
   const { switchStyle } = usePublicHooks();
+  const subjectTypeOptions = ref<Array<{ value: any; label: string }>>([]);
+  const stageOptions = ref<Array<{ value: any; label: string }>>([]);
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const {
     form,
@@ -172,12 +176,30 @@ export function useRewardSubject() {
     });
   }
 
+  async function loadRewardSubjectOptions() {
+    try {
+      const { data } = await getRewardSubjectOptions();
+      subjectTypeOptions.value = data?.subjectTypeOptions ?? [];
+      stageOptions.value = data?.stageOptions ?? [];
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadRewardSubjectOptions();
+  });
+
   return {
     form,
     loading,
     columns,
     dataList,
     pagination,
+    subjectTypeOptions,
+    stageOptions,
+    statusOptions,
     onSearch,
     resetForm,
     openDialog,

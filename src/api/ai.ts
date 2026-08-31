@@ -12,3 +12,11 @@ export const getAiCallRecordDetail = <T = Record<string, any>>(
 ) => {
   return http.request<ApiResult<T>>("get", `/api/ai/aiCallRecord/${id}`);
 };
+
+/** AI 调用记录筛选选项（状态等） */
+export const getAiCallRecordOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/api/ai/aiCallRecord/options"
+  );
+};

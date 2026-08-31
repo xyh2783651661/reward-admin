@@ -12,11 +12,12 @@ import {
   resetUserPassword,
   getRoleAll,
   getUserDetail,
+  getUserOptions,
   type SysUserVo,
   type SysUserReq,
   type SysRoleVo
 } from "@/api/rbac";
-import { h, reactive, ref } from "vue";
+import { h, reactive, ref, onMounted } from "vue";
 
 export function useUser() {
   const formRef = ref();
@@ -24,6 +25,7 @@ export function useUser() {
   const loading = ref(true);
   const dataList = ref<SysUserVo[]>([]);
   const roleOptions = ref<SysRoleVo[]>([]);
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const form = reactive<SysUserReq>({
     username: "",
@@ -291,6 +293,19 @@ export function useUser() {
     onSearch();
   }
 
+  async function loadUserStatusOptions() {
+    try {
+      const { data } = await getUserOptions();
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadUserStatusOptions();
+  });
+
   void onSearch();
 
   return {
@@ -299,6 +314,7 @@ export function useUser() {
     columns,
     dataList,
     pagination,
+    statusOptions,
     onSearch,
     resetForm,
     openDialog,

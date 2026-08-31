@@ -4,6 +4,7 @@ import { useMailLog } from "./hook";
 import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import DictSelect from "@/components/DictSelect/index.vue";
 
 import Refresh from "~icons/ep/refresh";
 import AntDesignMailOutlined from "~icons/ant-design/mail-outlined";
@@ -17,6 +18,8 @@ const formRef = ref();
 const {
   form,
   loading,
+  optionsLoading,
+  options,
   columns,
   dataList,
   pagination,
@@ -45,16 +48,65 @@ const {
         />
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select
+        <DictSelect
           v-model="form.status"
+          :options="options.statusOptions"
+          :loading="optionsLoading"
           placeholder="请选择"
-          clearable
           class="w-[150px]!"
-        >
-          <el-option label="待发送" :value="0" />
-          <el-option label="成功" :value="1" />
-          <el-option label="失败" :value="2" />
-        </el-select>
+        />
+      </el-form-item>
+      <el-form-item label="邮件类型" prop="type">
+        <DictSelect
+          v-model="form.type"
+          :options="options.typeOptions"
+          :loading="optionsLoading"
+          placeholder="请选择邮件类型"
+          filterable
+          class="w-[200px]!"
+        />
+      </el-form-item>
+      <el-form-item label="MQ状态" prop="mqStatus">
+        <DictSelect
+          v-model="form.mqStatus"
+          :options="options.mqStatusOptions"
+          :loading="optionsLoading"
+          placeholder="请选择MQ状态"
+          class="w-[150px]!"
+        />
+      </el-form-item>
+      <el-form-item label="收件人" prop="recipient">
+        <el-input
+          v-model="form.recipient"
+          placeholder="请输入收件人邮箱"
+          clearable
+          class="w-[190px]!"
+        />
+      </el-form-item>
+      <el-form-item label="消息ID" prop="messageId">
+        <el-input
+          v-model="form.messageId"
+          placeholder="请输入消息ID"
+          clearable
+          class="w-[190px]!"
+        />
+      </el-form-item>
+      <el-form-item label="优先级" prop="priority">
+        <DictSelect
+          v-model="form.priority"
+          :options="options.priorityOptions"
+          :loading="optionsLoading"
+          placeholder="请选择优先级"
+          class="w-[150px]!"
+        />
+      </el-form-item>
+      <el-form-item label="供应商" prop="provider">
+        <el-input
+          v-model="form.provider"
+          placeholder="请输入供应商"
+          clearable
+          class="w-[170px]!"
+        />
       </el-form-item>
       <el-form-item label="发送时间" prop="requestTime">
         <el-date-picker
@@ -104,7 +156,7 @@ const {
         >
           <template #operation="{ row }">
             <el-button
-              v-if="row.content"
+              v-if="row.id"
               class="reset-margin outline-hidden!"
               link
               type="primary"

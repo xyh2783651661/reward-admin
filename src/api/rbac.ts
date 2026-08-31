@@ -193,3 +193,19 @@ export const resetUserPassword = (data: { id: number; password: string }) => {
     data
   });
 };
+
+/** 系统用户筛选选项（状态等） */
+export const getUserOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/admin/users/options"
+  );
+};
+
+/** 角色筛选选项（状态等） */
+export const getRoleOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/admin/roles/options"
+  );
+};

@@ -11,10 +11,11 @@ import {
   addSysNotice,
   updateSysNotice,
   publishSysNotice,
-  withdrawSysNotice
+  withdrawSysNotice,
+  getSysNoticeOptions
 } from "@/api/notice";
 import { useCrudTable } from "@/views/config/composables";
-import { type Ref, ref, h, computed } from "vue";
+import { type Ref, ref, h, computed, onMounted } from "vue";
 
 type TagType = "primary" | "success" | "warning" | "info" | "danger" | "";
 
@@ -42,11 +43,18 @@ const statusMap: Record<
   2: { label: "已撤回", type: "danger", hint: "已停止展示" }
 };
 
-const platformOptions = [
+const platformOptionMeta = [
   { label: "Web", value: 1, type: "primary" },
   { label: "Android", value: 2, type: "success" },
   { label: "iOS", value: 4, type: "warning" }
 ] as const;
+
+function decomposePlatformMask(mask: FormItemProps["platformMask"]): number[] {
+  const numericMask = normalizePlatformMask(mask);
+  return platformOptionMeta
+    .filter(item => numericMask & item.value)
+    .map(item => item.value);
+}
 
 function toNumber(value: unknown, fallback = 0) {
   const num = Number(value);
@@ -59,13 +67,6 @@ function normalizePlatformMask(value: FormItemProps["platformMask"]) {
   }
 
   return toNumber(value);
-}
-
-function decomposePlatformMask(mask: FormItemProps["platformMask"]): number[] {
-  const numericMask = normalizePlatformMask(mask);
-  return platformOptions
-    .filter(item => numericMask & item.value)
-    .map(item => item.value);
 }
 
 function formatDateTime(value?: string) {
@@ -91,7 +92,7 @@ function getOnlineState(row: FormItemProps) {
 
 function getPlatformLabels(mask: FormItemProps["platformMask"]) {
   const numericMask = normalizePlatformMask(mask);
-  return platformOptions.filter(item => numericMask & item.value);
+  return platformOptionMeta.filter(item => numericMask & item.value);
 }
 
 function getTimeRange(row: FormItemProps) {
@@ -142,6 +143,27 @@ export function useSysNotice(_tableRef?: Ref) {
       current: 1,
       size: 10
     }
+  });
+
+  const noticeTypeOptions = ref<Array<{ value: any; label: string }>>([]);
+  const priorityOptions = ref<Array<{ value: any; label: string }>>([]);
+  const platformOptions = ref<Array<{ value: any; label: string }>>([]);
+  const statusOptions = ref<Array<{ value: any; label: string }>>([]);
+
+  async function loadSysNoticeOptions() {
+    try {
+      const { data } = await getSysNoticeOptions();
+      noticeTypeOptions.value = data?.noticeTypeOptions ?? [];
+      priorityOptions.value = data?.priorityOptions ?? [];
+      platformOptions.value = data?.platformOptions ?? [];
+      statusOptions.value = data?.statusOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadSysNoticeOptions();
   });
 
   const noticeStats = computed(() => {
@@ -400,6 +422,9 @@ export function useSysNotice(_tableRef?: Ref) {
     pagination,
     noticeStats,
     platformOptions,
+    noticeTypeOptions,
+    priorityOptions,
+    statusOptions,
     onSearch,
     resetForm,
     openDialog,

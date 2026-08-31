@@ -13,7 +13,8 @@ import {
   updateDailyImageRemark,
   getDailyImageThumbnailUrl,
   getDailyImagePreviewUrl,
-  getDailyImageDownloadUrl
+  getDailyImageDownloadUrl,
+  getDailyImageOptions
 } from "@/api/daily-image";
 import type { PaginationProps } from "@pureadmin/table";
 
@@ -49,6 +50,8 @@ export function useDailyImage() {
     current: 1,
     size: 30
   });
+
+  const sourceOptions = ref<Array<{ value: any; label: string }>>([]);
 
   /** 前端关键字过滤（后端分页接口暂不支持 keyword，仅筛选当前页） */
   const keyword = ref("");
@@ -601,9 +604,19 @@ export function useDailyImage() {
     }
   }
 
+  async function loadSourceOptions() {
+    try {
+      const { data } = await getDailyImageOptions();
+      sourceOptions.value = data?.sourceOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   onMounted(() => {
     window.addEventListener("keydown", handleDrawerKeydown);
     onSearch();
+    loadSourceOptions();
   });
 
   onUnmounted(() => {
@@ -614,6 +627,7 @@ export function useDailyImage() {
     // 列表与查询
     form,
     keyword,
+    sourceOptions,
     loading,
     dataList,
     filteredList,

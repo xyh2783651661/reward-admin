@@ -92,6 +92,20 @@ export const getTaskLogsFilterOptions = () => {
   >("get", "/api/task-logs/filter-options");
 };
 
+/** 获取任务日志选项（成功/失败等） */
+export const getTaskLogOptions = () => {
+  return http.request<
+    ApiResult<{ successOptions: { value: boolean; label: string }[] }>
+  >("get", "/api/task-logs/options");
+};
+
+/** 获取访问日志选项（成功/失败等） */
+export const getAccessLogOptions = () => {
+  return http.request<
+    ApiResult<{ successOptions: { value: string; label: string }[] }>
+  >("get", "/api/access-logs/options");
+};
+
 /** 任务日志详情 */
 export interface TaskLogBatchItem {
   id?: string | number | null;

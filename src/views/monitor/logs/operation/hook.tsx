@@ -4,6 +4,7 @@ import {
   getTaskLogsFilterOptions,
   getTaskLogDetail
 } from "@/api/system";
+import { getTaskLogOptions } from "@/api/logs";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
@@ -22,6 +23,8 @@ export function useOperationLog(_tableRef?: Ref) {
   });
   const dataList = ref([]);
   const loading = ref(true);
+  const optionsLoading = ref(false);
+  const successOptions = ref<{ value: boolean; label: string }[]>([]);
   const { tagStyle } = usePublicHooks();
 
   const filterOptions = ref({
@@ -163,14 +166,21 @@ export function useOperationLog(_tableRef?: Ref) {
   }
 
   async function loadFilterOptions() {
+    optionsLoading.value = true;
     try {
-      const { data } = await getTaskLogsFilterOptions();
+      const [taskOpts, successOpts] = await Promise.all([
+        getTaskLogsFilterOptions(),
+        getTaskLogOptions()
+      ]);
       filterOptions.value = {
-        taskNames: data?.taskNames ?? [],
-        classMethods: data?.classMethods ?? []
+        taskNames: taskOpts.data?.taskNames ?? [],
+        classMethods: taskOpts.data?.classMethods ?? []
       };
+      successOptions.value = successOpts.data?.successOptions ?? [];
     } catch (error) {
       console.error("加载任务日志筛选选项失败", error);
+    } finally {
+      optionsLoading.value = false;
     }
   }
 
@@ -188,6 +198,8 @@ export function useOperationLog(_tableRef?: Ref) {
   return {
     form,
     loading,
+    optionsLoading,
+    successOptions,
     columns,
     dataList,
     pagination,

@@ -8,6 +8,14 @@ export const getDailyImagePage = (params?: object) => {
   });
 };
 
+/** 图片筛选选项（来源等） */
+export const getDailyImageOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/api/daily-images/options"
+  );
+};
+
 /** 获取图片详情 */
 export const getDailyImageDetail = (id: number) => {
   return http.request<ApiResult<Record<string, any>>>(

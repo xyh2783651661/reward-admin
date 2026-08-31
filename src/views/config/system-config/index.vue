@@ -50,6 +50,22 @@ const {
           class="w-[220px]!"
         />
       </el-form-item>
+      <el-form-item label="配置值：" prop="configValue">
+        <el-input
+          v-model="form.configValue"
+          placeholder="请输入配置值"
+          clearable
+          class="w-[200px]!"
+        />
+      </el-form-item>
+      <el-form-item label="说明：" prop="description">
+        <el-input
+          v-model="form.description"
+          placeholder="请输入说明"
+          clearable
+          class="w-[200px]!"
+        />
+      </el-form-item>
       <el-form-item label="配置分组：" prop="configGroup">
         <el-select
           v-model="form.configGroup"

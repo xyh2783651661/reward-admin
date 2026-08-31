@@ -23,6 +23,7 @@ const {
   dataList,
   pagination,
   userOptions,
+  enabledOptions,
   onSearch,
   resetForm,
   openDialog,
@@ -64,8 +65,12 @@ const {
           placeholder="请选择状态"
           class="w-[180px]!"
         >
-          <el-option label="已启用" :value="1" />
-          <el-option label="已禁用" :value="0" />
+          <el-option
+            v-for="o in enabledOptions"
+            :key="o.value"
+            :label="o.label"
+            :value="o.value"
+          />
         </el-select>
       </el-form-item>
       <el-form-item>

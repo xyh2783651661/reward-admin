@@ -11,17 +11,19 @@ import {
   deleteMailRecipient,
   getMailRecipientList,
   getMailRecipientUserList,
+  getMailRecipientOptions,
   getRewardUserList,
   updateMailRecipient,
   updateMailRecipientUser
 } from "@/api/system";
 import { useCrudTable, useTreePanel } from "../../composables";
-import { type Ref, ref, h } from "vue";
+import { type Ref, ref, h, onMounted } from "vue";
 
 export function useMailRecipient(treeRef: Ref) {
   const formRef = ref();
   const switchLoadMap = ref({});
   const { switchStyle } = usePublicHooks();
+  const enabledOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const {
     form,
@@ -235,6 +237,19 @@ export function useMailRecipient(treeRef: Ref) {
     });
   }
 
+  async function loadEnabledOptions() {
+    try {
+      const { data } = await getMailRecipientOptions();
+      enabledOptions.value = data?.enabledOptions ?? [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  onMounted(() => {
+    loadEnabledOptions();
+  });
+
   return {
     form,
     isShow,
@@ -250,6 +265,7 @@ export function useMailRecipient(treeRef: Ref) {
     isExpandAll,
     isSelectAll,
     treeSearchValue,
+    enabledOptions,
     onSearch,
     resetForm,
     openDialog,

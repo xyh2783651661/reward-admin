@@ -49,7 +49,7 @@ export const getPocketMoneyRuleOptions = () => {
   return http.request<
     ApiResult<{
       ruleTypeOptions: { label: string; value: string }[];
-      ruleKeys: string[];
+      ruleKeys: { label: string; value: string }[];
     }>
   >("get", "/api/reward-pocket-money-rules/options");
 };

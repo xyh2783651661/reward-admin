@@ -54,10 +54,10 @@ defineExpose({ getRef });
         clearable
       >
         <el-option
-          v-for="key in ruleKeyOptions"
-          :key="key"
-          :label="key"
-          :value="key"
+          v-for="opt in ruleKeyOptions"
+          :key="opt.value"
+          :label="opt.label"
+          :value="opt.value"
         />
       </el-select>
     </el-form-item>

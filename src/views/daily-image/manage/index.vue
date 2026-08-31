@@ -26,6 +26,7 @@ const {
   // 列表与查询
   form,
   keyword,
+  sourceOptions,
   loading,
   dataList,
   filteredList,
@@ -93,13 +94,6 @@ const {
   // URL helpers
   getDailyImageThumbnailUrl
 } = useDailyImage();
-
-const sourceOptions = [
-  { label: "全部来源", value: "" },
-  { label: "Unsplash", value: "unsplash" },
-  { label: "本地", value: "local" },
-  { label: "上传", value: "upload" }
-];
 
 const densityOptions = [
   { label: "大", value: "large" as const },
@@ -213,6 +207,7 @@ function uploadStatusLabel(status: string) {
           v-model="form.source"
           class="toolbar__source"
           placeholder="全部来源"
+          clearable
           aria-label="按来源筛选"
           @change="handleSourceChange"
         >

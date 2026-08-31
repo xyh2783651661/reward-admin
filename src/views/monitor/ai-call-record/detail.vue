@@ -157,24 +157,41 @@ async function copyText(value: string, label: string) {
   message(`${label}复制失败`, { type: "error" });
 }
 
-const detailRecord = computed<AiCallRecordDetail>(() => ({
-  id: Number(props.record?.id ?? 0),
-  bizType: String(props.record?.bizType ?? ""),
-  bizId: String(props.record?.bizId ?? ""),
-  model: String(props.record?.model ?? ""),
-  templateName: String(props.record?.templateName ?? ""),
-  prompt: normalizeContent(props.record?.prompt),
-  response: normalizeContent(props.record?.response),
-  costTimeMs: Number(props.record?.costTimeMs ?? 0),
-  promptTokens: Number(props.record?.promptTokens ?? 0),
-  responseTokens: Number(props.record?.responseTokens ?? 0),
-  status: String(props.record?.status ?? ""),
-  errorMessage: normalizeContent(props.record?.errorMessage),
-  operator: String(props.record?.operator ?? ""),
-  traceId: String(props.record?.traceId ?? ""),
-  createdTime: String(props.record?.createdTime ?? ""),
-  updatedTime: String(props.record?.updatedTime ?? "")
-}));
+const detailRecord = computed<AiCallRecordDetail>(() => {
+  // 后端 detail 接口返回 provider（list 接口返回 model 为兼容别名）；统一取 provider，回退 model
+  const rawProvider = String(
+    props.record?.provider ?? props.record?.model ?? ""
+  );
+
+  return {
+    id: Number(props.record?.id ?? 0),
+    bizType: String(props.record?.bizType ?? ""),
+    bizId: String(props.record?.bizId ?? ""),
+    model: rawProvider,
+    provider: rawProvider,
+    templateName: String(props.record?.templateName ?? ""),
+    prompt: normalizeContent(props.record?.prompt),
+    response: normalizeContent(props.record?.response),
+    costTimeMs: Number(props.record?.costTimeMs ?? 0),
+    promptTokens: Number(props.record?.promptTokens ?? 0),
+    responseTokens: Number(props.record?.responseTokens ?? 0),
+    totalTokens: Number(props.record?.totalTokens ?? 0),
+    finishReason: normalizeContent(props.record?.finishReason),
+    status: String(props.record?.status ?? ""),
+    errorMessage: normalizeContent(props.record?.errorMessage),
+    operator: String(props.record?.operator ?? ""),
+    traceId: String(props.record?.traceId ?? ""),
+    remoteModel: normalizeContent(props.record?.remoteModel),
+    streamMode: Number(props.record?.streamMode ?? 0),
+    maxTokens: Number(props.record?.maxTokens ?? 0),
+    retryCount: Number(props.record?.retryCount ?? 0),
+    fallbackTried: normalizeContent(props.record?.fallbackTried),
+    exceptionClass: normalizeContent(props.record?.exceptionClass),
+    stackTrace: normalizeContent(props.record?.stackTrace),
+    createdTime: String(props.record?.createdTime ?? ""),
+    updatedTime: String(props.record?.updatedTime ?? "")
+  };
+});
 
 const summaryItems = computed(() => {
   const item = detailRecord.value;
@@ -199,11 +216,31 @@ const summaryItems = computed(() => {
     },
     {
       label: "总 Tokens",
-      value: `${(item.promptTokens || 0) + (item.responseTokens || 0)}`
+      value: `${
+        item.totalTokens != null
+          ? item.totalTokens
+          : item.promptTokens + item.responseTokens || 0
+      }`
     },
     {
       label: "调用模型",
-      value: item.model || "-"
+      value: item.provider || "-"
+    },
+    {
+      label: "实际模型",
+      value: item.remoteModel || "-"
+    },
+    {
+      label: "结束原因",
+      value: item.finishReason || "-"
+    },
+    {
+      label: "调用模式",
+      value: item.streamMode === 1 ? "流式" : "同步"
+    },
+    {
+      label: "重试次数",
+      value: `${item.retryCount || 0}`
     }
   ];
 });
@@ -224,7 +261,11 @@ const descriptionColumns = [
   },
   {
     label: "调用模型",
-    prop: "model"
+    prop: "provider"
+  },
+  {
+    label: "实际模型",
+    prop: "remoteModel"
   },
   {
     label: "模板名称",
@@ -234,6 +275,35 @@ const descriptionColumns = [
   {
     label: "调用状态",
     prop: "status"
+  },
+  {
+    label: "调用模式",
+    prop: "streamMode",
+    formatter: ({ streamMode }) => (streamMode === 1 ? "流式(1)" : "同步(0)")
+  },
+  {
+    label: "总 Tokens",
+    prop: "totalTokens"
+  },
+  {
+    label: "结束原因",
+    prop: "finishReason"
+  },
+  {
+    label: "max_tokens",
+    prop: "maxTokens"
+  },
+  {
+    label: "重试次数",
+    prop: "retryCount"
+  },
+  {
+    label: "故障转移供应商",
+    prop: "fallbackTried"
+  },
+  {
+    label: "异常类",
+    prop: "exceptionClass"
   },
   {
     label: "操作人",
@@ -276,6 +346,12 @@ const contentTabs = computed(() => {
   if (item.errorMessage.trim()) {
     tabs.unshift(
       createContentTab("error", "失败原因", item.errorMessage, "暂无错误信息")
+    );
+  }
+
+  if (item.stackTrace.trim()) {
+    tabs.unshift(
+      createContentTab("stack", "异常堆栈", item.stackTrace, "暂无堆栈信息")
     );
   }
 
