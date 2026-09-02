@@ -12,22 +12,16 @@ import {
   batchDownloadDailyImages,
   getBatchDownloadLinks,
   updateDailyImageRemark,
+  regenerateDailyImageVision,
   getDailyImageThumbnailUrl,
   getDailyImagePreviewUrl,
   getDailyImageDownloadUrl,
   getDailyImageOptions
 } from "@/api/daily-image";
+import type { DailyImage } from "@/api/daily-image";
 import type { PaginationProps } from "@pureadmin/table";
 
-export type DailyImageItem = {
-  id: number;
-  originalName?: string;
-  source?: string;
-  fileSize?: number;
-  extension?: string;
-  remark?: string;
-  [key: string]: any;
-};
+export type DailyImageItem = DailyImage;
 
 export type UploadTask = {
   uid: number;
@@ -212,7 +206,7 @@ export function useDailyImage() {
   const drawerVisible = ref(false);
   const drawerLoading = ref(false);
   const drawerItem = ref<DailyImageItem | null>(null);
-  const drawerDetail = ref<Record<string, any> | null>(null);
+  const drawerDetail = ref<DailyImage | null>(null);
   /** 抽屉当前图片在 filteredList 中的索引 */
   const drawerIndex = computed(() => {
     if (!drawerItem.value) return -1;
@@ -327,6 +321,29 @@ export function useDailyImage() {
       message("更新失败", { type: "error" });
     } finally {
       remarkSaving.value = false;
+    }
+  }
+
+  // ========== 视觉描述重跑（详情抽屉 D 组） ==========
+  const visionRegenerating = ref(false);
+
+  async function regenerateVision() {
+    if (!drawerItem.value) return;
+    visionRegenerating.value = true;
+    try {
+      const result = await regenerateDailyImageVision(drawerItem.value.id);
+      if (result.code === 200) {
+        message("已重置为待生成，下次视觉任务运行时将自动重跑", {
+          type: "success"
+        });
+        loadDetail(drawerItem.value.id);
+      } else {
+        message(result.msg || "操作失败", { type: "error" });
+      }
+    } catch {
+      message("操作失败", { type: "error" });
+    } finally {
+      visionRegenerating.value = false;
     }
   }
 
@@ -674,6 +691,9 @@ export function useDailyImage() {
     remarkDraft,
     remarkSaving,
     saveRemark,
+    // 视觉描述重跑
+    visionRegenerating,
+    regenerateVision,
     // 上传
     fileInputRef,
     uploadTasks,

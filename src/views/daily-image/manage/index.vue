@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useDailyImage } from "./hook";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import { message } from "@/utils/message";
 
 import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
@@ -67,6 +68,9 @@ const {
   remarkDraft,
   remarkSaving,
   saveRemark,
+  // 视觉描述重跑
+  visionRegenerating,
+  regenerateVision,
   // 上传
   fileInputRef,
   uploadTasks,
@@ -110,40 +114,156 @@ const gridStyle = computed(() => {
   return { "--card-min": map[density.value] };
 });
 
-/** 详情字段展示配置（存在才渲染） */
-const detailFieldLabels: Array<{ key: string; label: string }> = [
-  { key: "id", label: "ID" },
-  { key: "originalName", label: "文件名" },
-  { key: "storedName", label: "存储名" },
-  { key: "extension", label: "格式" },
-  { key: "fileSize", label: "大小" },
-  { key: "source", label: "来源" },
-  { key: "createTime", label: "创建时间" },
-  { key: "updateTime", label: "更新时间" }
-];
+/** 详情展示数据源：优先用详情接口数据，加载中/失败时回退到列表项（列表接口同样返回完整实体） */
+const detail = computed(() => drawerDetail.value ?? drawerItem.value);
 
-const detailRows = computed(() => {
-  const detail = drawerDetail.value;
-  if (!detail) return [];
-  return detailFieldLabels
-    .filter(
-      f =>
-        detail[f.key] !== undefined &&
-        detail[f.key] !== null &&
-        detail[f.key] !== ""
-    )
-    .map(f => ({
-      label: f.label,
-      value:
-        f.key === "fileSize"
-          ? formatFileSize(detail[f.key])
-          : f.key === "source"
-            ? getSourceLabel(detail[f.key])
-            : f.key === "extension"
-              ? String(detail[f.key]).toUpperCase()
-              : String(detail[f.key])
-    }));
+/** 非空判断（用于字段行显隐） */
+function hasVal(v: unknown) {
+  return v !== undefined && v !== null && v !== "";
+}
+
+/** 非空对象判断（用于 extraJson / visionDescriptions 等 Map 字段） */
+function hasObj(v: unknown) {
+  return (
+    v !== undefined &&
+    v !== null &&
+    typeof v === "object" &&
+    Object.keys(v as object).length > 0
+  );
+}
+
+/** 各分组是否包含有效字段（整组无有效字段时隐藏标题） */
+const groupFlags = computed(() => {
+  const d = detail.value;
+  if (!d) return { A: false, B: false, C: false, D: false, E: false, F: false };
+  return {
+    A: [d.id, d.originalName, d.extension, d.fileSize, d.source].some(hasVal),
+    B: [
+      d.width,
+      d.height,
+      d.orientation,
+      d.mimeType,
+      d.dominantColor,
+      d.fileHash,
+      d.storageName
+    ].some(hasVal),
+    C: [
+      d.authorName,
+      d.authorUrl,
+      d.license,
+      d.sourcePageUrl,
+      d.sourceId,
+      d.sourceUrl
+    ].some(hasVal),
+    D:
+      hasVal(d.visionStatus) ||
+      hasObj(d.visionDescriptions) ||
+      hasVal(d.visionGeneratedTime),
+    E: [
+      d.imageDate,
+      d.theme,
+      d.queryKeyword,
+      d.batchId,
+      d.downloadedTime,
+      d.downloadCostMs
+    ].some(hasVal),
+    F:
+      [
+        d.createdTime,
+        d.updatedTime,
+        d.createdBy,
+        d.updatedBy,
+        d.storagePath,
+        d.thumbnailPath
+      ].some(hasVal) || hasObj(d.extraJson)
+  };
 });
+
+/** 折叠面板默认展开 A/B/C/D，E/F 折叠 */
+const activeGroups = ref(["A", "B", "C", "D"]);
+
+/** 视觉描述元数据 key（与语言描述区分） */
+const VISION_META_KEYS = ["model", "template", "cost_ms", "errors"];
+
+/** 从 visionDescriptions 提取语言描述列表 */
+function getVisionLanguages(vd?: Record<string, any> | null) {
+  if (!vd) return [];
+  return Object.entries(vd)
+    .filter(
+      ([k, v]) => !VISION_META_KEYS.includes(k) && typeof v === "string" && v
+    )
+    .map(([lang, text]) => ({ lang, text }));
+}
+
+/** 从 visionDescriptions 提取元数据（model / cost_ms） */
+function getVisionMeta(vd?: Record<string, any> | null) {
+  if (!vd) return null;
+  const meta: Record<string, any> = {};
+  if (vd.model !== undefined) meta.model = vd.model;
+  if (vd.cost_ms !== undefined) meta.cost_ms = vd.cost_ms;
+  return Object.keys(meta).length ? meta : null;
+}
+
+/** 从 visionDescriptions 提取错误信息 */
+function getVisionErrors(vd?: Record<string, any> | null) {
+  if (!vd) return [];
+  const errors = vd.errors;
+  if (Array.isArray(errors)) return errors.map(String);
+  if (typeof errors === "string" && errors) return [errors];
+  return [];
+}
+
+const LANG_LABELS: Record<string, string> = {
+  en: "English",
+  zh: "中文",
+  ja: "日本語",
+  ko: "한국어",
+  fr: "Français",
+  de: "Deutsch",
+  es: "Español"
+};
+
+function langLabel(lang: string) {
+  return LANG_LABELS[lang] || lang.toUpperCase();
+}
+
+/** 时间格式化：后端 LocalDateTime 序列化为 ISO 字符串 */
+function formatDateTime(v?: string | null) {
+  if (!v) return "";
+  return String(v)
+    .replace("T", " ")
+    .replace(/\.\d+$/, "")
+    .slice(0, 19);
+}
+
+function orientationLabel(v?: string | null) {
+  const map: Record<string, string> = {
+    landscape: "横向",
+    portrait: "竖向",
+    square: "方形"
+  };
+  return v ? map[v] || v : "";
+}
+
+function visionStatusLabel(v?: number | null) {
+  const map: Record<number, string> = { 0: "未生成", 1: "已生成", 2: "失败" };
+  return v !== undefined && v !== null ? map[v] || String(v) : "未生成";
+}
+
+function visionStatusType(v?: number | null) {
+  const map: Record<number, string> = { 0: "info", 1: "success", 2: "danger" };
+  return v !== undefined && v !== null ? map[v] || "info" : "info";
+}
+
+/** 复制文本（用于 MD5 等） */
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    message("已复制", { type: "success" });
+  } catch {
+    message("复制失败", { type: "error" });
+  }
+}
 
 function handleDownloadCommand(command: string | number | object) {
   const action = String(command);
@@ -164,8 +284,11 @@ function formatFileSize(bytes?: number) {
 function getSourceType(type?: string) {
   const map: Record<string, string> = {
     unsplash: "info",
+    pexels: "success",
+    pixabay: "success",
     local: "warning",
-    upload: "success"
+    upload: "success",
+    sync: "info"
   };
   return type ? map[type] || "info" : "info";
 }
@@ -173,8 +296,11 @@ function getSourceType(type?: string) {
 function getSourceLabel(type?: string) {
   const map: Record<string, string> = {
     unsplash: "Unsplash",
+    pexels: "Pexels",
+    pixabay: "Pixabay",
     local: "本地",
-    upload: "上传"
+    upload: "上传",
+    sync: "同步"
   };
   return type ? map[type] || type : "未知";
 }
@@ -397,12 +523,30 @@ function uploadStatusLabel(status: string) {
 
           <!-- 底部信息 -->
           <div class="image-card__footer">
-            <span class="image-card__name">
-              {{ item.originalName || `图片 #${item.id}` }}
-            </span>
-            <span class="image-card__size">
-              {{ formatFileSize(item.fileSize) }}
-            </span>
+            <div class="image-card__footer-top">
+              <span class="image-card__name">
+                {{ item.originalName || `图片 #${item.id}` }}
+              </span>
+              <span class="image-card__size">
+                {{ formatFileSize(item.fileSize) }}
+              </span>
+            </div>
+            <div
+              v-if="
+                hasVal(item.extension) ||
+                (hasVal(item.width) && hasVal(item.height)) ||
+                hasVal(item.theme)
+              "
+              class="image-card__meta"
+            >
+              <span v-if="hasVal(item.extension)">
+                {{ String(item.extension).toUpperCase() }}
+              </span>
+              <span v-if="hasVal(item.width) && hasVal(item.height)">
+                {{ item.width }}×{{ item.height }}
+              </span>
+              <span v-if="hasVal(item.theme)">{{ item.theme }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -426,7 +570,7 @@ function uploadStatusLabel(status: string) {
     <el-drawer
       v-model="drawerVisible"
       :title="drawerItem?.originalName || '图片详情'"
-      size="420px"
+      size="600px"
       :destroy-on-close="false"
       @close="closeDrawer"
     >
@@ -464,25 +608,316 @@ function uploadStatusLabel(status: string) {
           </el-button>
         </div>
 
-        <!-- 元信息 -->
+        <!-- 分组信息 -->
         <div class="drawer-body__section">
-          <h4 class="drawer-body__section-title">图片信息</h4>
-          <dl class="drawer-body__fields">
-            <template v-for="row in detailRows" :key="row.label">
-              <dt>{{ row.label }}</dt>
-              <dd>
-                <el-tag
-                  v-if="row.label === '来源'"
-                  :type="getSourceType(drawerItem.source) as any"
-                  size="small"
-                  effect="plain"
+          <el-collapse v-model="activeGroups" class="drawer-body__collapse">
+            <!-- A 基本信息 -->
+            <el-collapse-item v-if="groupFlags.A" title="基本信息" name="A">
+              <dl class="drawer-body__fields">
+                <template v-if="hasVal(detail?.id)">
+                  <dt>ID</dt>
+                  <dd>{{ detail?.id }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.originalName)">
+                  <dt>文件名</dt>
+                  <dd
+                    class="drawer-body__ellipsis"
+                    :title="detail?.originalName"
+                  >
+                    {{ detail?.originalName }}
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.extension)">
+                  <dt>格式</dt>
+                  <dd>
+                    <el-tag size="small" effect="plain">
+                      {{ String(detail?.extension).toUpperCase() }}
+                    </el-tag>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.fileSize)">
+                  <dt>大小</dt>
+                  <dd>{{ formatFileSize(detail?.fileSize) }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.source)">
+                  <dt>来源</dt>
+                  <dd>
+                    <el-tag
+                      :type="getSourceType(detail?.source) as any"
+                      size="small"
+                      effect="plain"
+                    >
+                      {{ getSourceLabel(detail?.source) }}
+                    </el-tag>
+                  </dd>
+                </template>
+              </dl>
+            </el-collapse-item>
+
+            <!-- B 图片属性 -->
+            <el-collapse-item v-if="groupFlags.B" title="图片属性" name="B">
+              <dl class="drawer-body__fields">
+                <template
+                  v-if="hasVal(detail?.width) && hasVal(detail?.height)"
                 >
-                  {{ row.value }}
-                </el-tag>
-                <template v-else>{{ row.value }}</template>
-              </dd>
-            </template>
-          </dl>
+                  <dt>尺寸</dt>
+                  <dd>
+                    {{ detail?.width }} × {{ detail?.height }}
+                    <el-tag
+                      v-if="hasVal(detail?.orientation)"
+                      size="small"
+                      type="info"
+                      effect="plain"
+                      class="ml-1"
+                    >
+                      {{ orientationLabel(detail?.orientation) }}
+                    </el-tag>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.mimeType)">
+                  <dt>MIME</dt>
+                  <dd>{{ detail?.mimeType }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.dominantColor)">
+                  <dt>主色调</dt>
+                  <dd class="drawer-body__color">
+                    <span
+                      class="drawer-body__color-swatch"
+                      :style="{ background: detail?.dominantColor }"
+                    />
+                    <span>{{ detail?.dominantColor }}</span>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.fileHash)">
+                  <dt>MD5</dt>
+                  <dd class="drawer-body__copy">
+                    <span class="drawer-body__mono">
+                      {{ detail?.fileHash }}
+                    </span>
+                    <el-button
+                      text
+                      size="small"
+                      aria-label="复制 MD5"
+                      @click="copyText(detail?.fileHash || '')"
+                    >
+                      复制
+                    </el-button>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.storageName)">
+                  <dt>存储名</dt>
+                  <dd class="drawer-body__mono">{{ detail?.storageName }}</dd>
+                </template>
+              </dl>
+            </el-collapse-item>
+
+            <!-- C 版权与来源 -->
+            <el-collapse-item v-if="groupFlags.C" title="版权与来源" name="C">
+              <dl class="drawer-body__fields">
+                <template v-if="hasVal(detail?.authorName)">
+                  <dt>作者</dt>
+                  <dd>
+                    <a
+                      v-if="hasVal(detail?.authorUrl)"
+                      :href="detail?.authorUrl"
+                      target="_blank"
+                      rel="noopener"
+                      class="drawer-body__link"
+                    >
+                      {{ detail?.authorName }}
+                    </a>
+                    <template v-else>{{ detail?.authorName }}</template>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.license)">
+                  <dt>授权</dt>
+                  <dd>
+                    <el-tag size="small" type="info" effect="plain">
+                      {{ detail?.license }}
+                    </el-tag>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.sourcePageUrl)">
+                  <dt>来源页</dt>
+                  <dd>
+                    <a
+                      :href="detail?.sourcePageUrl"
+                      target="_blank"
+                      rel="noopener"
+                      class="drawer-body__link"
+                    >
+                      查看来源页
+                    </a>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.sourceId)">
+                  <dt>来源 ID</dt>
+                  <dd class="drawer-body__mono">{{ detail?.sourceId }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.sourceUrl)">
+                  <dt>原始 URL</dt>
+                  <dd>
+                    <a
+                      :href="detail?.sourceUrl"
+                      target="_blank"
+                      rel="noopener"
+                      class="drawer-body__link"
+                    >
+                      打开
+                    </a>
+                  </dd>
+                </template>
+              </dl>
+            </el-collapse-item>
+
+            <!-- D 视觉描述 -->
+            <el-collapse-item v-if="groupFlags.D" title="视觉描述" name="D">
+              <div class="drawer-body__vision">
+                <div class="drawer-body__vision-head">
+                  <el-tag
+                    :type="visionStatusType(detail?.visionStatus) as any"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ visionStatusLabel(detail?.visionStatus) }}
+                  </el-tag>
+                  <el-button
+                    v-if="detail?.visionStatus === 2"
+                    size="small"
+                    type="warning"
+                    :loading="visionRegenerating"
+                    @click="regenerateVision"
+                  >
+                    重跑
+                  </el-button>
+                </div>
+
+                <div
+                  v-for="item in getVisionLanguages(detail?.visionDescriptions)"
+                  :key="item.lang"
+                  class="drawer-body__vision-card"
+                >
+                  <span class="drawer-body__vision-lang">
+                    {{ langLabel(item.lang) }}
+                  </span>
+                  <p class="drawer-body__vision-text">{{ item.text }}</p>
+                </div>
+
+                <div
+                  v-if="getVisionMeta(detail?.visionDescriptions)"
+                  class="drawer-body__vision-meta"
+                >
+                  <span v-if="detail?.visionDescriptions?.model">
+                    模型：{{ detail?.visionDescriptions?.model }}
+                  </span>
+                  <span
+                    v-if="detail?.visionDescriptions?.cost_ms !== undefined"
+                  >
+                    耗时：{{ detail?.visionDescriptions?.cost_ms }} ms
+                  </span>
+                </div>
+
+                <div
+                  v-if="getVisionErrors(detail?.visionDescriptions).length"
+                  class="drawer-body__vision-errors"
+                >
+                  <el-icon><WarningFilled /></el-icon>
+                  <span>
+                    {{ getVisionErrors(detail?.visionDescriptions).join("；") }}
+                  </span>
+                </div>
+
+                <div
+                  v-if="hasVal(detail?.visionGeneratedTime)"
+                  class="drawer-body__vision-time"
+                >
+                  生成时间：{{ formatDateTime(detail?.visionGeneratedTime) }}
+                </div>
+              </div>
+            </el-collapse-item>
+
+            <!-- E 采集信息 -->
+            <el-collapse-item v-if="groupFlags.E" title="采集信息" name="E">
+              <dl class="drawer-body__fields">
+                <template v-if="hasVal(detail?.imageDate)">
+                  <dt>业务日期</dt>
+                  <dd>{{ detail?.imageDate }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.theme)">
+                  <dt>主题词</dt>
+                  <dd>
+                    <el-tag size="small" effect="plain">
+                      {{ detail?.theme }}
+                    </el-tag>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.queryKeyword)">
+                  <dt>搜索词</dt>
+                  <dd>{{ detail?.queryKeyword }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.batchId)">
+                  <dt>批次</dt>
+                  <dd class="drawer-body__mono">{{ detail?.batchId }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.downloadedTime)">
+                  <dt>下载完成</dt>
+                  <dd>{{ formatDateTime(detail?.downloadedTime) }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.downloadCostMs)">
+                  <dt>下载耗时</dt>
+                  <dd>{{ detail?.downloadCostMs }} ms</dd>
+                </template>
+              </dl>
+            </el-collapse-item>
+
+            <!-- F 存储与审计 -->
+            <el-collapse-item v-if="groupFlags.F" title="存储与审计" name="F">
+              <dl class="drawer-body__fields">
+                <template v-if="hasVal(detail?.createdTime)">
+                  <dt>创建时间</dt>
+                  <dd>{{ formatDateTime(detail?.createdTime) }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.updatedTime)">
+                  <dt>更新时间</dt>
+                  <dd>{{ formatDateTime(detail?.updatedTime) }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.createdBy)">
+                  <dt>创建人</dt>
+                  <dd>{{ detail?.createdBy }}</dd>
+                </template>
+                <template v-if="hasVal(detail?.updatedBy)">
+                  <dt>更新人</dt>
+                  <dd>{{ detail?.updatedBy }}</dd>
+                </template>
+                <template v-if="hasObj(detail?.extraJson)">
+                  <dt>扩展信息</dt>
+                  <dd>
+                    <pre class="drawer-body__json">{{
+                      JSON.stringify(detail?.extraJson, null, 2)
+                    }}</pre>
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.storagePath)">
+                  <dt>存储路径</dt>
+                  <dd
+                    class="drawer-body__mono drawer-body__ellipsis"
+                    :title="detail?.storagePath"
+                  >
+                    {{ detail?.storagePath }}
+                  </dd>
+                </template>
+                <template v-if="hasVal(detail?.thumbnailPath)">
+                  <dt>缩略图路径</dt>
+                  <dd
+                    class="drawer-body__mono drawer-body__ellipsis"
+                    :title="detail?.thumbnailPath"
+                  >
+                    {{ detail?.thumbnailPath }}
+                  </dd>
+                </template>
+              </dl>
+            </el-collapse-item>
+          </el-collapse>
         </div>
 
         <!-- 备注编辑 -->
@@ -1038,10 +1473,32 @@ function uploadStatusLabel(status: string) {
 
 .image-card__footer {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.image-card__footer-top {
+  display: flex;
   gap: 8px;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  min-width: 0;
+}
+
+.image-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.image-card__meta > span:not(:last-child)::after {
+  margin-left: 6px;
+  color: var(--el-text-color-placeholder);
+  content: "·";
 }
 
 .image-card__name {
@@ -1151,6 +1608,142 @@ function uploadStatusLabel(status: string) {
     color: var(--el-text-color-primary);
     overflow-wrap: break-word;
   }
+}
+
+/* 折叠分组 */
+.drawer-body__collapse {
+  border-top: none;
+  border-bottom: none;
+
+  :deep(.el-collapse-item__header) {
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+  }
+
+  :deep(.el-collapse-item__wrap) {
+    border-bottom: none;
+  }
+
+  :deep(.el-collapse-item__content) {
+    padding-bottom: 4px;
+  }
+}
+
+/* 通用字段辅助 */
+.drawer-body__ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer-body__mono {
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.drawer-body__color {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.drawer-body__color-swatch {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+}
+
+.drawer-body__copy {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .drawer-body__mono {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.drawer-body__link {
+  color: var(--el-color-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.drawer-body__json {
+  max-height: 200px;
+  padding: 8px;
+  margin: 0;
+  overflow: auto;
+  font-size: 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
+}
+
+/* 视觉描述 */
+.drawer-body__vision {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.drawer-body__vision-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.drawer-body__vision-card {
+  padding: 10px 12px;
+  background: var(--el-fill-color-extra-light);
+  border-radius: 8px;
+}
+
+.drawer-body__vision-lang {
+  display: inline-block;
+  padding: 1px 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-radius: 10px;
+}
+
+.drawer-body__vision-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-primary);
+}
+
+.drawer-body__vision-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.drawer-body__vision-errors {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--el-color-danger);
+  background: var(--el-color-danger-light-9);
+  border-radius: 6px;
+}
+
+.drawer-body__vision-time {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .drawer-body__actions {
