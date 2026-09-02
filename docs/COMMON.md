@@ -162,6 +162,39 @@ yyyy-MM-dd HH:mm:ss
 <img src="/media/1/thumbnail" alt="缩略图" />
 ```
 
+## 下载与导出（前端统一约定）
+
+所有下载、导出场景统一走 `reward-admin` 的 `useDownload`，**禁止**在页面里各自手写 `createObjectURL` + `a.click()`。
+
+| 层                         | 职责                                                        |
+| -------------------------- | ----------------------------------------------------------- |
+| `src/hooks/useDownload.ts` | 交互层：loading、按钮幂等、最小 loading 时长、成功/失败提示 |
+| `src/utils/download.ts`    | 传输层：Blob 归一化、错误响应识别、落盘                     |
+
+它统一解决三件事：
+
+1. **loading 状态**：请求期间按钮进入 loading；
+2. **按钮幂等**：loading 期间再次点击直接丢弃，避免重复下发导出请求；
+3. **最小 loading 时长**（默认 `400ms`）：请求若几十毫秒就返回，按钮闪一下即恢复，用户反而更不确定是否触发。强制最短停留时间可保证每次点击都有可感知反馈。
+
+标准接法：
+
+```ts
+const { loading: exportLoading, runExport } = useDownload();
+
+async function onExport() {
+  await runExport(() => exportCheckRecord(payload), `检测流水_${ts}.xlsx`);
+}
+```
+
+模板绑定 `<el-button :loading="exportLoading" @click="onExport">导出</el-button>`。
+
+`run` 用于不走单一 Blob 落盘的场景（如先拉链接列表再逐个触发）；失败提示想带上业务原因时抛 `DownloadError`，只有它会把 message 拼进提示文案。
+
+### 后端配合要点
+
+导出接口以 `responseType: "blob"` 请求。**后端报错时不要返回 200 + JSON 错误体**：此时 axios 会原样透传，前端若不识别就会把一段错误 JSON 存成 `.xlsx` 还提示成功。当前前端已做兜底识别（Blob 查 `Content-Type`，裸二进制嗅探首字节 `{`/`[`），但更推荐后端直接返回非 2xx 状态码。
+
 ## 文档索引
 
 完整文档入口见 [README.md](README.md)。

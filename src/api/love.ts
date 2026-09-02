@@ -25,11 +25,10 @@ export const getLoveRecordByDate = (params?: object) => {
 };
 
 /** 记录详情 */
-export const getLoveRecordDetail = (id: string | number) => {
-  return http.request<ApiResult<Record<string, any>>>(
-    "get",
-    `/api/records/${id}`
-  );
+export const getLoveRecordDetail = <T = Record<string, any>>(
+  id: string | number
+) => {
+  return http.request<ApiResult<T>>("get", `/api/records/${id}`);
 };
 
 /** 新增记录 */

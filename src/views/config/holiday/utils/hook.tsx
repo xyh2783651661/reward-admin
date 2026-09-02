@@ -432,7 +432,8 @@ export function useHolidayConfig() {
 
     try {
       const { data } = await getHolidayConfigPage<SysHolidayConfig>(
-        toRaw(form)
+        // status 为 "" 表示查询全部，序列化时需省略该字段以匹配接口类型
+        { ...toRaw(form), status: form.status === "" ? undefined : form.status }
       );
       dataList.value = data?.records ?? [];
       pagination.total = data?.total ?? 0;

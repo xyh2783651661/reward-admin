@@ -2,8 +2,8 @@ import { http } from "@/utils/http";
 import type { ApiResult, ApiPageResult } from "./types";
 
 /** 分页查询图片列表 */
-export const getDailyImagePage = (params?: object) => {
-  return http.request<ApiPageResult>("get", "/api/daily-images/page", {
+export const getDailyImagePage = <T = Record<string, any>>(params?: object) => {
+  return http.request<ApiPageResult<T>>("get", "/api/daily-images/page", {
     params
   });
 };

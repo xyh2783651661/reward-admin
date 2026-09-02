@@ -29,6 +29,7 @@ const {
   pagination,
   dropdownOptions,
   onSearch,
+  exportLoading,
   onExport,
   onResolve,
   onBatchResolve,
@@ -156,6 +157,7 @@ onMounted(() => {
         <el-button
           type="success"
           :icon="useRenderIcon('ep:download')"
+          :loading="exportLoading"
           @click="onExport"
         >
           导出

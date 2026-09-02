@@ -47,6 +47,7 @@ const {
   navigateDetail,
   rowClassName,
   onSearch,
+  exportLoading,
   onExport,
   resetForm,
   handleSizeChange,
@@ -224,6 +225,7 @@ onMounted(() => {
           type="success"
           :icon="useRenderIcon('ep:download')"
           plain
+          :loading="exportLoading"
           @click="onExport"
         >
           导出

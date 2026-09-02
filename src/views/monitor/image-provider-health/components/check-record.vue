@@ -26,6 +26,7 @@ const {
   pagination,
   dropdownOptions,
   onSearch,
+  exportLoading,
   onExport,
   resetForm,
   handleSizeChange,
@@ -136,6 +137,7 @@ onMounted(() => {
         <el-button
           type="success"
           :icon="useRenderIcon('ep:download')"
+          :loading="exportLoading"
           @click="onExport"
         >
           导出

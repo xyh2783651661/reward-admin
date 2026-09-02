@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { reactive, ref, computed, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
+import { useDownload } from "@/hooks/useDownload";
 import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
 import {
@@ -302,24 +303,17 @@ export function useAlertRecord(_tableRef?: Ref, initialProvider?: string) {
     }
   }
 
-  async function onExport() {
-    try {
-      const payload = buildRequest(toRaw(form));
-      delete payload.current;
-      delete payload.size;
+  const { loading: exportLoading, runExport } = useDownload();
 
-      const response: any = await exportAlertRecord(payload);
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `告警记录_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      message("导出成功", { type: "success" });
-    } catch (error) {
-      console.error("导出失败", error);
-      message("导出失败", { type: "error" });
-    }
+  async function onExport() {
+    const payload = buildRequest(toRaw(form));
+    delete payload.current;
+    delete payload.size;
+
+    await runExport(
+      () => exportAlertRecord(payload),
+      () => `告警记录_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`
+    );
   }
 
   function resetForm(formEl) {
@@ -355,6 +349,7 @@ export function useAlertRecord(_tableRef?: Ref, initialProvider?: string) {
     rowClassName,
     handleSelectionChange,
     onSearch,
+    exportLoading,
     onExport,
     onResolve,
     onBatchResolve,

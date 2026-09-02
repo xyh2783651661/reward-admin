@@ -27,7 +27,6 @@ const {
   filterOptions,
   onSearch,
   onDetail,
-  clearAll,
   resetForm,
   exportExcel,
   exportLoading,

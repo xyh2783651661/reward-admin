@@ -1,6 +1,7 @@
 ﻿import dayjs from "dayjs";
 import Detail from "./detail.vue";
 import { message } from "@/utils/message";
+import { useDownload } from "@/hooks/useDownload";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
@@ -38,7 +39,7 @@ export function useSystemLog(_tableRef: Ref) {
   });
   const dataList = ref([]);
   const loading = ref(true);
-  const exportLoading = ref(false);
+  const { loading: exportLoading, runExport } = useDownload();
   const { copied, update } = useCopyToClipboard();
   const { tagStyle } = usePublicHooks();
   const optionsLoading = ref(false);
@@ -224,33 +225,9 @@ export function useSystemLog(_tableRef: Ref) {
     onSearch();
   }
 
-  const exportExcel = async () => {
-    if (exportLoading.value) return;
-
-    exportLoading.value = true;
-    try {
-      const blob = await exportAccessLogsList(toRaw(form));
-
-      const fileName = "系统日志.xlsx";
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-
-      a.href = url;
-      a.download = fileName;
-      a.click();
-
-      window.URL.revokeObjectURL(url);
-    } catch (e) {
-      console.error("导出失败", e);
-      message("导出失败", {
-        type: "error"
-      });
-    } finally {
-      setTimeout(() => {
-        exportLoading.value = false;
-      }, 500);
-    }
-  };
+  function exportExcel() {
+    return runExport(() => exportAccessLogsList(toRaw(form)), "系统日志.xlsx");
+  }
 
   /** 双击快速复制请求接口或 TraceId */
   function handleCellDblclick(row, { property }) {

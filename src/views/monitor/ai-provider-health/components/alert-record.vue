@@ -48,6 +48,7 @@ const {
   rowClassName,
   handleSelectionChange,
   onSearch,
+  exportLoading,
   onExport,
   onResolve,
   onBatchResolve,
@@ -222,6 +223,7 @@ onMounted(() => {
           type="success"
           :icon="useRenderIcon('ep:download')"
           plain
+          :loading="exportLoading"
           @click="onExport"
         >
           导出

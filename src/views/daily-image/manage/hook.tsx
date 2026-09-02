@@ -1,5 +1,6 @@
-import { ref, reactive, computed, onMounted, onUnmounted, toRaw } from "vue";
+import { h, ref, reactive, computed, onMounted, onUnmounted, toRaw } from "vue";
 import { message } from "@/utils/message";
+import { DownloadError, useDownload } from "@/hooks/useDownload";
 import { ElMessageBox, ElNotification } from "element-plus";
 import { openImageViewer } from "@/components/ReImageViewer";
 import {
@@ -79,7 +80,7 @@ export function useDailyImage() {
     const seq = ++searchSeq;
     loading.value = true;
     try {
-      const { data } = await getDailyImagePage(toRaw(form));
+      const { data } = await getDailyImagePage<DailyImageItem>(toRaw(form));
       if (seq !== searchSeq) return;
       dataList.value = data?.records ?? [];
       selectedIds.value = selectedIds.value.filter(id =>
@@ -530,78 +531,81 @@ export function useDailyImage() {
   }
 
   // ========== 下载 ==========
-  const batchDownloadLoading = ref(false);
-  const isDownloading = ref(false);
+  const { loading: batchDownloadLoading, runExport: runBatchDownload } =
+    useDownload({
+      successText: "下载成功",
+      errorText: "批量下载失败"
+    });
+
+  // 逐个下载自带进度通知，不需要再叠加成功提示
+  const { loading: isDownloading, run: runBatchDownloadLinks } = useDownload({
+    successText: false,
+    errorText: "批量下载失败"
+  });
 
   function handleDownload(item: DailyImageItem) {
     window.open(getDailyImageDownloadUrl(item.id), "_blank");
   }
 
-  async function handleBatchDownload() {
+  function handleBatchDownload() {
     if (!hasSelection.value) {
       message("请先选择要下载的图片", { type: "warning" });
       return;
     }
-    batchDownloadLoading.value = true;
-    try {
-      const blob: any = await batchDownloadDailyImages(selectedIds.value);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "图片打包下载.zip";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      message("批量下载失败", { type: "error" });
-    } finally {
-      batchDownloadLoading.value = false;
-    }
+
+    return runBatchDownload(
+      () => batchDownloadDailyImages(selectedIds.value),
+      "图片打包下载.zip"
+    );
   }
 
-  async function handleBatchDownloadLinks() {
+  function handleBatchDownloadLinks() {
     if (!hasSelection.value) {
       message("请先选择要下载的图片", { type: "warning" });
       return;
     }
-    isDownloading.value = true;
-    try {
+
+    return runBatchDownloadLinks(async () => {
       const result = await getBatchDownloadLinks(selectedIds.value);
       if (result.code !== 200 || !result.data?.length) {
-        message(result.msg || "获取下载链接失败", { type: "error" });
-        return;
+        throw new DownloadError(result.msg || "获取下载链接失败");
       }
       const links = result.data;
       const total = links.length;
+      // message 传函数时 Element Plus 会将其作为默认插槽渲染，因而具备响应式，
+      // 进度才能真正自增；直接改写 notify.message 是无效的
+      const progressText = ref(`0/${total}`);
       const notify = ElNotification({
         title: "正在下载",
-        message: `0/${total}`,
+        message: () => h("span", progressText.value),
         type: "info",
         duration: 0
       });
-      for (let i = 0; i < links.length; i++) {
-        const item = links[i];
-        const a = document.createElement("a");
-        a.href = item.url.startsWith("/api")
-          ? item.url
-          : `/api${item.url.startsWith("/") ? "" : "/"}${item.url}`;
-        a.download = item.name;
-        a.click();
-        notify.message = `${i + 1}/${total}`;
-        if (i < links.length - 1) {
-          await new Promise(r => setTimeout(r, 300));
+      try {
+        for (let i = 0; i < links.length; i++) {
+          const item = links[i];
+          const a = document.createElement("a");
+          a.href = item.url.startsWith("/api")
+            ? item.url
+            : `/api${item.url.startsWith("/") ? "" : "/"}${item.url}`;
+          a.download = item.name;
+          a.click();
+          progressText.value = `${i + 1}/${total}`;
+          if (i < links.length - 1) {
+            await new Promise(r => setTimeout(r, 300));
+          }
         }
+      } finally {
+        // 中途失败也要收起进度通知，避免常驻不消失
+        notify.close();
       }
-      notify.close();
+
       ElNotification({
         title: "下载完成",
         message: `共 ${total} 个文件`,
         type: "success"
       });
-    } catch {
-      message("批量下载失败", { type: "error" });
-    } finally {
-      isDownloading.value = false;
-    }
+    });
   }
 
   async function loadSourceOptions() {

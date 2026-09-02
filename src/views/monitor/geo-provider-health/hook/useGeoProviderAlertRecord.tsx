@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
+import { useDownload } from "@/hooks/useDownload";
 import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
 import {
@@ -317,24 +318,17 @@ export function useGeoProviderAlertRecord(
     }
   }
 
-  async function onExport() {
-    try {
-      const payload = buildRequest(toRaw(form));
-      delete (payload as any).current;
-      delete (payload as any).size;
+  const { loading: exportLoading, runExport } = useDownload();
 
-      const response: any = await exportGeoProviderAlertRecord(payload);
-      const url = window.URL.createObjectURL(new Blob([response]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `地理来源告警_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`;
-      link.click();
-      window.URL.revokeObjectURL(url);
-      message("导出成功", { type: "success" });
-    } catch (error) {
-      console.error("导出失败", error);
-      message("导出失败", { type: "error" });
-    }
+  async function onExport() {
+    const payload = buildRequest(toRaw(form));
+    delete (payload as any).current;
+    delete (payload as any).size;
+
+    await runExport(
+      () => exportGeoProviderAlertRecord(payload),
+      () => `地理来源告警_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`
+    );
   }
 
   function resetForm(formEl: any) {
@@ -357,6 +351,7 @@ export function useGeoProviderAlertRecord(
     pagination,
     dropdownOptions,
     onSearch,
+    exportLoading,
     onExport,
     onResolve,
     onBatchResolve,

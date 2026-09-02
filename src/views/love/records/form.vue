@@ -11,7 +11,7 @@ import {
 import { ReImageViewer } from "@/components/ReImageViewer";
 import { message } from "@/utils/message";
 import { ElMessageBox } from "element-plus";
-import type { UploadFile } from "element-plus";
+import type { UploadRawFile } from "element-plus";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
@@ -57,12 +57,10 @@ function getMediaThumbUrl(item: any) {
 }
 
 // 上传图片
-async function handleUpload(file: UploadFile) {
-  if (!file.raw) return;
-
+async function handleUpload(file: UploadRawFile) {
   uploadLoading.value = true;
   try {
-    const result = await uploadMedia([file.raw]);
+    const result = await uploadMedia([file]);
     if (result.code === 200 && result.data?.length) {
       const newMedia = result.data[0];
       mediaList.value.push({ ...newMedia, isNew: true });

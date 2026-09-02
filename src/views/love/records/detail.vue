@@ -74,7 +74,7 @@ async function loadDetail() {
 
   loading.value = true;
   try {
-    const { data } = await getLoveRecordDetail(props.id);
+    const { data } = await getLoveRecordDetail<RecordDetail>(props.id);
     detail.value = data;
   } catch (error) {
     console.error("加载详情失败:", error);
@@ -206,23 +206,23 @@ function handleClose() {
   }
 
   .section-title {
+    padding-left: 10px;
     margin: 0 0 12px;
     font-size: 16px;
     font-weight: 600;
     color: var(--el-text-color-primary);
     border-left: 3px solid var(--el-color-primary);
-    padding-left: 10px;
   }
 }
 
 .content-text {
   padding: 16px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 8px;
   line-height: 1.8;
   color: var(--el-text-color-regular);
-  white-space: pre-wrap;
   word-break: break-word;
+  white-space: pre-wrap;
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
 }
 
 .media-grid {
@@ -233,9 +233,9 @@ function handleClose() {
   .media-item {
     width: 100%;
     height: 150px;
-    border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
+    border-radius: 8px;
     transition: transform 0.3s;
 
     &:hover {
