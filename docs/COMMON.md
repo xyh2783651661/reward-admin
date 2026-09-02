@@ -195,6 +195,34 @@ async function onExport() {
 
 导出接口以 `responseType: "blob"` 请求。**后端报错时不要返回 200 + JSON 错误体**：此时 axios 会原样透传，前端若不识别就会把一段错误 JSON 存成 `.xlsx` 还提示成功。当前前端已做兜底识别（Blob 查 `Content-Type`，裸二进制嗅探首字节 `{`/`[`），但更推荐后端直接返回非 2xx 状态码。
 
+## 搜索表单 Enter 触发（前端统一约定）
+
+搜索表单的回车触发统一走全局指令 `v-search-enter`，**禁止**在单个 `el-input` 上手写 `@keyup.enter`（存在中文输入法确认上屏误触发问题，指令内已做 `isComposing` 守卫）。
+
+- 指令位置：`src/directives/searchEnter/index.ts`，已全局注册，无需 import
+- 绑定在搜索表单根元素上，一行接入：
+
+```html
+<el-form
+  v-search-enter="onSearch"
+  :inline="true"
+  :model="form"
+  class="search-form"
+></el-form>
+```
+
+指令内部统一处理的边界（业务无需关心）：
+
+| 场景                                           | 行为                         |
+| ---------------------------------------------- | ---------------------------- |
+| 中文输入法组合期 / 确认上屏                    | 忽略（`isComposing` 守卫）   |
+| textarea、contentEditable 内                   | 忽略（Enter 为换行语义）     |
+| 按钮、链接上的 Enter                           | 忽略（走原生激活）           |
+| Ctrl/Shift/Alt/Meta + Enter                    | 忽略（避免与组合快捷键冲突） |
+| select / date-picker / cascader 下拉面板展开时 | 忽略（Enter 为确认选中语义） |
+
+不适用场景：无搜索输入框的页面（纯 PureTableBar）、本地即时过滤（如 daily-image 的 keyword）不接。
+
 ## 文档索引
 
 完整文档入口见 [README.md](README.md)。

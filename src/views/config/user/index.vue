@@ -86,6 +86,7 @@ onMounted(() => {
   <div class="main">
     <el-form
       ref="formRef"
+      v-search-enter="onSearch"
       :inline="true"
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"

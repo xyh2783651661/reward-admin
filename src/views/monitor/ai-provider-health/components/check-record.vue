@@ -84,6 +84,7 @@ onMounted(() => {
     <!-- 一行式筛选栏 -->
     <el-form
       ref="formRef"
+      v-search-enter="onSearch"
       :inline="true"
       :model="form"
       class="filter-bar bg-bg_color w-full pl-4 pt-[12px] overflow-auto"

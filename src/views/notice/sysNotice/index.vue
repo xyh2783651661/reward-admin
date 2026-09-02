@@ -71,6 +71,7 @@ const {
 
     <el-form
       ref="formRef"
+      v-search-enter="onSearch"
       :inline="true"
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
@@ -81,7 +82,6 @@ const {
           placeholder="搜索标题或内容"
           clearable
           class="w-[220px]!"
-          @keyup.enter="onSearch"
         />
       </el-form-item>
       <el-form-item label="类型" prop="filterNoticeType">
