@@ -61,7 +61,20 @@ export {
   getMailRecipientUserList,
   updateMailRecipientUser,
   getMailSendRecordsList,
-  getMailRecipientOptions
+  getMailRecipientOptions,
+  getMailSendTaskList,
+  addMailSendTask,
+  updateMailSendTask,
+  deleteMailSendTask,
+  getMailSendTaskDetail,
+  getMailSendTaskRecipients,
+  checkMailSendTask,
+  sendMailSendTask,
+  retryMailSendTask,
+  cancelMailSendTask,
+  getMailSendTaskOptions,
+  uploadMailAttachment,
+  uploadMailImage
 } from "./mail";
 
 export {

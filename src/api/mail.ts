@@ -69,3 +69,93 @@ export const getMailRecipientOptions = () => {
     "/api/mail-recipients/options"
   );
 };
+
+// ==================== 邮件批量发送任务 ====================
+
+export const getMailSendTaskList = <T = Record<string, any>>(data?: object) => {
+  return http.request<ApiPageResult<T>>("post", "/api/mail-send-tasks/page", {
+    data
+  });
+};
+
+export const addMailSendTask = (data?: object) => {
+  return http.request<ApiResult>("post", "/api/mail-send-tasks/add", { data });
+};
+
+export const updateMailSendTask = (data?: object) => {
+  return http.request<ApiResult>("post", "/api/mail-send-tasks/update", {
+    data
+  });
+};
+
+export const deleteMailSendTask = (id: string | number) => {
+  return http.request<ApiResult>("delete", `/api/mail-send-tasks/${id}`);
+};
+
+export const getMailSendTaskDetail = <T = Record<string, any>>(
+  id: string | number
+) => {
+  return http.request<ApiResult<T>>("get", `/api/mail-send-tasks/${id}`);
+};
+
+export const getMailSendTaskRecipients = <T = Record<string, any>>(
+  id: string | number,
+  data?: object
+) => {
+  return http.request<ApiPageResult<T>>(
+    "post",
+    `/api/mail-send-tasks/${id}/recipients`,
+    { data }
+  );
+};
+
+export const checkMailSendTask = <T = Record<string, any>>(
+  id: string | number
+) => {
+  return http.request<ApiResult<T>>("get", `/api/mail-send-tasks/${id}/check`);
+};
+
+export const sendMailSendTask = (id: string | number) => {
+  return http.request<ApiResult>("post", `/api/mail-send-tasks/${id}/send`);
+};
+
+export const retryMailSendTask = (id: string | number) => {
+  return http.request<ApiResult>("post", `/api/mail-send-tasks/${id}/retry`);
+};
+
+export const cancelMailSendTask = (id: string | number) => {
+  return http.request<ApiResult>("post", `/api/mail-send-tasks/${id}/cancel`);
+};
+
+export const getMailSendTaskOptions = () => {
+  return http.request<ApiResult<Record<string, any[]>>>(
+    "get",
+    "/api/mail-send-tasks/options"
+  );
+};
+
+export const uploadMailAttachment = (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return http.request<ApiResult<Record<string, any>>>(
+    "post",
+    "/api/mail-send-tasks/attachments/upload",
+    {
+      data: formData,
+      headers: { "Content-Type": "multipart/form-data" }
+    }
+  );
+};
+
+export const uploadMailImage = (file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return http.request<ApiResult<Record<string, any>>>(
+    "post",
+    "/api/mail-send-tasks/images/upload",
+    {
+      data: formData,
+      headers: { "Content-Type": "multipart/form-data" }
+    }
+  );
+};
