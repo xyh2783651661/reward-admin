@@ -1,47 +1,35 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import editForm from "../form.vue";
-import { message } from "@/utils/message";
 import roleForm from "../role.vue";
-import { usePublicHooks } from "@/hooks/usePublicHooks";
+import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { addDialog } from "@/components/ReDialog";
+import { useCrudDialog } from "@/hooks/useCrudDialog";
+import ReStatusSwitch from "@/components/ReStatusSwitch/index.vue";
 import type { FormItemProps } from "../utils/types";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { deviceDetection } from "@pureadmin/utils";
 import {
   addRewardUser,
   deleteRewardUser,
   getRewardUserPage,
   getRoleIds,
-  // getRoleMenu,
-  // getRoleMenuIds,
   resetPwdRewardUser,
   updateRewardUser
 } from "@/api/system";
 import { getUserOptions, getRoleAll } from "@/api/rbac";
-import {
-  mockLoadTreeData,
-  mockRoleMenuCheckedIds
-} from "../../composables/mockData";
-import { useCrudTable, useTreePanel } from "../../composables";
-import { type Ref, reactive, ref, h, onMounted } from "vue";
+import { useCrudTable } from "../../composables";
+import { computed, reactive, ref, h, onMounted } from "vue";
 import userAvatar from "@/assets/user.jpg";
 import ReCropperPreview from "@/components/ReCropperPreview";
-import {
-  ElForm,
-  ElInput,
-  ElFormItem,
-  ElProgress,
-  ElMessageBox
-} from "element-plus";
+import { ElForm, ElInput, ElFormItem, ElProgress } from "element-plus";
 
-export function useRewardUser(treeRef: Ref) {
-  const formRef = ref();
-  const switchLoadMap = ref({});
+export function useRewardUser() {
   const avatarInfo = ref();
   const ruleFormRef = ref();
   const cropRef = ref();
   const roleOptions = ref<Array<{ id: any; roleName: string }>>([]);
   const statusOptions = ref<Array<{ value: any; label: string }>>([]);
-  const { switchStyle } = usePublicHooks();
 
   const {
     form,
@@ -65,28 +53,26 @@ export function useRewardUser(treeRef: Ref) {
       role: "",
       status: ""
     },
-    deleteMessage: row => `已删除ID为${row.id}的数据`
+    deleteMessage: row => `已删除用户「${row.nickName}」`
   });
 
-  const {
-    curRow,
-    isShow,
-    treeData,
-    treeProps,
-    isLinkage,
-    isExpandAll,
-    isSelectAll,
-    treeSearchValue,
-    handleMenu,
-    handleSave,
-    rowStyle,
-    onQueryChanged,
-    filterMethod
-  } = useTreePanel({
-    treeRef,
-    loadTreeData: mockLoadTreeData,
-    getCheckedIds: row => mockRoleMenuCheckedIds(row)
-  });
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "nickName", label: "昵称", type: "input" },
+    { prop: "birthday", label: "生日", type: "date" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: statusOptions.value
+    },
+    {
+      prop: "role",
+      label: "角色",
+      type: "select",
+      options: roleOptions.value.map(o => ({ label: o.roleName, value: o.id }))
+    }
+  ]);
 
   // 重置的新密码
   const pwdForm = reactive({ newPwd: "" });
@@ -100,31 +86,47 @@ export function useRewardUser(treeRef: Ref) {
   const curScore = ref();
 
   const columns: TableColumnList = [
-    { label: "ID", prop: "id" },
-    { label: "昵称", prop: "nickName", minWidth: 80 },
+    { label: "ID", prop: "id", width: 80, hide: true },
+    { label: "昵称", prop: "nickName", minWidth: 120 },
     {
       label: "生日",
       prop: "birthday",
-      minWidth: 100,
-      formatter: ({ birthday }) => dayjs(birthday).format("YYYY-MM-DD")
+      minWidth: 110,
+      formatter: ({ birthday }) =>
+        birthday ? dayjs(birthday).format("YYYY-MM-DD") : "-"
     },
     {
       label: "状态",
+      prop: "status",
+      minWidth: 100,
       cellRenderer: scope => (
-        <el-switch
+        <ReStatusSwitch
+          modelValue={scope.row.status}
+          onUpdate:modelValue={(val: any) => (scope.row.status = val)}
+          row={scope.row}
+          index={scope.index}
           size={scope.props.size === "small" ? "small" : "default"}
-          loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.status}
-          active-value={1}
-          inactive-value={0}
-          active-text="已启用"
-          inactive-text="已停用"
-          inline-prompt
-          style={switchStyle.value}
-          onChange={() => onChange(scope as any)}
+          activeText="已启用"
+          inactiveText="已停用"
+          confirmTitle={`确认要<strong>${
+            scope.row.status === 1 ? "停用" : "启用"
+          }</strong><strong style='color:var(--el-color-primary)'>${
+            scope.row.nickName
+          }</strong>吗?`}
+          onChange={async ({ row, value, next }) => {
+            try {
+              const r = await updateRewardUser({ id: row.id, status: value });
+              if (r.code !== 200) throw new Error(r.msg || "状态更新失败");
+              message(`已${value === 1 ? "启用" : "停用"}${row.nickName}`, {
+                type: "success"
+              });
+              next(true);
+            } catch (error) {
+              next(false, error);
+            }
+          }}
         />
-      ),
-      minWidth: 90
+      )
     },
     {
       label: "头像",
@@ -140,20 +142,26 @@ export function useRewardUser(treeRef: Ref) {
       ),
       width: 90
     },
-    { label: "手机号", prop: "phone" },
     {
-      label: "创建时间",
-      prop: "createdTime",
-      minWidth: 160,
-      formatter: ({ createdTime }) =>
-        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
+      label: "手机号",
+      prop: "phone",
+      minWidth: 130,
+      formatter: ({ phone }) => phone || "-"
     },
     {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 160,
+      width: 168,
       formatter: ({ updatedTime }) =>
-        dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      width: 168,
+      hide: true,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     { label: "操作", fixed: "right", width: 180, slot: "operation" }
   ];
@@ -166,105 +174,34 @@ export function useRewardUser(treeRef: Ref) {
     "dark:hover:text-primary!"
   ];
 
-  function handleUpdate(_row) {}
+  const { open } = useCrudDialog<FormItemProps>({
+    title: "用户",
+    formComponent: editForm,
+    width: "680px",
+    defaultForm: row => ({
+      id: row?.id ?? "",
+      nickName: row?.nickName ?? "",
+      avatar: row?.avatar ?? "",
+      phone: row?.phone ?? "",
+      birthday: row?.birthday ?? "",
+      status: row?.status ?? 1
+    }),
+    submitApi: (payload, mode) =>
+      mode === "新增" ? addRewardUser(payload) : updateRewardUser(payload)
+  });
 
-  function onChange({ row, index }) {
-    ElMessageBox.confirm(
-      `确认要<strong>${
-        row.status === 0 ? "停用" : "启用"
-      }</strong><strong style='color:var(--el-color-primary)'>${
-        row.nickName
-      }</strong>吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(() => {
-        switchLoadMap.value[index] = Object.assign(
-          {},
-          switchLoadMap.value[index],
-          { loading: true }
-        );
-        setTimeout(() => {
-          switchLoadMap.value[index] = Object.assign(
-            {},
-            switchLoadMap.value[index],
-            { loading: false }
-          );
-          updateRewardUser({ id: row.id, status: row.status }).then(r => {
-            if (r.code === 200) {
-              message(
-                `已${row.status === 0 ? "停用" : "启用"}${row.nickName}`,
-                { type: "success" }
-              );
-              onSearch();
-            }
-          });
-        }, 300);
-      })
-      .catch(() => {
-        row.status === 0 ? (row.status = 1) : (row.status = 0);
-      });
-  }
-
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}配置`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          nickName: row?.nickName ?? "",
-          avatar: row?.avatar ?? "",
-          phone: row?.phone ?? "",
-          birthday: row?.birthday ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-        FormRef.validate(valid => {
-          if (valid) {
-            const api = title === "新增" ? addRewardUser : updateRewardUser;
-            api(curData)
-              .then(r => {
-                if (r.code === 200) {
-                  message(
-                    r.msg || `您${title}了用户为${curData.nickName}的这条数据`,
-                    { type: "success" }
-                  );
-                  done();
-                  onSearch();
-                } else {
-                  message(r.msg || "操作失败", { type: "error" });
-                }
-              })
-              .catch(() => {
-                message("操作失败，请稍后重试", { type: "error" });
-              });
-          }
-        });
-      }
-    });
+  function openDialog(title: "新增" | "修改" = "新增", row?: FormItemProps) {
+    void open(title, row, () => onSearch());
   }
 
   /** 上传头像 */
   function handleUpload(row) {
     addDialog({
       title: "裁剪、上传头像",
-      width: "40%",
+      width: "680px",
       closeOnClickModal: false,
       fullscreen: deviceDetection(),
+      sureBtnLoading: true,
       contentRenderer: () =>
         h(ReCropperPreview, {
           ref: cropRef,
@@ -275,7 +212,7 @@ export function useRewardUser(treeRef: Ref) {
         done();
         onSearch();
       },
-      closeCallBack: () => cropRef.value.hidePopover()
+      closeCallBack: () => cropRef.value?.hidePopover()
     });
   }
 
@@ -283,10 +220,11 @@ export function useRewardUser(treeRef: Ref) {
   function handleReset(row) {
     addDialog({
       title: `重置 ${row.nickName} 用户的密码`,
-      width: "30%",
+      width: "480px",
       draggable: true,
       closeOnClickModal: false,
       fullscreen: deviceDetection(),
+      sureBtnLoading: true,
       contentRenderer: () => (
         <>
           <ElForm ref={ruleFormRef} model={pwdForm}>
@@ -332,39 +270,38 @@ export function useRewardUser(treeRef: Ref) {
         </>
       ),
       closeCallBack: () => (pwdForm.newPwd = ""),
-      beforeSure: done => {
-        ruleFormRef.value.validate(valid => {
-          if (valid) {
-            resetPwdRewardUser({ id: row.id, password: pwdForm.newPwd })
-              .then(r => {
-                if (r.code === 200) {
-                  message(`重置 ${row.nickName} 用户的密码,${r.msg}`, {
-                    type: "success"
-                  });
-                } else {
-                  message(`重置 ${row.nickName} 用户的密码,${r.msg}`, {
-                    type: "error"
-                  });
-                }
-              })
-              .catch(r => {
-                message(`重置 ${row.nickName} 用户的密码,${r.msg}`, {
-                  type: "error"
-                });
-              })
-              .finally(() => {
-                done();
-                onSearch();
-              });
+      beforeSure: async (done, { closeLoading }) => {
+        try {
+          const valid = await ruleFormRef.value?.validate().catch(() => false);
+          if (!valid) {
+            closeLoading();
+            return;
           }
-        });
+          const r = await resetPwdRewardUser({
+            id: row.id,
+            password: pwdForm.newPwd
+          });
+          if (r.code !== 200) throw new Error(r.msg || "重置密码失败");
+          message(`已重置 ${row.nickName} 用户的密码`, { type: "success" });
+          done();
+          onSearch();
+        } catch (error) {
+          closeLoading();
+          message(getErrorMessage(error, "重置密码失败"), { type: "error" });
+        }
       }
     });
   }
 
   /** 分配角色 */
   async function handleRole(row) {
-    const ids = (await getRoleIds({ userId: row.id })).data ?? [];
+    let ids: Array<number | string> = [];
+    try {
+      ids = (await getRoleIds({ userId: row.id })).data ?? [];
+    } catch (error) {
+      message(getErrorMessage(error, "加载用户角色失败"), { type: "error" });
+      return;
+    }
     addDialog({
       title: `分配 ${row.nickName} 用户的角色`,
       props: {
@@ -374,11 +311,12 @@ export function useRewardUser(treeRef: Ref) {
           ids
         }
       },
-      width: "400px",
+      width: "480px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
       closeOnClickModal: false,
+      sureBtnLoading: true,
       contentRenderer: () => h(roleForm),
       beforeSure: done => {
         done();
@@ -390,14 +328,14 @@ export function useRewardUser(treeRef: Ref) {
     try {
       const { data } = await getUserOptions();
       statusOptions.value = data?.statusOptions ?? [];
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      message(getErrorMessage(error, "加载状态选项失败"), { type: "error" });
     }
     try {
       const { data } = await getRoleAll();
       roleOptions.value = (data ?? []) as Array<{ id: any; roleName: string }>;
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      message(getErrorMessage(error, "加载角色列表失败"), { type: "error" });
     }
   }
 
@@ -407,34 +345,19 @@ export function useRewardUser(treeRef: Ref) {
 
   return {
     form,
-    isShow,
-    curRow,
     loading,
     columns,
-    rowStyle,
     dataList,
-    treeData,
-    treeProps,
-    isLinkage,
     pagination,
-    isExpandAll,
-    isSelectAll,
-    roleOptions,
-    statusOptions,
-    handleUpdate,
+    searchFields,
     buttonClass,
     handleUpload,
     handleReset,
     handleRole,
-    treeSearchValue,
     onSearch,
     resetForm,
     openDialog,
-    handleMenu,
-    handleSave,
     handleDelete,
-    filterMethod,
-    onQueryChanged,
     handleSizeChange,
     handleCurrentChange,
     handleSelectionChange

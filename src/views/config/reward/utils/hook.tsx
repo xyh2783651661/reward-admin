@@ -1,33 +1,24 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
-import { ElMessageBox } from "element-plus";
-import { usePublicHooks } from "@/hooks/usePublicHooks";
-import { addDialog } from "@/components/ReDialog";
+import { getErrorMessage } from "@/utils/error";
+import { useCrudDialog } from "@/hooks/useCrudDialog";
+import ReStatusSwitch from "@/components/ReStatusSwitch/index.vue";
 import type { FormItemProps } from "../utils/types";
-import { deviceDetection } from "@pureadmin/utils";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import {
   addRewardConfig,
   deleteRewardConfig,
   exportRewardConfigList,
   getRewardConfigList,
   getRewardConfigOptions,
-  // getRoleMenu,
-  // getRoleMenuIds,
   updateRewardConfig
 } from "@/api/system";
-import {
-  mockLoadTreeData,
-  mockRoleMenuCheckedIds
-} from "../../composables/mockData";
-import { useCrudTable, useTreePanel, useTableExport } from "../../composables";
-import { type Ref, ref, h, onMounted } from "vue";
+import { useCrudTable, useTableExport } from "../../composables";
+import { computed, ref, h, onMounted } from "vue";
 import ReJsonField from "@/components/ReJsonField/index.vue";
 
-export function useRewardConfig(treeRef: Ref) {
-  const formRef = ref();
-  const switchLoadMap = ref({});
-  const { switchStyle } = usePublicHooks();
+export function useRewardConfig() {
   const rewardTypeOptions = ref<Array<{ value: any; label: string }>>([]);
   const statusOptions = ref<Array<{ value: any; label: string }>>([]);
 
@@ -52,27 +43,8 @@ export function useRewardConfig(treeRef: Ref) {
       rewardValue: "",
       condition: "",
       status: ""
-    }
-  });
-
-  const {
-    curRow,
-    isShow,
-    treeData,
-    treeProps,
-    isLinkage,
-    isExpandAll,
-    isSelectAll,
-    treeSearchValue,
-    handleMenu,
-    handleSave,
-    rowStyle,
-    onQueryChanged,
-    filterMethod
-  } = useTreePanel({
-    treeRef,
-    loadTreeData: mockLoadTreeData,
-    getCheckedIds: row => mockRoleMenuCheckedIds(row)
+    },
+    deleteMessage: row => `已删除配置「${row.rewardKey}」`
   });
 
   const { exportLoading, exportExcel } = useTableExport(
@@ -81,30 +53,87 @@ export function useRewardConfig(treeRef: Ref) {
     () => form
   );
 
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "rewardKey", label: "KEY", type: "input" },
+    {
+      prop: "rewardType",
+      label: "类型",
+      type: "select",
+      options: rewardTypeOptions.value
+    },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: statusOptions.value
+    },
+    { prop: "rewardValue", label: "数值", type: "input" },
+    { prop: "description", label: "说明", type: "input" },
+    {
+      prop: "condition",
+      label: "条件",
+      type: "input",
+      width: "lg",
+      placeholder: "请输入条件表达式"
+    }
+  ]);
+
   const columns: TableColumnList = [
-    { label: "ID", prop: "id" },
-    { label: "KEY", prop: "rewardKey", minWidth: 280, sortable: true },
-    { label: "类型", prop: "rewardType", sortable: true },
+    { label: "ID", prop: "id", width: 80, hide: true },
+    { label: "KEY", prop: "rewardKey", minWidth: 240, sortable: true },
+    { label: "类型", prop: "rewardType", minWidth: 100, sortable: true },
     {
       label: "状态",
+      prop: "status",
+      minWidth: 100,
       cellRenderer: scope => (
-        <el-switch
+        <ReStatusSwitch
+          modelValue={scope.row.status}
+          onUpdate:modelValue={(val: any) => (scope.row.status = val)}
+          row={scope.row}
+          index={scope.index}
           size={scope.props.size === "small" ? "small" : "default"}
-          loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.status}
-          active-value={1}
-          inactive-value={0}
-          active-text="已启用"
-          inactive-text="已停用"
-          inline-prompt
-          style={switchStyle.value}
-          onChange={() => onChange(scope as any)}
+          activeText="已启用"
+          inactiveText="已停用"
+          confirmTitle={`确认要<strong>${
+            scope.row.status === 1 ? "停用" : "启用"
+          }</strong><strong style='color:var(--el-color-primary)'>${
+            scope.row.rewardKey
+          }</strong>吗?`}
+          onChange={async ({ row, value, next }) => {
+            try {
+              const r = await updateRewardConfig({ id: row.id, status: value });
+              if (r.code !== 200) throw new Error(r.msg || "状态更新失败");
+              message(`已${value === 1 ? "启用" : "停用"}${row.rewardKey}`, {
+                type: "success"
+              });
+              next(true);
+            } catch (error) {
+              next(false, error);
+            }
+          }}
         />
-      ),
-      minWidth: 90
+      )
     },
-    { label: "数值", prop: "rewardValue", sortable: true },
-    { label: "说明", prop: "description", minWidth: 120 },
+    {
+      label: "数值",
+      prop: "rewardValue",
+      minWidth: 90,
+      align: "right",
+      sortable: true,
+      formatter: ({ rewardValue }) =>
+        rewardValue === null || rewardValue === undefined || rewardValue === ""
+          ? "-"
+          : rewardValue
+    },
+    {
+      label: "说明",
+      prop: "description",
+      minWidth: 140,
+      showOverflowTooltip: true,
+      formatter: ({ description }) => description || "-"
+    },
     {
       label: "条件",
       prop: "condition",
@@ -117,107 +146,43 @@ export function useRewardConfig(treeRef: Ref) {
         })
     },
     {
-      label: "创建时间",
-      prop: "createdTime",
-      minWidth: 160,
-      sortable: true,
-      formatter: ({ createdTime }) =>
-        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
-    },
-    {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 160,
+      width: 168,
       sortable: true,
       formatter: ({ updatedTime }) =>
-        dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      width: 168,
+      hide: true,
+      sortable: true,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     { label: "操作", fixed: "right", width: 140, slot: "operation" }
   ];
 
-  function onChange({ row, index }) {
-    ElMessageBox.confirm(
-      `确认要<strong>${
-        row.status === 0 ? "停用" : "启用"
-      }</strong><strong style='color:var(--el-color-primary)'>${
-        row.rewardKey
-      }</strong>吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(() => {
-        switchLoadMap.value[index] = Object.assign(
-          {},
-          switchLoadMap.value[index],
-          { loading: true }
-        );
-        setTimeout(() => {
-          switchLoadMap.value[index] = Object.assign(
-            {},
-            switchLoadMap.value[index],
-            { loading: false }
-          );
-          updateRewardConfig({ id: row.id, status: row.status }).then(r => {
-            if (r.code === 200) {
-              message(
-                `已${row.status === 0 ? "停用" : "启用"}${row.rewardKey}`,
-                { type: "success" }
-              );
-            }
-          });
-        }, 300);
-      })
-      .catch(() => {
-        row.status === 0 ? (row.status = 1) : (row.status = 0);
-      });
-  }
+  const { open } = useCrudDialog<FormItemProps>({
+    title: "配置",
+    formComponent: editForm,
+    width: "680px",
+    defaultForm: row => ({
+      id: row?.id ?? "",
+      rewardKey: row?.rewardKey ?? "",
+      rewardType: row?.rewardType ?? "",
+      rewardValue: row?.rewardValue ?? "",
+      description: row?.description ?? "",
+      condition: row?.condition ?? ""
+    }),
+    submitApi: (payload, mode) =>
+      mode === "新增" ? addRewardConfig(payload) : updateRewardConfig(payload)
+  });
 
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}配置`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          rewardKey: row?.rewardKey ?? "",
-          rewardType: row?.rewardType ?? "",
-          rewardValue: row?.rewardValue ?? "",
-          description: row?.description ?? "",
-          condition: row?.condition ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-        function chores() {
-          done();
-          onSearch();
-        }
-        FormRef.validate(valid => {
-          if (valid) {
-            const api = title === "新增" ? addRewardConfig : updateRewardConfig;
-            api(curData)
-              .then(r => {
-                message(r.msg, { type: r.code === 200 ? "success" : "error" });
-              })
-              .finally(() => {
-                chores();
-              });
-          }
-        });
-      }
-    });
+  function openDialog(title: "新增" | "修改" = "新增", row?: FormItemProps) {
+    void open(title, row, () => onSearch());
   }
 
   async function loadRewardConfigOptions() {
@@ -225,8 +190,8 @@ export function useRewardConfig(treeRef: Ref) {
       const { data } = await getRewardConfigOptions();
       rewardTypeOptions.value = data?.rewardTypeOptions ?? [];
       statusOptions.value = data?.statusOptions ?? [];
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      message(getErrorMessage(error, "加载配置选项失败"), { type: "error" });
     }
   }
 
@@ -236,31 +201,17 @@ export function useRewardConfig(treeRef: Ref) {
 
   return {
     form,
-    isShow,
-    curRow,
     loading,
     exportLoading,
+    searchFields,
     columns,
-    rowStyle,
     dataList,
-    treeData,
-    treeProps,
-    isLinkage,
     pagination,
-    isExpandAll,
-    isSelectAll,
-    treeSearchValue,
-    rewardTypeOptions,
-    statusOptions,
     onSearch,
     exportExcel,
     resetForm,
     openDialog,
-    handleMenu,
-    handleSave,
     handleDelete,
-    filterMethod,
-    onQueryChanged,
     handleSizeChange,
     handleCurrentChange,
     handleSelectionChange

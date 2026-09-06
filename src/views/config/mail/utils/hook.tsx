@@ -1,11 +1,12 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
-import { ElMessageBox } from "element-plus";
-import { usePublicHooks } from "@/hooks/usePublicHooks";
-import { addDialog } from "@/components/ReDialog";
+import { getErrorMessage } from "@/utils/error";
+import { useCrudDialog } from "@/hooks/useCrudDialog";
+import ReStatusSwitch from "@/components/ReStatusSwitch/index.vue";
 import type { FormItemProps } from "../utils/types";
-import { deviceDetection, getKeyList } from "@pureadmin/utils";
+import type { SearchField } from "@/components/ReSearchBar/types";
+import { getKeyList } from "@pureadmin/utils";
 import {
   addMailRecipient,
   deleteMailRecipient,
@@ -17,12 +18,9 @@ import {
   updateMailRecipientUser
 } from "@/api/system";
 import { useCrudTable, useTreePanel } from "../../composables";
-import { type Ref, ref, h, onMounted } from "vue";
+import { type Ref, computed, ref, onMounted } from "vue";
 
 export function useMailRecipient(treeRef: Ref) {
-  const formRef = ref();
-  const switchLoadMap = ref({});
-  const { switchStyle } = usePublicHooks();
   const enabledOptions = ref<Array<{ value: any; label: string }>>([]);
 
   const {
@@ -40,8 +38,20 @@ export function useMailRecipient(treeRef: Ref) {
     searchApi: getMailRecipientList,
     deleteApi: deleteMailRecipient,
     defaultForm: { email: "", name: "", enabled: "" },
-    deleteMessage: row => `已删除ID为${row.id}的数据`
+    deleteMessage: row => `已删除收件人「${row.name}」`
   });
+
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "email", label: "邮件", type: "input" },
+    { prop: "name", label: "姓名", type: "input" },
+    {
+      prop: "enabled",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: enabledOptions.value
+    }
+  ]);
 
   const {
     curRow,
@@ -67,34 +77,42 @@ export function useMailRecipient(treeRef: Ref) {
     if (row?.id) {
       curRow.value = row;
       isShow.value = true;
-      const { data } = await getMailRecipientUserList({ mailId: row.id });
-      treeRef.value.setCheckedKeys(getKeyList(data, "userId"));
+      try {
+        const { data } = await getMailRecipientUserList({ mailId: row.id });
+        treeRef.value.setCheckedKeys(getKeyList(data ?? [], "userId"));
+      } catch (error) {
+        message(getErrorMessage(error, "加载收件人用户失败"), {
+          type: "error"
+        });
+      }
     } else {
       curRow.value = null;
       isShow.value = false;
     }
   }
 
-  function handleSave() {
+  const saveLoading = ref(false);
+
+  async function handleSave() {
+    if (!curRow.value || saveLoading.value) return;
     const { id, name } = curRow.value;
-    updateMailRecipientUser({
-      mailId: id,
-      userIds: treeRef.value.getCheckedKeys()
-    }).then(r => {
-      if (r.code === 200) {
-        message(`收件人名称为${name}的用户配置${r.msg}`, {
-          type: "success"
-        });
-      } else {
-        message(`收件人名称为${name}的用户配置${r.msg}`, {
-          type: "error"
-        });
-      }
-    });
+    saveLoading.value = true;
+    try {
+      const r = await updateMailRecipientUser({
+        mailId: id,
+        userIds: treeRef.value.getCheckedKeys()
+      });
+      if (r.code !== 200) throw new Error(r.msg || "保存失败");
+      message(`收件人「${name}」的用户配置已保存`, { type: "success" });
+    } catch (error) {
+      message(getErrorMessage(error, "保存失败"), { type: "error" });
+    } finally {
+      saveLoading.value = false;
+    }
   }
 
   const columns: TableColumnList = [
-    { label: "ID", prop: "id" },
+    { label: "ID", prop: "id", width: 80, hide: true },
     {
       label: "邮件",
       prop: "email",
@@ -105,144 +123,115 @@ export function useMailRecipient(treeRef: Ref) {
         </el-link>
       )
     },
-    { label: "姓名", prop: "name" },
+    { label: "姓名", prop: "name", minWidth: 100 },
     {
       label: "状态",
+      prop: "enabled",
+      minWidth: 100,
       cellRenderer: scope => (
-        <el-switch
+        <ReStatusSwitch
+          modelValue={scope.row.enabled}
+          onUpdate:modelValue={(val: any) => (scope.row.enabled = val)}
+          row={scope.row}
+          index={scope.index}
           size={scope.props.size === "small" ? "small" : "default"}
-          loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.enabled}
-          active-value={true}
-          inactive-value={false}
-          active-text="已启用"
-          inactive-text="已禁用"
-          inline-prompt
-          style={switchStyle.value}
-          onChange={() => onChange(scope as any)}
+          activeValue={true}
+          inactiveValue={false}
+          activeText="已启用"
+          inactiveText="已禁用"
+          confirmTitle={`确认要<strong>${
+            scope.row.enabled ? "禁用" : "启用"
+          }</strong><strong style='color:var(--el-color-primary)'>${
+            scope.row.name
+          }</strong>吗?`}
+          onChange={async ({ row, value, next }) => {
+            try {
+              const r = await updateMailRecipient({
+                id: row.id,
+                enabled: value as boolean
+              });
+              if (r.code !== 200) throw new Error(r.msg || "状态更新失败");
+              message(`已${value ? "启用" : "禁用"}${row.name}`, {
+                type: "success"
+              });
+              next(true);
+            } catch (error) {
+              next(false, error);
+            }
+          }}
         />
-      ),
-      minWidth: 90
+      )
     },
     { label: "类型", prop: "type", minWidth: 90 },
-    { label: "组别", prop: "groupCode" },
-    { label: "优先级", prop: "priority", minWidth: 80 },
-    { label: "备注", prop: "remark", minWidth: 160 },
     {
-      label: "创建时间",
-      prop: "createdTime",
+      label: "组别",
+      prop: "groupCode",
+      minWidth: 90,
+      formatter: ({ groupCode }) => groupCode || "-"
+    },
+    {
+      label: "优先级",
+      prop: "priority",
+      minWidth: 80,
+      align: "right",
+      formatter: ({ priority }) =>
+        priority === null || priority === undefined || priority === ""
+          ? "-"
+          : priority
+    },
+    {
+      label: "备注",
+      prop: "remark",
       minWidth: 160,
-      formatter: ({ createdTime }) =>
-        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
+      showOverflowTooltip: true,
+      formatter: ({ remark }) => remark || "-"
     },
     {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 160,
+      width: 168,
       formatter: ({ updatedTime }) =>
-        dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      width: 168,
+      hide: true,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     { label: "操作", fixed: "right", width: 210, slot: "operation" }
   ];
 
-  function onChange({ row, index }) {
-    ElMessageBox.confirm(
-      `确认要<strong>${
-        row.enabled ? "启用" : "禁用"
-      }</strong><strong style='color:var(--el-color-primary)'>${
-        row.name
-      }</strong>吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(() => {
-        switchLoadMap.value[index] = Object.assign(
-          {},
-          switchLoadMap.value[index],
-          { loading: true }
-        );
-        setTimeout(() => {
-          switchLoadMap.value[index] = Object.assign(
-            {},
-            switchLoadMap.value[index],
-            { loading: false }
-          );
-          updateMailRecipient({ id: row.id, enabled: row.enabled }).then(r => {
-            if (r.code === 200) {
-              message(`已${row.enabled ? "启用" : "禁用"}${row.name}`, {
-                type: "success"
-              });
-            }
-          });
-        }, 300);
-      })
-      .catch(() => {
-        row.enabled ? (row.enabled = false) : (row.enabled = true);
-      });
-  }
+  const { open } = useCrudDialog<FormItemProps>({
+    title: "收件人",
+    formComponent: editForm,
+    width: "680px",
+    defaultForm: row => ({
+      id: row?.id ?? "",
+      email: row?.email ?? "",
+      name: row?.name ?? "",
+      enabled: row?.enabled ?? true,
+      type: row?.type ?? "",
+      groupCode: row?.groupCode ?? "",
+      priority: row?.priority ?? "",
+      remark: row?.remark ?? ""
+    }),
+    submitApi: (payload, mode) =>
+      mode === "新增" ? addMailRecipient(payload) : updateMailRecipient(payload)
+  });
 
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}收件人`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          email: row?.email ?? "",
-          name: row?.name ?? "",
-          enabled: row?.enabled ?? true,
-          type: row?.type ?? "",
-          groupCode: row?.groupCode ?? "",
-          priority: row?.priority ?? "",
-          remark: row?.remark ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-        const msg = `您${title}了收件人名称为${curData.name}的这条数据`;
-        function chores() {
-          done();
-          onSearch();
-        }
-        FormRef.validate(valid => {
-          if (valid) {
-            const api =
-              title === "新增" ? addMailRecipient : updateMailRecipient;
-            api(curData)
-              .then(r => {
-                if (r.code === 200) {
-                  message(msg + `${r.msg}`, { type: "success" });
-                } else {
-                  message(msg + `${r.msg}`, { type: "error" });
-                }
-              })
-              .finally(() => {
-                chores();
-              });
-          }
-        });
-      }
-    });
+  function openDialog(title: "新增" | "修改" = "新增", row?: FormItemProps) {
+    void open(title, row, () => onSearch());
   }
 
   async function loadEnabledOptions() {
     try {
       const { data } = await getMailRecipientOptions();
       enabledOptions.value = data?.enabledOptions ?? [];
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      message(getErrorMessage(error, "加载状态选项失败"), { type: "error" });
     }
   }
 
@@ -265,7 +254,8 @@ export function useMailRecipient(treeRef: Ref) {
     isExpandAll,
     isSelectAll,
     treeSearchValue,
-    enabledOptions,
+    searchFields,
+    saveLoading,
     onSearch,
     resetForm,
     openDialog,

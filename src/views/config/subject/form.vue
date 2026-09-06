@@ -36,7 +36,7 @@ defineExpose({ getRef });
       <el-input
         v-model="newFormInline.name"
         clearable
-        placeholder="请输入角色名称"
+        placeholder="请输入科目名称"
       />
     </el-form-item>
 
