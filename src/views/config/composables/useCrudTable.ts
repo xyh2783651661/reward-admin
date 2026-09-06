@@ -28,14 +28,16 @@ export interface CrudTableConfig<TForm extends Record<string, any>> {
   onDeleteSuccess?: (row: any) => void;
 }
 
+export type CrudForm<TForm> = TForm & { current: number; size: number };
+
 export function useCrudTable<TForm extends Record<string, any>>(
   config: CrudTableConfig<TForm>
 ) {
-  const form = reactive<TForm>({
+  const form = reactive({
     ...config.defaultForm,
     current: 1,
     size: 10
-  } as TForm);
+  }) as CrudForm<TForm>;
 
   const dataList = ref<any[]>([]);
   const loading = ref(true);

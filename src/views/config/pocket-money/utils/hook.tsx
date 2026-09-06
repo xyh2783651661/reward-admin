@@ -1,9 +1,10 @@
 import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
-import { deviceDetection } from "@pureadmin/utils";
-import { addDialog } from "@/components/ReDialog";
+import { getErrorMessage } from "@/utils/error";
+import { useCrudDialog } from "@/hooks/useCrudDialog";
 import type { FormItemProps } from "../utils/types";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import {
   getPocketMoneyRulePage,
   getPocketMoneyRuleOptions,
@@ -13,10 +14,9 @@ import {
   deletePocketMoneyRule
 } from "@/api/system";
 import { useCrudTable, useTableExport } from "../../composables";
-import { ref, onMounted, h } from "vue";
+import { computed, ref, onMounted } from "vue";
 
 export function usePocketMoneyRule() {
-  const formRef = ref();
   const ruleKeyOptions = ref<{ label: string; value: string }[]>([]);
   const ruleTypeOptions = ref<{ label: string; value: string }[]>([]);
 
@@ -35,7 +35,7 @@ export function usePocketMoneyRule() {
     searchApi: getPocketMoneyRulePage,
     deleteApi: deletePocketMoneyRule,
     defaultForm: { ruleKey: "", ruleType: "", description: "" },
-    deleteMessage: row => `已删除ID为${row.id}的数据`,
+    deleteMessage: row => `已删除规则「${row.ruleKey}」`,
     onDeleteSuccess: () => fetchOptions()
   });
 
@@ -45,80 +45,98 @@ export function usePocketMoneyRule() {
     () => form
   );
 
-  const columns: TableColumnList = [
-    { label: "ID", prop: "id" },
-    { label: "规则标识", prop: "ruleKey", minWidth: 160 },
-    { label: "规则类型", prop: "ruleType", minWidth: 100 },
-    { label: "金额数值", prop: "ruleValue", minWidth: 100 },
-    { label: "规则描述", prop: "description", minWidth: 180 },
+  const searchFields = computed<SearchField[]>(() => [
     {
-      label: "创建时间",
-      prop: "createdTime",
-      minWidth: 160,
-      formatter: ({ createdTime }) =>
-        dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss")
+      prop: "ruleKey",
+      label: "规则标识",
+      type: "select",
+      options: ruleKeyOptions.value
+    },
+    {
+      prop: "ruleType",
+      label: "规则类型",
+      type: "select",
+      options: ruleTypeOptions.value
+    },
+    { prop: "description", label: "规则描述", type: "input" }
+  ]);
+
+  const columns: TableColumnList = [
+    { label: "ID", prop: "id", width: 80, hide: true },
+    { label: "规则标识", prop: "ruleKey", minWidth: 160, sortable: true },
+    { label: "规则类型", prop: "ruleType", minWidth: 100 },
+    {
+      label: "金额数值",
+      prop: "ruleValue",
+      minWidth: 100,
+      align: "right",
+      sortable: true,
+      formatter: ({ ruleValue }) =>
+        ruleValue === null || ruleValue === undefined || ruleValue === ""
+          ? "-"
+          : ruleValue
+    },
+    {
+      label: "规则描述",
+      prop: "description",
+      minWidth: 200,
+      showOverflowTooltip: true,
+      formatter: ({ description }) => description || "-"
     },
     {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 160,
+      width: 168,
+      sortable: true,
       formatter: ({ updatedTime }) =>
-        dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss")
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      width: 168,
+      hide: true,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     { label: "操作", fixed: "right", width: 140, slot: "operation" }
   ];
 
   async function fetchOptions() {
-    const { data } = await getPocketMoneyRuleOptions();
-    ruleKeyOptions.value = data.ruleKeys ?? [];
-    ruleTypeOptions.value = data.ruleTypeOptions ?? [];
+    try {
+      const { data } = await getPocketMoneyRuleOptions();
+      ruleKeyOptions.value = data?.ruleKeys ?? [];
+      ruleTypeOptions.value = data?.ruleTypeOptions ?? [];
+    } catch (error) {
+      message(getErrorMessage(error, "加载规则选项失败"), { type: "error" });
+    }
   }
 
-  function openDialog(title = "新增", row?: FormItemProps) {
-    const formInlineData = {
+  const { open } = useCrudDialog<FormItemProps>({
+    title: "零花钱规则",
+    formComponent: editForm,
+    width: "680px",
+    defaultForm: row => ({
       id: row?.id ?? "",
       ruleKey: row?.ruleKey ?? "",
       ruleType: row?.ruleType ?? "",
       ruleValue: row?.ruleValue ?? "",
       description: row?.description ?? ""
-    };
-    addDialog({
-      title: `${title}零花钱规则`,
-      props: { formInline: formInlineData },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () =>
-        h(editForm, {
-          ref: formRef,
-          formInline: formInlineData,
-          ruleKeyOptions: ruleKeyOptions.value,
-          ruleTypeOptions: ruleTypeOptions.value
-        }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-        function chores() {
-          done();
-          onSearch();
-          fetchOptions();
-        }
-        FormRef.validate(valid => {
-          if (valid) {
-            const api =
-              title === "新增" ? addPocketMoneyRule : updatePocketMoneyRule;
-            api(curData)
-              .then(r => {
-                message(r.msg, { type: r.code === 200 ? "success" : "error" });
-              })
-              .finally(() => {
-                chores();
-              });
-          }
-        });
-      }
+    }),
+    extraProps: () => ({
+      ruleKeyOptions: ruleKeyOptions.value,
+      ruleTypeOptions: ruleTypeOptions.value
+    }),
+    submitApi: (payload, mode) =>
+      mode === "新增"
+        ? addPocketMoneyRule(payload)
+        : updatePocketMoneyRule(payload)
+  });
+
+  function openDialog(title: "新增" | "修改" = "新增", row?: FormItemProps) {
+    void open(title, row, () => {
+      onSearch();
+      fetchOptions();
     });
   }
 
@@ -130,8 +148,7 @@ export function usePocketMoneyRule() {
     form,
     loading,
     exportLoading,
-    ruleKeyOptions,
-    ruleTypeOptions,
+    searchFields,
     columns,
     dataList,
     pagination,
