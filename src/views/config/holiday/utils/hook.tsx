@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import editForm from "../form.vue";
 import recipientForm from "../recipient-form.vue";
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
@@ -47,14 +48,6 @@ const DEFAULT_FORM_OPTIONS: SysHolidayOptions = {
   holidayTypes: [],
   statusOptions: []
 };
-
-function getErrorMessage(error: unknown, fallback = "操作失败") {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-}
 
 function cloneDefaultFormInline() {
   return {
@@ -691,6 +684,7 @@ export function useHolidayConfig() {
         message(`已删除节假日配置 ${row.holidayName}`, {
           type: "success"
         });
+        form.current = 1;
       })
       .catch(error => {
         message(getErrorMessage(error, "删除失败"), {

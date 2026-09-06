@@ -24,6 +24,14 @@
   --pure-theme-sidebar-logo: none;
   --pure-theme-menu-title-hover: initial;
   --pure-theme-menu-active-before: transparent;
+
+  /* reward-admin 间距 / 圆角 / 阴影 token */
+  --ra-space-xs: 8px;
+  --ra-space-sm: 12px;
+  --ra-space-md: 16px;
+  --ra-space-lg: 24px;
+  --ra-radius-card: 6px;
+  --ra-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
 }
 
 /* 灰色模式 */
@@ -34,4 +42,46 @@
 /* 色弱模式 */
 .html-weakness {
   filter: invert(80%);
+}
+
+/* 统一页面容器（既有列表页已使用 .main） */
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ra-space-md);
+}
+
+/* 统一搜索表单 */
+.search-form {
+  padding: 16px 24px 0;
+  border-radius: var(--ra-radius-card);
+
+  .el-form-item {
+    margin-bottom: 16px;
+  }
+
+  .el-form-item__label {
+    font-weight: 400;
+  }
+}
+
+/* 筛选控件宽度 token —— 替换写死的 w-[180px]! 等 */
+.ra-input {
+  width: 200px;
+}
+
+.ra-input-lg {
+  width: 220px;
+}
+
+.ra-select {
+  width: 160px;
+}
+
+.ra-select-sm {
+  width: 140px;
+}
+
+.ra-daterange {
+  width: 260px;
 }

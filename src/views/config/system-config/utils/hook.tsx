@@ -1,6 +1,7 @@
 ﻿import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import { addDialog } from "@/components/ReDialog";
@@ -44,14 +45,6 @@ const DEFAULT_FORM_OPTIONS: SystemConfigOptions = {
   sensitiveOptions: [],
   groups: []
 };
-
-function getErrorMessage(error: unknown, fallback = "操作失败") {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-}
 
 function cloneDefaultFormInline() {
   return {
@@ -161,7 +154,8 @@ export function useSystemConfig() {
     {
       label: "ID",
       prop: "id",
-      width: 88
+      width: 80,
+      hide: true
     },
     {
       label: "配置 Key",
@@ -242,19 +236,22 @@ export function useSystemConfig() {
       label: "说明",
       prop: "description",
       minWidth: 220,
+      hide: true,
+      showOverflowTooltip: true,
       formatter: ({ description }) => description || "-"
     },
     {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 168,
+      width: 168,
       formatter: ({ updatedTime }) =>
         updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "创建时间",
       prop: "createdTime",
-      minWidth: 168,
+      width: 168,
+      hide: true,
       formatter: ({ createdTime }) =>
         createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
@@ -473,6 +470,7 @@ export function useSystemConfig() {
         message(`已删除配置 ${row.configKey}`, {
           type: "success"
         });
+        form.current = 1;
       })
       .catch(error => {
         message(getErrorMessage(error, "删除失败"), {

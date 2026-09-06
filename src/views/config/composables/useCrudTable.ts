@@ -1,4 +1,5 @@
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, toRaw, onMounted } from "vue";
@@ -49,10 +50,14 @@ export function useCrudTable<TForm extends Record<string, any>>(
     loading.value = true;
     try {
       const { data } = await config.searchApi(toRaw(form));
-      dataList.value = data.records;
-      pagination.total = data.total;
-      pagination.pageSize = data.size;
-      pagination.currentPage = data.current;
+      dataList.value = data?.records ?? [];
+      pagination.total = data?.total ?? 0;
+      pagination.pageSize = data?.size ?? 10;
+      pagination.currentPage = data?.current ?? 1;
+    } catch (error) {
+      dataList.value = [];
+      pagination.total = 0;
+      message(getErrorMessage(error, "加载数据失败"), { type: "error" });
     } finally {
       loading.value = false;
     }
@@ -61,6 +66,7 @@ export function useCrudTable<TForm extends Record<string, any>>(
   function resetForm(formEl: any) {
     if (!formEl) return;
     formEl.resetFields();
+    form.current = 1;
     onSearch();
   }
 
@@ -73,12 +79,18 @@ export function useCrudTable<TForm extends Record<string, any>>(
             ? config.deleteMessage(row)
             : `已删除ID为${row.id}的数据`;
           message(msg, { type: "success" });
+          // 末页仅剩一条被删除时回退一页，避免停留在空白页
+          if (dataList.value.length === 1 && form.current > 1) {
+            form.current -= 1;
+          }
         } else {
           message(r.msg || "删除失败", { type: "error" });
         }
       })
-      .catch(() => {
-        message("删除失败，请稍后重试", { type: "error" });
+      .catch(error => {
+        message(getErrorMessage(error, "删除失败，请稍后重试"), {
+          type: "error"
+        });
       })
       .finally(() => {
         onSearch();
