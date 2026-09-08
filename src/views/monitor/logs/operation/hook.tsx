@@ -7,7 +7,8 @@ import {
 import { getTaskLogOptions } from "@/api/logs";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
-import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/operation/detail.vue";
 import { message } from "@/utils/message";
@@ -187,8 +188,50 @@ export function useOperationLog(_tableRef?: Ref) {
   const resetForm = formEl => {
     if (!formEl) return;
     formEl.resetFields();
+    form.current = 1;
     onSearch();
   };
+
+  // 搜索区字段配置：4 项一行平铺
+  const searchFields = computed<SearchField[]>(() => [
+    {
+      prop: "taskName",
+      label: "任务名",
+      type: "select",
+      filterable: true,
+      allowCreate: true,
+      placeholder: "请选择或输入任务名",
+      options: filterOptions.value.taskNames.map(v => ({ label: v, value: v }))
+    },
+    {
+      prop: "classMethod",
+      label: "调用方法",
+      type: "select",
+      width: "lg",
+      filterable: true,
+      allowCreate: true,
+      placeholder: "请选择或输入调用方法",
+      options: filterOptions.value.classMethods.map(v => ({
+        label: v,
+        value: v
+      }))
+    },
+    {
+      prop: "success",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      placeholder: "请选择",
+      options: successOptions.value,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "timeRange",
+      label: "时间范围",
+      type: "datetimerange",
+      shortcuts: true
+    }
+  ]);
 
   onMounted(() => {
     onSearch();
@@ -204,6 +247,7 @@ export function useOperationLog(_tableRef?: Ref) {
     dataList,
     pagination,
     filterOptions,
+    searchFields,
     onSearch,
     resetForm,
     handleSizeChange,

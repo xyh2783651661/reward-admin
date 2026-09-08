@@ -1,17 +1,13 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useVersionLog as useRole } from "./hook";
-import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
-import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-
-import Refresh from "~icons/ep/refresh";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 
 defineOptions({
   name: "VersionLog"
 });
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
@@ -20,6 +16,7 @@ const {
   columns,
   dataList,
   pagination,
+  searchFields,
   onSearch,
   resetForm,
   handleSizeChange,
@@ -28,57 +25,22 @@ const {
   handleYank,
   handleEditRelease
 } = useRole(tableRef);
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="Code" prop="versionCode">
-        <el-input
-          v-model="form.versionCode"
-          placeholder="请输入 Code"
-          clearable
-          class="w-[170px]!"
-        />
-      </el-form-item>
-      <el-form-item label="版本号" prop="versionName">
-        <el-input
-          v-model="form.versionName"
-          placeholder="请输入版本号"
-          clearable
-          class="w-[170px]!"
-        />
-      </el-form-item>
-      <el-form-item label="创建时间" prop="requestTime">
-        <el-date-picker
-          v-model="form.requestTime"
-          :shortcuts="getPickerShortcuts()"
-          type="datetimerange"
-          range-separator="至"
-          start-placeholder="开始日期时间"
-          end-placeholder="结束日期时间"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
@@ -141,11 +103,5 @@ const {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
 }
 </style>

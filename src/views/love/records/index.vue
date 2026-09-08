@@ -2,20 +2,19 @@
 import { ref } from "vue";
 import { useLoveRecords } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import DetailDialog from "./detail.vue";
 
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import View from "~icons/ep/view";
-import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 
 defineOptions({
   name: "LoveRecords"
 });
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
@@ -26,6 +25,7 @@ const {
   pagination,
   detailVisible,
   currentDetailId,
+  searchFields,
   onSearch,
   resetForm,
   openDialog,
@@ -34,41 +34,22 @@ const {
   handleSizeChange,
   handleCurrentChange
 } = useLoveRecords(tableRef);
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="日期" prop="date">
-        <el-date-picker
-          v-model="form.date"
-          type="date"
-          value-format="YYYY-MM-DD"
-          placeholder="请选择日期"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar title="恋爱记录" :columns="columns" @refresh="onSearch">
       <template #buttons>
@@ -150,11 +131,3 @@ const {
     <DetailDialog :id="currentDetailId" v-model:visible="detailVisible" />
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

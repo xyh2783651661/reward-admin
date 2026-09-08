@@ -2,7 +2,8 @@ import Detail from "./detail.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
-import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import {
   getCacheKeys,
   getCacheValue,
@@ -140,6 +141,16 @@ export function useCache(tableRef: Ref) {
     onSearch();
   };
 
+  // 搜索区字段配置：仅 Key 模式一项
+  const searchFields = computed<SearchField[]>(() => [
+    {
+      prop: "pattern",
+      label: "Key 模式",
+      type: "input",
+      placeholder: "如 system:*"
+    }
+  ]);
+
   onMounted(() => {
     onSearch();
   });
@@ -151,6 +162,7 @@ export function useCache(tableRef: Ref) {
     dataList,
     pagination,
     selectedNum,
+    searchFields,
     onSearch,
     resetForm,
     onViewValue,

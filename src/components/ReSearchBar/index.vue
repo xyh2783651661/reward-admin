@@ -44,6 +44,7 @@ const visibleFields = computed(() =>
 function widthClass(field: SearchField) {
   const width: SearchFieldWidth = field.width ?? "md";
   if (field.type === "daterange") return "ra-daterange";
+  if (field.type === "datetimerange") return "ra-datetimerange";
   if (field.type === "select") {
     return width === "sm" ? "ra-select-sm" : "ra-select";
   }
@@ -55,7 +56,11 @@ function widthClass(field: SearchField) {
 function placeholderOf(field: SearchField) {
   if (field.placeholder) return field.placeholder;
   if (field.type === "select") return `全部${field.label}`;
-  if (field.type === "date" || field.type === "daterange") {
+  if (
+    field.type === "date" ||
+    field.type === "daterange" ||
+    field.type === "datetimerange"
+  ) {
     return `请选择${field.label}`;
   }
   return `请输入${field.label}`;
@@ -100,6 +105,7 @@ defineExpose({ getRef: () => formRef.value, expanded });
         :filterable="field.filterable"
         :allow-create="field.allowCreate"
         :default-first-option="field.allowCreate"
+        popper-class="ra-select-popper"
         clearable
         :class="widthClass(field)"
       >
@@ -127,6 +133,18 @@ defineExpose({ getRef: () => formRef.value, expanded });
         start-placeholder="开始日期"
         end-placeholder="结束日期"
         :value-format="field.valueFormat ?? 'YYYY-MM-DD'"
+        :shortcuts="field.shortcuts ? getPickerShortcuts() : undefined"
+        clearable
+        :class="widthClass(field)"
+      />
+      <el-date-picker
+        v-else-if="field.type === 'datetimerange'"
+        v-model="model[field.prop]"
+        type="datetimerange"
+        range-separator="至"
+        start-placeholder="开始日期时间"
+        end-placeholder="结束日期时间"
+        :value-format="field.valueFormat"
         :shortcuts="field.shortcuts ? getPickerShortcuts() : undefined"
         clearable
         :class="widthClass(field)"

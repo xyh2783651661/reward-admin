@@ -3,7 +3,8 @@ import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
-import { ref, h } from "vue";
+import { ref, h, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import {
   getMailSendTaskList,
   deleteMailSendTask,
@@ -152,6 +153,20 @@ export function useMailSendTask() {
       .catch(() => {});
   }
 
+  // 搜索区字段配置：4 项一行平铺
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "taskNo", label: "任务编号", type: "input" },
+    { prop: "taskName", label: "任务名称", type: "input" },
+    { prop: "subject", label: "邮件主题", type: "input" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: statusOptions.value
+    }
+  ]);
+
   async function loadStatusOptions() {
     try {
       const { data } = await getMailSendTaskOptions();
@@ -168,6 +183,7 @@ export function useMailSendTask() {
     columns,
     pagination,
     statusOptions,
+    searchFields,
     sendLoadingMap,
     onSearch,
     resetForm,

@@ -2,15 +2,14 @@
 import { ref } from "vue";
 import { useCache } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Delete from "~icons/ep/delete";
 import View from "~icons/ep/view";
-import Refresh from "~icons/ep/refresh";
 
 defineOptions({ name: "CacheManage" });
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
@@ -20,6 +19,7 @@ const {
   dataList,
   pagination,
   selectedNum,
+  searchFields,
   onSearch,
   resetForm,
   onViewValue,
@@ -31,40 +31,28 @@ const {
   handleCurrentChange,
   handleSelectionChange
 } = useCache(tableRef);
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
+
+function handleReset() {
+  // ReSearchBar 内部已调用 formRef.resetFields()，此处只需复位页码并刷新
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <!-- 搜索表单 -->
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="Key 模式" prop="pattern">
-        <el-input
-          v-model="form.pattern"
-          placeholder="如 system:*"
-          clearable
-          class="w-[200px]!"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="handleReset"
+    />
 
     <!-- 表格 -->
     <PureTableBar :columns="columns" @refresh="onSearch">
@@ -162,11 +150,3 @@ const {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

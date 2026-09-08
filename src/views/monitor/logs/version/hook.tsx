@@ -5,7 +5,8 @@ import {
   yankRewardApkVersion,
   updateRewardApkRelease
 } from "@/api/reward";
-import { type Ref, reactive, ref, onMounted, toRaw, h } from "vue";
+import { type Ref, reactive, ref, onMounted, toRaw, h, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { ElMessage, ElMessageBox, ElTag } from "element-plus";
 import { addDialog } from "@/components/ReDialog/index";
 import ReleaseForm from "./form.vue";
@@ -225,8 +226,21 @@ export function useVersionLog(_tableRef?: Ref) {
   const resetForm = formEl => {
     if (!formEl) return;
     formEl.resetFields();
+    form.current = 1;
     onSearch();
   };
+
+  // 搜索区字段配置：3 项一行平铺
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "versionCode", label: "Code", type: "input" },
+    { prop: "versionName", label: "版本号", type: "input" },
+    {
+      prop: "requestTime",
+      label: "创建时间",
+      type: "datetimerange",
+      shortcuts: true
+    }
+  ]);
 
   onMounted(() => {
     onSearch();
@@ -238,6 +252,7 @@ export function useVersionLog(_tableRef?: Ref) {
     columns,
     dataList,
     pagination,
+    searchFields,
     onSearch,
     resetForm,
     handleSizeChange,

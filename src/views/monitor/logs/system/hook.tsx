@@ -4,7 +4,8 @@ import { message } from "@/utils/message";
 import { useDownload } from "@/hooks/useDownload";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
-import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { useCopyToClipboard } from "@pureadmin/utils";
 import {
   getSystemLogsList,
@@ -299,6 +300,113 @@ export function useSystemLog(_tableRef: Ref) {
     onSearch();
   };
 
+  /** 后端返回的筛选选项是 string[]，转成 SearchField 需要的 { label, value } */
+  function toOptions(list: string[]) {
+    return (list ?? []).map(v => ({ label: v, value: v }));
+  }
+
+  // 搜索区字段配置：16 项，常显 3 项 + 展开/收起
+  const searchFields = computed<SearchField[]>(() => {
+    const opts = filterOptions.value;
+    return [
+      {
+        prop: "module",
+        label: "所属模块",
+        type: "select",
+        filterable: true,
+        placeholder: "请选择所属模块",
+        options: toOptions(opts.modules)
+      },
+      { prop: "traceId", label: "TraceId", type: "input" },
+      {
+        prop: "uri",
+        label: "请求接口",
+        type: "input",
+        placeholder: "请输入请求接口"
+      },
+      {
+        prop: "method",
+        label: "请求方法",
+        type: "select",
+        width: "sm",
+        placeholder: "请选择请求方法",
+        options: toOptions(opts.methods)
+      },
+      {
+        prop: "action",
+        label: "操作类型",
+        type: "select",
+        filterable: true,
+        placeholder: "请选择操作类型",
+        options: toOptions(opts.actions)
+      },
+      {
+        prop: "resourceType",
+        label: "资源类型",
+        type: "select",
+        filterable: true,
+        placeholder: "请选择资源类型",
+        options: toOptions(opts.resourceTypes)
+      },
+      { prop: "resourceId", label: "资源ID", type: "input" },
+      {
+        prop: "bizType",
+        label: "业务类型",
+        type: "select",
+        filterable: true,
+        placeholder: "请选择业务类型",
+        options: toOptions(opts.bizTypes)
+      },
+      { prop: "bizId", label: "业务ID", type: "input" },
+      { prop: "operatorId", label: "操作人ID", type: "input" },
+      {
+        prop: "operatorName",
+        label: "操作人",
+        type: "select",
+        filterable: true,
+        allowCreate: true,
+        placeholder: "请选择或输入操作人",
+        options: toOptions(opts.operatorNames)
+      },
+      {
+        prop: "browserType",
+        label: "浏览器类型",
+        type: "select",
+        placeholder: "请选择浏览器",
+        options: toOptions(opts.browserTypes)
+      },
+      {
+        prop: "ipLocation",
+        label: "IP 归属地",
+        type: "select",
+        filterable: true,
+        placeholder: "请选择归属地",
+        options: toOptions(opts.ipLocations)
+      },
+      {
+        prop: "description",
+        label: "请求描述",
+        type: "input",
+        placeholder: "请输入请求描述"
+      },
+      {
+        prop: "success",
+        label: "状态",
+        type: "select",
+        width: "sm",
+        placeholder: "请选择状态",
+        options: successOptions.value,
+        optionsLoading: optionsLoading.value
+      },
+      {
+        prop: "requestTime",
+        label: "请求时间",
+        type: "datetimerange",
+        shortcuts: true
+      }
+    ];
+  });
+
   onMounted(() => {
     onSearch();
     loadFilterOptions();
@@ -313,6 +421,7 @@ export function useSystemLog(_tableRef: Ref) {
     dataList,
     pagination,
     filterOptions,
+    searchFields,
     onSearch,
     onDetail,
     resetForm,

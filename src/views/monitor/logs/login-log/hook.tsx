@@ -2,7 +2,8 @@
 import { getLoginLogsList } from "@/api/system";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
-import { reactive, ref, onMounted, toRaw } from "vue";
+import { reactive, ref, onMounted, toRaw, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 
 export function useLoginLog() {
   const form = reactive({
@@ -115,12 +116,35 @@ export function useLoginLog() {
     onSearch();
   });
 
+  // 搜索区字段配置：4 项一行平铺
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "username", label: "用户名", type: "input" },
+    { prop: "ip", label: "IP 地址", type: "input", placeholder: "请输入IP" },
+    {
+      prop: "success",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: [
+        { label: "成功", value: "true" },
+        { label: "失败", value: "false" }
+      ]
+    },
+    {
+      prop: "requestTime",
+      label: "登录时间",
+      type: "datetimerange",
+      shortcuts: true
+    }
+  ]);
+
   return {
     form,
     loading,
     columns,
     dataList,
     pagination,
+    searchFields,
     onSearch,
     resetForm,
     handleSizeChange,

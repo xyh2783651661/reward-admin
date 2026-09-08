@@ -3,6 +3,7 @@ export type SearchFieldType =
   | "select"
   | "date"
   | "daterange"
+  | "datetimerange"
   | "input-number";
 
 export type SearchFieldWidth = "sm" | "md" | "lg";
@@ -24,9 +25,13 @@ export interface SearchField {
   optionsLoading?: boolean;
   filterable?: boolean;
   allowCreate?: boolean;
-  /** type=daterange 时启用 monitor/utils 的快捷选项 */
+  /** type=daterange / datetimerange 时启用 monitor/utils 的快捷选项 */
   shortcuts?: boolean;
-  /** date / daterange 的 value-format，默认 YYYY-MM-DD */
+  /**
+   * date / daterange / datetimerange 的 value-format。
+   * date / daterange 默认 YYYY-MM-DD；
+   * datetimerange 不传则保持 Element 默认的 Date 对象（避免改变既有接口传参格式）。
+   */
   valueFormat?: string;
   /** input-number 的范围 */
   min?: number;

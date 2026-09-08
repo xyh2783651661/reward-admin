@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted } from "vue";
 import { useMailSendTask } from "./utils/hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import AddFill from "~icons/ri/add-circle-line";
-import Refresh from "~icons/ep/refresh";
 import EditPen from "~icons/ep/edit-pen";
 import View from "~icons/ep/view";
 import Delete from "~icons/ep/delete";
@@ -15,15 +15,13 @@ defineOptions({
   name: "MailSendTask"
 });
 
-const formRef = ref();
-
 const {
   form,
   loading,
   dataList,
   columns,
   pagination,
-  statusOptions,
+  searchFields,
   sendLoadingMap,
   onSearch,
   resetForm,
@@ -38,6 +36,11 @@ const {
   loadStatusOptions
 } = useMailSendTask();
 
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
+
 onMounted(() => {
   loadStatusOptions();
 });
@@ -45,69 +48,14 @@ onMounted(() => {
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-      @submit.prevent
-    >
-      <el-form-item label="任务编号：" prop="taskNo">
-        <el-input
-          v-model="form.taskNo"
-          placeholder="请输入任务编号"
-          clearable
-          class="w-[180px]!"
-          @keyup.enter="onSearch"
-        />
-      </el-form-item>
-      <el-form-item label="任务名称：" prop="taskName">
-        <el-input
-          v-model="form.taskName"
-          placeholder="请输入任务名称"
-          clearable
-          class="w-[180px]!"
-          @keyup.enter="onSearch"
-        />
-      </el-form-item>
-      <el-form-item label="邮件主题：" prop="subject">
-        <el-input
-          v-model="form.subject"
-          placeholder="请输入邮件主题"
-          clearable
-          class="w-[180px]!"
-          @keyup.enter="onSearch"
-        />
-      </el-form-item>
-      <el-form-item label="状态：" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="请选择状态"
-          clearable
-          class="w-[160px]!"
-        >
-          <el-option
-            v-for="o in statusOptions"
-            :key="o.value"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri/search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      :visible-count="4"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar title="邮件发送管理" :columns="columns" @refresh="onSearch">
       <template #buttons>
@@ -212,11 +160,3 @@ onMounted(() => {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

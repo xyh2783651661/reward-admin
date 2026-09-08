@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { useHolidayConfig } from "./utils/hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import Refresh from "~icons/ep/refresh";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import AddFill from "~icons/ri/add-circle-line";
@@ -13,12 +12,10 @@ defineOptions({
   name: "HolidayConfig"
 });
 
-const formRef = ref();
 const {
   form,
-  formOptions,
   loading,
-  optionsLoading,
+  searchFields,
   columns,
   dataList,
   pagination,
@@ -31,71 +28,22 @@ const {
   handleCurrentChange,
   handleSelectionChange
 } = useHolidayConfig();
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="节假日名称：" prop="holidayName">
-        <el-input
-          v-model="form.holidayName"
-          placeholder="请输入节假日名称"
-          clearable
-          class="w-[200px]!"
-        />
-      </el-form-item>
-      <el-form-item label="节假日类型：" prop="holidayType">
-        <el-select
-          v-model="form.holidayType"
-          clearable
-          :loading="optionsLoading"
-          placeholder="请选择类型"
-          class="w-[160px]!"
-        >
-          <el-option
-            v-for="item in formOptions.holidayTypes"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态：" prop="status">
-        <el-select
-          v-model="form.status"
-          clearable
-          :loading="optionsLoading"
-          placeholder="请选择状态"
-          class="w-[140px]!"
-        >
-          <el-option
-            v-for="item in formOptions.statusOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri/search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar title="节假日配置管理" :columns="columns" @refresh="onSearch">
       <template #buttons>
@@ -174,11 +122,3 @@ const {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

@@ -5,7 +5,8 @@ import { getMailSendRecordOptions, getMailSendRecordDetail } from "@/api/mail";
 import type { OptionsResponse } from "@/components/DictSelect/types";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
-import { reactive, ref, onMounted, toRaw } from "vue";
+import { reactive, ref, onMounted, toRaw, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/login/detail.vue";
 import type { MailSendRecordItem } from "./types";
@@ -227,8 +228,62 @@ export function useMailLog() {
   const resetForm = formEl => {
     if (!formEl) return;
     formEl.resetFields();
+    form.current = 1;
     onSearch();
   };
+
+  // 搜索区字段配置：9 项，常显 3 项 + 展开/收起
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "subject", label: "主题", type: "input" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      placeholder: "请选择",
+      options: options.statusOptions,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "type",
+      label: "邮件类型",
+      type: "select",
+      filterable: true,
+      options: options.typeOptions,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "mqStatus",
+      label: "MQ状态",
+      type: "select",
+      width: "sm",
+      options: options.mqStatusOptions,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "recipient",
+      label: "收件人",
+      type: "input",
+      placeholder: "请输入收件人邮箱"
+    },
+    { prop: "messageId", label: "消息ID", type: "input" },
+    {
+      prop: "priority",
+      label: "优先级",
+      type: "select",
+      width: "sm",
+      options: options.priorityOptions,
+      optionsLoading: optionsLoading.value
+    },
+    { prop: "provider", label: "供应商", type: "input" },
+    {
+      prop: "requestTime",
+      label: "发送时间",
+      type: "datetimerange",
+      valueFormat: "YYYY-MM-DD HH:mm:ss",
+      shortcuts: true
+    }
+  ]);
 
   async function loadStatusOptions() {
     optionsLoading.value = true;
@@ -257,6 +312,7 @@ export function useMailLog() {
     columns,
     dataList,
     pagination,
+    searchFields,
     onSearch,
     resetForm,
     handleSizeChange,

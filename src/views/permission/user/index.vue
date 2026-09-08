@@ -1,25 +1,23 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { useUser } from "./utils/hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
-import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 import Lock from "~icons/ri/lock-password-line";
 
 defineOptions({ name: "SysUser" });
 
-const formRef = ref();
 const {
   form,
   loading,
   columns,
   dataList,
   pagination,
-  statusOptions,
+  searchFields,
   onSearch,
   resetForm,
   openDialog,
@@ -28,70 +26,23 @@ const {
   handleSizeChange,
   handleCurrentChange
 } = useUser();
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="用户名：">
-        <el-input
-          v-model="form.username"
-          placeholder="请输入用户名"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item label="昵称：">
-        <el-input
-          v-model="form.nickname"
-          placeholder="请输入昵称"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item label="手机号：">
-        <el-input
-          v-model="form.phone"
-          placeholder="请输入手机号"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item label="状态：">
-        <el-select
-          v-model="form.status"
-          placeholder="请选择状态"
-          clearable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="o in statusOptions"
-            :key="o.value"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri/search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      :visible-count="4"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar title="系统用户管理" :columns="columns" @refresh="onSearch">
       <template #buttons>
@@ -170,11 +121,3 @@ const {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

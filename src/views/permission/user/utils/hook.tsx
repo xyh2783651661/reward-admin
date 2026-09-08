@@ -17,7 +17,8 @@ import {
   type SysUserReq,
   type SysRoleVo
 } from "@/api/rbac";
-import { h, reactive, ref, onMounted } from "vue";
+import { h, reactive, ref, onMounted, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 
 export function useUser() {
   const formRef = ref();
@@ -112,6 +113,20 @@ export function useUser() {
     form.current = 1;
     onSearch();
   };
+
+  // 搜索区字段配置：4 项一行平铺
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "username", label: "用户名", type: "input" },
+    { prop: "nickname", label: "昵称", type: "input" },
+    { prop: "phone", label: "手机号", type: "input" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: statusOptions.value
+    }
+  ]);
 
   async function loadRoles() {
     if (roleOptions.value.length === 0) {
@@ -315,6 +330,7 @@ export function useUser() {
     dataList,
     pagination,
     statusOptions,
+    searchFields,
     onSearch,
     resetForm,
     openDialog,

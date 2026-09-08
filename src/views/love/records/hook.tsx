@@ -12,7 +12,8 @@ import {
 } from "@/api/love";
 import { type Ref, ref, h } from "vue";
 import type { PaginationProps } from "@pureadmin/table";
-import { reactive, toRaw, onMounted } from "vue";
+import { reactive, toRaw, onMounted, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 
 export function useLoveRecords(_tableRef?: Ref) {
   const formRef = ref();
@@ -88,8 +89,14 @@ export function useLoveRecords(_tableRef?: Ref) {
   function resetForm(formEl: any) {
     if (!formEl) return;
     formEl.resetFields();
+    form.current = 1;
     onSearch();
   }
+
+  // 搜索区字段配置：仅日期一项，无需折叠
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "date", label: "日期", type: "date" }
+  ]);
 
   function handleDelete(row: any) {
     deleteLoveRecord(row.id)
@@ -179,6 +186,7 @@ export function useLoveRecords(_tableRef?: Ref) {
     pagination,
     detailVisible,
     currentDetailId,
+    searchFields,
     onSearch,
     resetForm,
     openDialog,

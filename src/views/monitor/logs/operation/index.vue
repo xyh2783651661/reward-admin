@@ -1,122 +1,48 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useOperationLog as useRole } from "./hook";
-import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import AntDesignExceptionOutlined from "~icons/ant-design/exception-outlined";
-import Refresh from "~icons/ep/refresh";
 
 defineOptions({
   name: "OperationLog"
 });
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
   form,
   loading,
-  optionsLoading,
-  successOptions,
   columns,
   dataList,
   pagination,
-  filterOptions,
+  searchFields,
   onSearch,
   resetForm,
   handleSizeChange,
   handleCurrentChange,
   onDetail
 } = useRole(tableRef);
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="任务名" prop="taskName">
-        <el-select
-          v-model="form.taskName"
-          placeholder="请选择或输入任务名"
-          clearable
-          filterable
-          allow-create
-          default-first-option
-          class="w-[170px]!"
-        >
-          <el-option
-            v-for="item in filterOptions.taskNames"
-            :key="item"
-            :label="item"
-            :value="item"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="调用方法" prop="classMethod">
-        <el-select
-          v-model="form.classMethod"
-          placeholder="请选择或输入调用方法"
-          clearable
-          filterable
-          allow-create
-          default-first-option
-          class="w-[260px]!"
-        >
-          <el-option
-            v-for="item in filterOptions.classMethods"
-            :key="item"
-            :label="item"
-            :value="item"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="success">
-        <el-select
-          v-model="form.success"
-          placeholder="请选择"
-          clearable
-          :loading="optionsLoading"
-          class="w-[150px]!"
-        >
-          <el-option
-            v-for="o in successOptions"
-            :key="String(o.value)"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="时间范围" prop="timeRange">
-        <el-date-picker
-          v-model="form.timeRange"
-          :shortcuts="getPickerShortcuts()"
-          type="datetimerange"
-          range-separator="至"
-          start-placeholder="开始日期时间"
-          end-placeholder="结束日期时间"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      :visible-count="4"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar title="任务执行日志" :columns="columns" @refresh="onSearch">
       <template v-slot="{ size, dynamicColumns }">
@@ -161,11 +87,5 @@ const {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
 }
 </style>

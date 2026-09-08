@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
-import { reactive, ref, toRaw, type Ref, onMounted } from "vue";
+import { reactive, ref, toRaw, type Ref, onMounted, computed } from "vue";
 import { addDialog } from "@/components/ReDialog";
 import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import {
   getAiCallRecordDetail,
   getAiCallRecordPage,
@@ -308,6 +309,72 @@ export function useAiCallRecord(_tableRef?: Ref) {
     }
   }
 
+  // 搜索区字段配置：9 项筛选项（含 datetimerange）
+  const searchFields = computed<SearchField[]>(() => [
+    {
+      prop: "id",
+      label: "记录ID",
+      type: "input",
+      placeholder: "请输入记录ID",
+      width: "sm"
+    },
+    {
+      prop: "bizType",
+      label: "业务类型",
+      type: "input",
+      placeholder: "请输入业务类型"
+    },
+    {
+      prop: "bizId",
+      label: "业务ID",
+      type: "input",
+      placeholder: "请输入业务ID"
+    },
+    {
+      prop: "model",
+      label: "调用模型",
+      type: "input",
+      placeholder: "请输入调用模型"
+    },
+    {
+      prop: "templateName",
+      label: "模板名称",
+      type: "input",
+      placeholder: "请输入模板名称",
+      width: "lg"
+    },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      options: statusOptions.value,
+      filterable: true,
+      allowCreate: true,
+      width: "sm"
+    },
+    {
+      prop: "operator",
+      label: "操作人",
+      type: "input",
+      placeholder: "请输入操作人",
+      width: "sm"
+    },
+    {
+      prop: "traceId",
+      label: "TraceId",
+      type: "input",
+      placeholder: "请输入 TraceId",
+      width: "lg"
+    },
+    {
+      prop: "requestTime",
+      label: "请求时间",
+      type: "datetimerange",
+      shortcuts: true,
+      valueFormat: "YYYY-MM-DD HH:mm:ss"
+    }
+  ]);
+
   onMounted(() => {
     loadStatusOptions();
   });
@@ -319,6 +386,7 @@ export function useAiCallRecord(_tableRef?: Ref) {
     dataList,
     pagination,
     statusOptions,
+    searchFields,
     onSearch,
     onDetail,
     resetForm,

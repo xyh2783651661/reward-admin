@@ -19,6 +19,7 @@ import {
 } from "@/api/system";
 import { getMailRecipientList } from "@/api/mail";
 import { computed, h, reactive, ref, toRaw } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import type {
   ToggleValue,
   OptionItem,
@@ -229,6 +230,26 @@ export function useHolidayConfig() {
       formOptions.value.holidayTypes.map(item => [item.value, item.label])
     );
   });
+
+  // 搜索区字段配置：3 项一行平铺，无需折叠
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "holidayName", label: "节假日名称", type: "input" },
+    {
+      prop: "holidayType",
+      label: "节假日类型",
+      type: "select",
+      options: formOptions.value.holidayTypes,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: formOptions.value.statusOptions,
+      optionsLoading: optionsLoading.value
+    }
+  ]);
 
   // repeatType 到中文的映射
   const repeatTypeLabelMap: Record<string, string> = {
@@ -714,6 +735,7 @@ export function useHolidayConfig() {
   return {
     form,
     formOptions,
+    searchFields,
     loading,
     optionsLoading,
     columns,

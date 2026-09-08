@@ -65,7 +65,9 @@
   }
 }
 
-/* 筛选控件宽度 token —— 替换写死的 w-[180px]! 等 */
+/* 筛选控件宽度 token —— 替换写死的 w-[180px]! 等
+   宽度取值兼顾「选项文字可读 + 下拉弹层可点」：
+   select 过窄会导致下拉项换行、clearable 图标挤压文字，故选择类比输入类只小 20px */
 .ra-input {
   width: 200px;
 }
@@ -75,13 +77,24 @@
 }
 
 .ra-select {
-  width: 160px;
+  width: 180px;
 }
 
 .ra-select-sm {
-  width: 140px;
+  width: 160px;
 }
 
 .ra-daterange {
   width: 260px;
+}
+
+.ra-datetimerange {
+  width: 340px;
+}
+
+/* 下拉弹层最小宽度兜底：输入框窄但选项文字长时，弹层不被压缩换行。
+   内联 style 会覆盖普通声明，这里必须 !important。
+   注意：popper 被 teleport 到 body，不能用 scoped 样式命中。 */
+.el-select__popper.ra-select-popper {
+  min-width: 180px !important;
 }

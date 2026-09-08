@@ -17,7 +17,8 @@ import {
   type SysRoleReq,
   type SysMenuVo
 } from "@/api/rbac";
-import { h, reactive, ref, onMounted } from "vue";
+import { h, reactive, ref, onMounted, computed } from "vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 
 export function useRole() {
   const formRef = ref();
@@ -81,6 +82,19 @@ export function useRole() {
     form.current = 1;
     onSearch();
   };
+
+  // 搜索区字段配置：3 项一行平铺
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "roleName", label: "角色名称", type: "input" },
+    { prop: "roleCode", label: "角色编码", type: "input" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: statusOptions.value
+    }
+  ]);
 
   async function loadMenuTree() {
     if (menuTree.value.length === 0) {
@@ -272,6 +286,7 @@ export function useRole() {
     dataList,
     pagination,
     statusOptions,
+    searchFields,
     onSearch,
     resetForm,
     openDialog,
