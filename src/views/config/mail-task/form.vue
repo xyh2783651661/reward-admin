@@ -58,117 +58,149 @@ async function preview() {
 
 <template>
   <div class="main p-6">
-    <el-form
-      ref="formRef"
-      v-loading="loading"
-      :model="form"
-      :rules="rules"
-      label-width="90px"
-    >
-      <el-form-item label="任务名称：">
-        <el-input
-          v-model="form.taskName"
-          placeholder="请输入任务名称（可选）"
-          clearable
-          class="max-w-[480px]"
-        />
-      </el-form-item>
-
-      <el-form-item label="邮件主题：" prop="subject">
-        <el-input
-          v-model="form.subject"
-          placeholder="请输入邮件主题"
-          clearable
-          class="max-w-[480px]"
-        />
-      </el-form-item>
-
-      <el-form-item label="收件人：">
-        <div class="w-full">
-          <div class="flex items-center gap-3">
-            <el-button
-              :icon="useRenderIcon('ri/user-add-line')"
-              @click="openSelector"
-            >
-              选择业务好友
-            </el-button>
-            <span class="text-gray-500">已选择 {{ selectedCount }} 人</span>
-          </div>
-          <div
-            v-if="selectedRecipients.length"
-            class="mt-3 flex flex-wrap gap-2"
-          >
-            <el-tag
-              v-for="r in selectedRecipients"
-              :key="r.id"
-              closable
-              @close="
-                onRecipientsChange(form.recipientIds.filter(id => id !== r.id))
-              "
-            >
-              {{ r.name || "-" }} &lt;{{ r.email || "邮箱未设置" }}&gt;
-            </el-tag>
-          </div>
+    <el-card v-loading="loading" shadow="never" class="mail-task-form-card">
+      <template #header>
+        <div class="mail-task-form__header">
+          <h3 class="mail-task-form__title">
+            {{ isEdit ? "编辑邮件发送任务" : "新建邮件发送任务" }}
+          </h3>
         </div>
-      </el-form-item>
+      </template>
 
-      <el-form-item label="邮件正文：" prop="content">
-        <div class="w-full">
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-width="90px"
+        class="mail-task-form"
+      >
+        <el-row :gutter="24">
+          <el-col :xs="24" :md="12">
+            <el-form-item label="任务名称：" prop="taskName">
+              <el-input
+                v-model="form.taskName"
+                placeholder="请输入任务名称（可选）"
+                clearable
+                maxlength="100"
+                show-word-limit
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :md="12">
+            <el-form-item label="邮件主题：" prop="subject">
+              <el-input
+                v-model="form.subject"
+                placeholder="请输入邮件主题"
+                clearable
+                maxlength="200"
+                show-word-limit
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item label="收件人：" required>
+          <div class="w-full">
+            <div class="flex items-center gap-3">
+              <el-button
+                :icon="useRenderIcon('ri/user-add-line')"
+                @click="openSelector"
+              >
+                选择业务好友
+              </el-button>
+              <el-text v-if="selectedCount" type="info">
+                已选择 {{ selectedCount }} 人
+              </el-text>
+              <el-text v-else type="danger">未选择收件人</el-text>
+            </div>
+            <div
+              v-if="selectedRecipients.length"
+              class="mail-task-form__recipients mt-3"
+            >
+              <el-tag
+                v-for="r in selectedRecipients"
+                :key="r.id"
+                closable
+                effect="plain"
+                @close="
+                  onRecipientsChange(
+                    form.recipientIds.filter(id => id !== r.id)
+                  )
+                "
+              >
+                {{ r.name || "-" }} &lt;{{ r.email || "邮箱未设置" }}&gt;
+              </el-tag>
+            </div>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="邮件正文：" prop="content">
           <MailRichEditor v-model="form.content" />
-        </div>
-      </el-form-item>
+        </el-form-item>
 
-      <el-form-item label="附件：">
-        <div class="w-full">
-          <el-upload
-            :show-file-list="false"
-            :auto-upload="true"
-            :before-upload="beforeUpload"
-            accept="*"
-          >
-            <el-button :icon="useRenderIcon('ri-attachment-2')"
-              >上传附件</el-button
-            >
-          </el-upload>
-          <div v-if="form.attachments.length" class="mt-3">
-            <el-tag
-              v-for="(a, i) in form.attachments"
-              :key="i"
-              closable
-              class="mr-2 mb-2"
-              @close="removeAttachment(i)"
-            >
-              {{ a.fileName }}（{{
-                a.fileSize ? (a.fileSize / 1024).toFixed(1) + "KB" : "-"
-              }}）
-            </el-tag>
+        <el-row :gutter="24">
+          <el-col :xs="24" :md="12">
+            <el-form-item label="附件：">
+              <div class="w-full">
+                <el-upload
+                  :show-file-list="false"
+                  :auto-upload="true"
+                  :before-upload="beforeUpload"
+                  accept="*"
+                >
+                  <el-button :icon="useRenderIcon('ri-attachment-2')">
+                    上传附件
+                  </el-button>
+                </el-upload>
+                <div
+                  v-if="form.attachments.length"
+                  class="mail-task-form__attachments mt-3"
+                >
+                  <el-tag
+                    v-for="(a, i) in form.attachments"
+                    :key="i"
+                    closable
+                    effect="plain"
+                    @close="removeAttachment(i)"
+                  >
+                    {{ a.fileName }}（{{
+                      a.fileSize ? (a.fileSize / 1024).toFixed(1) + "KB" : "-"
+                    }}）
+                  </el-tag>
+                </div>
+              </div>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :md="12">
+            <el-form-item label="备注：">
+              <el-input
+                v-model="form.remark"
+                type="textarea"
+                :rows="4"
+                placeholder="备注（可选）"
+                maxlength="500"
+                show-word-limit
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-form-item>
+          <div class="mail-task-form__actions">
+            <el-button @click="cancel">取消</el-button>
+            <el-button :icon="useRenderIcon('ri/eye-line')" @click="preview">
+              预览
+            </el-button>
+            <el-button type="primary" :loading="saving" @click="save(true)">
+              保存草稿
+            </el-button>
+            <el-button type="success" :loading="sending" @click="send">
+              发送
+            </el-button>
           </div>
-        </div>
-      </el-form-item>
-
-      <el-form-item label="备注：">
-        <el-input
-          v-model="form.remark"
-          type="textarea"
-          :rows="3"
-          placeholder="备注（可选）"
-          class="max-w-[480px]"
-        />
-      </el-form-item>
-
-      <el-form-item>
-        <el-button type="primary" :loading="saving" @click="save(true)">
-          保存草稿
-        </el-button>
-        <el-button :icon="useRenderIcon('ri/eye-line')" @click="preview"
-          >预览</el-button
-        >
-        <el-button type="success" :loading="sending" @click="send">
-          发送
-        </el-button>
-        <el-button @click="cancel">取消</el-button>
-      </el-form-item>
-    </el-form>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
     <MailRecipientSelector
       v-if="selectorVisible"
@@ -178,3 +210,42 @@ async function preview() {
     />
   </div>
 </template>
+
+<style scoped>
+.mail-task-form-card {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mail-task-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mail-task-form__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.mail-task-form {
+  padding: 8px 0;
+}
+
+.mail-task-form__recipients,
+.mail-task-form__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mail-task-form__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  width: 100%;
+  padding-top: 8px;
+}
+</style>

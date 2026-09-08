@@ -81,6 +81,7 @@ onBeforeUnmount(() => {
       class="mail-rich-editor__editor"
       :defaultConfig="editorConfig"
       mode="default"
+      style="height: 380px"
       @onCreated="handleCreated"
       @onChange="handleChange"
     />
@@ -89,6 +90,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mail-rich-editor {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--el-border-color);
@@ -96,11 +99,18 @@ onBeforeUnmount(() => {
 }
 
 .mail-rich-editor__toolbar {
+  flex-shrink: 0;
   border-bottom: 1px solid var(--el-border-color);
 }
 
 .mail-rich-editor__editor {
-  height: 380px;
-  overflow-y: hidden;
+  flex: 1;
+  min-height: 380px;
+  overflow-y: auto;
+}
+
+.mail-rich-editor__editor :deep(.w-e-text-container) {
+  height: 100% !important;
+  min-height: 100% !important;
 }
 </style>
