@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
 import {
   getMailSendTaskDetail,
@@ -89,15 +90,17 @@ function handleRetry() {
     type: "warning"
   })
     .then(async () => {
-      const r: any = await retryMailSendTask(route.params.id as string);
-      if (r.code === 200) {
+      try {
+        const r: any = await retryMailSendTask(route.params.id as string);
+        if (r.code !== 200) throw new Error(r.msg || "重试失败");
         message("失败收件人已重新进入发送队列", { type: "success" });
         loadDetail();
         loadRecipients();
-      } else {
-        message(r.msg || "重试失败", { type: "error" });
+      } catch (e) {
+        message(getErrorMessage(e, "重试失败"), { type: "error" });
       }
     })
+    // 用户取消确认框时静默处理
     .catch(() => {});
 }
 

@@ -19,6 +19,7 @@ import {
 import { computed, h, reactive, ref, toRaw } from "vue";
 import { useTableExport } from "../../composables";
 import ReJsonField from "@/components/ReJsonField/index.vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import type {
   ToggleValue,
   OptionItem,
@@ -501,11 +502,49 @@ export function useSystemConfig() {
     () => toRaw(form)
   );
 
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "configKey", label: "配置 Key", type: "input", width: "lg" },
+    { prop: "configValue", label: "配置值", type: "input" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: formOptions.value.statusOptions,
+      optionsLoading: optionsLoading.value
+    },
+    { prop: "description", label: "说明", type: "input" },
+    {
+      prop: "configGroup",
+      label: "配置分组",
+      type: "select",
+      filterable: true,
+      allowCreate: true,
+      options: formOptions.value.groups,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "valueType",
+      label: "值类型",
+      type: "select",
+      options: formOptions.value.valueTypes,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "sensitive",
+      label: "敏感标识",
+      type: "select",
+      options: formOptions.value.sensitiveOptions,
+      optionsLoading: optionsLoading.value
+    }
+  ]);
+
   void Promise.all([onSearch(), loadOptions()]);
 
   return {
     form,
     formOptions,
+    searchFields,
     loading,
     optionsLoading,
     columns,
