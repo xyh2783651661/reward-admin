@@ -2,18 +2,17 @@
 import { ref } from "vue";
 import { useSysNotice } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
-import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 
 defineOptions({
   name: "SystemNotice"
 });
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
@@ -23,10 +22,7 @@ const {
   dataList,
   pagination,
   noticeStats,
-  platformOptions,
-  noticeTypeOptions,
-  priorityOptions,
-  statusOptions,
+  searchFields,
   onSearch,
   resetForm,
   openDialog,
@@ -37,6 +33,11 @@ const {
   handleCurrentChange,
   handleSelectionChange
 } = useSysNotice(tableRef);
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
@@ -69,95 +70,14 @@ const {
       </div>
     </section>
 
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="关键词" prop="keyword">
-        <el-input
-          v-model="form.keyword"
-          placeholder="搜索标题或内容"
-          clearable
-          class="w-[220px]!"
-        />
-      </el-form-item>
-      <el-form-item label="类型" prop="filterNoticeType">
-        <el-select
-          v-model="form.filterNoticeType"
-          placeholder="全部类型"
-          clearable
-          class="w-[150px]!"
-        >
-          <el-option
-            v-for="o in noticeTypeOptions"
-            :key="o.value"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="优先级" prop="priority">
-        <el-select
-          v-model="form.priority"
-          placeholder="全部优先级"
-          clearable
-          class="w-[150px]!"
-        >
-          <el-option
-            v-for="o in priorityOptions"
-            :key="o.value"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="平台" prop="platformMask">
-        <el-select
-          v-model="form.platformMask"
-          placeholder="全部平台"
-          clearable
-          class="w-[150px]!"
-        >
-          <el-option
-            v-for="item in platformOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="全部状态"
-          clearable
-          class="w-[150px]!"
-        >
-          <el-option
-            v-for="o in statusOptions"
-            :key="o.value"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri/search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      :visible-count="3"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <PureTableBar title="公告列表" :columns="columns" @refresh="onSearch">
       <template #buttons>
@@ -332,19 +252,6 @@ const {
 
   .is-urgent {
     background: var(--el-color-warning-light-9);
-  }
-}
-
-.search-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 8px;
-  padding: 14px 20px 2px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
   }
 }
 
