@@ -4,8 +4,8 @@ import type { SysMenuVo } from "@/api/rbac";
 
 const props = withDefaults(
   defineProps<{
-    menuTree: SysMenuVo[];
-    checkedKeys: number[];
+    menuTree?: SysMenuVo[];
+    checkedKeys?: number[];
   }>(),
   {
     menuTree: () => [],

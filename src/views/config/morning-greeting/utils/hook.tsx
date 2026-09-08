@@ -1,11 +1,11 @@
 import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
-import { ElMessageBox } from "element-plus";
-import { usePublicHooks } from "@/hooks/usePublicHooks";
-import { addDialog } from "@/components/ReDialog";
+import { getErrorMessage } from "@/utils/error";
+import { useCrudDialog } from "@/hooks/useCrudDialog";
+import ReStatusSwitch from "@/components/ReStatusSwitch/index.vue";
 import type { FormItemProps } from "../utils/types";
-import { deviceDetection } from "@pureadmin/utils";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import {
   addMorningGreeting,
   deleteMorningGreeting,
@@ -15,12 +15,9 @@ import {
 } from "@/api/morning-greeting";
 import { getRewardUserList } from "@/api/system";
 import { useCrudTable } from "../../composables";
-import { type Ref, ref, h, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 
-export function useMorningGreeting(_treeRef?: Ref) {
-  const formRef = ref();
-  const switchLoadMap = ref({});
-  const { switchStyle } = usePublicHooks();
+export function useMorningGreeting() {
   const userOptions = ref<{ id: number; nickName: string }[]>([]);
   const enabledOptions = ref<Array<{ value: any; label: string }>>([]);
 
@@ -36,33 +33,51 @@ export function useMorningGreeting(_treeRef?: Ref) {
     handleCurrentChange,
     handleSelectionChange
   } = useCrudTable<{
-    targetUserId?: number | string;
-    sendDate?: string;
-    enabled?: number;
+    targetUserId: number | string;
+    sendDate: string;
+    enabled: number | string;
   }>({
     searchApi: getMorningGreetingPage,
     deleteApi: deleteMorningGreeting,
-    defaultForm: { targetUserId: "", sendDate: "" },
-    deleteMessage: row => `已删除ID为${row.id}的数据`
+    defaultForm: { targetUserId: "", sendDate: "", enabled: "" },
+    deleteMessage: row => `已删除ID为${row.id}的配置`
   });
+
+  const searchFields = computed<SearchField[]>(() => [
+    {
+      prop: "targetUserId",
+      label: "目标用户",
+      type: "select",
+      filterable: true,
+      options: userOptions.value.map(u => ({ label: u.nickName, value: u.id }))
+    },
+    {
+      prop: "enabled",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: enabledOptions.value
+    }
+  ]);
 
   onMounted(async () => {
     try {
       const { data } = await getRewardUserList({});
       userOptions.value = (data ?? []) as { id: number; nickName: string }[];
-    } catch {
+    } catch (error) {
       userOptions.value = [];
+      message(getErrorMessage(error, "加载用户列表失败"), { type: "error" });
     }
     try {
       const { data } = await getMorningGreetingOptions();
       enabledOptions.value = data?.enabledOptions ?? [];
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      message(getErrorMessage(error, "加载状态选项失败"), { type: "error" });
     }
   });
 
   const columns: TableColumnList = [
-    { label: "ID", prop: "id" },
+    { label: "ID", prop: "id", width: 80, hide: true },
     {
       label: "目标用户",
       prop: "targetUserId",
@@ -80,132 +95,84 @@ export function useMorningGreeting(_treeRef?: Ref) {
     },
     {
       label: "状态",
+      prop: "enabled",
+      minWidth: 100,
       cellRenderer: scope => (
-        <el-switch
+        <ReStatusSwitch
+          modelValue={scope.row.enabled}
+          onUpdate:modelValue={(val: any) => (scope.row.enabled = val)}
+          row={scope.row}
+          index={scope.index}
           size={scope.props.size === "small" ? "small" : "default"}
-          loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.enabled}
-          active-value={1}
-          inactive-value={0}
-          active-text="已启用"
-          inactive-text="已禁用"
-          inline-prompt
-          style={switchStyle.value}
-          onChange={() => onChange(scope as any)}
+          activeText="已启用"
+          inactiveText="已禁用"
+          confirmTitle={`确认要<strong>${
+            scope.row.enabled ? "禁用" : "启用"
+          }</strong><strong style='color:var(--el-color-primary)'>ID为${
+            scope.row.id
+          }</strong>的早安问候配置吗?`}
+          onChange={async ({ row, value, next }) => {
+            try {
+              const r = await updateMorningGreeting({
+                id: row.id,
+                enabled: value as number
+              });
+              if (r.code !== 200) throw new Error(r.msg || "状态更新失败");
+              message(`已${value ? "启用" : "禁用"}ID为${row.id}的配置`, {
+                type: "success"
+              });
+              next(true);
+            } catch (error) {
+              next(false, error);
+            }
+          }}
         />
-      ),
-      minWidth: 90
+      )
     },
-    { label: "备注", prop: "remark", minWidth: 160 },
     {
-      label: "创建时间",
-      prop: "createdTime",
-      minWidth: 160,
-      formatter: ({ createdTime }) =>
-        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+      label: "备注",
+      prop: "remark",
+      minWidth: 200,
+      showOverflowTooltip: true,
+      formatter: ({ remark }) => remark || "-"
     },
     {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 160,
+      width: 168,
       formatter: ({ updatedTime }) =>
         updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      width: 168,
+      hide: true,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     { label: "操作", fixed: "right", width: 140, slot: "operation" }
   ];
 
-  function onChange({ row, index }) {
-    ElMessageBox.confirm(
-      `确认要<strong>${
-        row.enabled ? "启用" : "禁用"
-      }</strong><strong style='color:var(--el-color-primary)'>ID为${
-        row.id
-      }</strong>的早安问候配置吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(() => {
-        switchLoadMap.value[index] = Object.assign(
-          {},
-          switchLoadMap.value[index],
-          { loading: true }
-        );
-        setTimeout(() => {
-          switchLoadMap.value[index] = Object.assign(
-            {},
-            switchLoadMap.value[index],
-            { loading: false }
-          );
-          updateMorningGreeting({ id: row.id, enabled: row.enabled }).then(
-            r => {
-              if (r.code === 200) {
-                message(
-                  `已${row.enabled ? "启用" : "禁用"}ID为${row.id}的配置`,
-                  {
-                    type: "success"
-                  }
-                );
-              }
-            }
-          );
-        }, 300);
-      })
-      .catch(() => {
-        row.enabled ? (row.enabled = 0) : (row.enabled = 1);
-      });
-  }
+  const { open } = useCrudDialog<FormItemProps>({
+    title: "早安问候配置",
+    formComponent: editForm,
+    width: "680px",
+    defaultForm: row => ({
+      id: row?.id ?? "",
+      targetUserId: row?.targetUserId ?? "",
+      sendDate: row?.sendDate ?? "",
+      enabled: row?.enabled ?? 1,
+      remark: row?.remark ?? ""
+    }),
+    submitApi: (payload, mode) =>
+      mode === "新增"
+        ? addMorningGreeting(payload)
+        : updateMorningGreeting(payload)
+  });
 
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}早安问候配置`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          targetUserId: row?.targetUserId ?? "",
-          sendDate: row?.sendDate ?? "",
-          enabled: row?.enabled ?? 1,
-          remark: row?.remark ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-        const msg = `您${title}了目标用户为${curData.targetUserId}的这条数据`;
-        function chores() {
-          done();
-          onSearch();
-        }
-        FormRef.validate(valid => {
-          if (valid) {
-            const api =
-              title === "新增" ? addMorningGreeting : updateMorningGreeting;
-            api(curData)
-              .then(r => {
-                if (r.code === 200) {
-                  message(msg + `${r.msg}`, { type: "success" });
-                } else {
-                  message(msg + `${r.msg}`, { type: "error" });
-                }
-              })
-              .finally(() => {
-                chores();
-              });
-          }
-        });
-      }
-    });
+  function openDialog(title: "新增" | "修改" = "新增", row?: FormItemProps) {
+    void open(title, row, () => onSearch());
   }
 
   return {
@@ -214,8 +181,7 @@ export function useMorningGreeting(_treeRef?: Ref) {
     dataList,
     pagination,
     columns,
-    userOptions,
-    enabledOptions,
+    searchFields,
     onSearch,
     resetForm,
     openDialog,

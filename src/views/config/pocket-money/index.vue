@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { usePocketMoneyRule as useRole } from "./utils/hook";
+import { usePocketMoneyRule } from "./utils/hook";
 import { ref } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
-import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
 import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
@@ -14,15 +14,13 @@ defineOptions({
   name: "PocketMoney"
 });
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
   form,
   loading,
   exportLoading,
-  ruleKeyOptions,
-  ruleTypeOptions,
+  searchFields,
   columns,
   dataList,
   pagination,
@@ -34,72 +32,30 @@ const {
   handleSizeChange,
   handleCurrentChange,
   handleSelectionChange
-} = useRole();
+} = usePocketMoneyRule();
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 </script>
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="规则标识：" prop="ruleKey">
-        <el-select
-          v-model="form.ruleKey"
-          placeholder="请选择规则标识"
-          clearable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="key in ruleKeyOptions"
-            :key="key.value"
-            :label="key.label"
-            :value="key.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="规则类型：" prop="ruleType">
-        <el-select
-          v-model="form.ruleType"
-          placeholder="请选择规则类型"
-          clearable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="item in ruleTypeOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="规则描述：" prop="description">
-        <el-input
-          v-model="form.description"
-          placeholder="请输入规则描述"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri/search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
-    <PureTableBar class="w-full" :columns="columns" @refresh="onSearch">
+    <PureTableBar
+      title="零花钱规则"
+      class="w-full"
+      :columns="columns"
+      @refresh="onSearch"
+    >
       <template #buttons>
         <el-button
           v-perms="'config:pocketMoney:add'"
@@ -175,11 +131,3 @@ const {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

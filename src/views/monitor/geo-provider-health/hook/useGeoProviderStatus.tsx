@@ -27,7 +27,13 @@ export interface ProviderCardItem extends GeoProviderHealthItem {
 }
 
 // 状态过滤器
-export type StatusFilter = "all" | "abnormal" | "UP" | "WARN" | "DOWN" | "SUSPENDED";
+export type StatusFilter =
+  | "all"
+  | "abnormal"
+  | "UP"
+  | "WARN"
+  | "DOWN"
+  | "SUSPENDED";
 
 const STATUS_SEVERITY: Record<string, number> = {
   DOWN: 0,
@@ -137,7 +143,9 @@ export function useGeoProviderStatus() {
   }
 
   function toggleSelect(provider: string, poolName?: string) {
-    const idx = selectedProviders.value.findIndex(p => p.provider === provider && p.poolName === poolName);
+    const idx = selectedProviders.value.findIndex(
+      p => p.provider === provider && p.poolName === poolName
+    );
     if (idx >= 0) selectedProviders.value.splice(idx, 1);
     else selectedProviders.value.push({ poolName, provider });
   }
@@ -147,12 +155,16 @@ export function useGeoProviderStatus() {
   }
 
   function selectAllVisible() {
-    selectedProviders.value = filteredList.value.map(i => ({ poolName: i.poolName, provider: i.provider }));
+    selectedProviders.value = filteredList.value.map(i => ({
+      poolName: i.poolName,
+      provider: i.provider
+    }));
   }
 
   async function loadStats() {
     try {
-      const { data } = await getGeoProviderStatsOverview<GeoProviderStatsOverview>();
+      const { data } =
+        await getGeoProviderStatsOverview<GeoProviderStatsOverview>();
       Object.assign(statsOverview, data);
     } catch (error) {
       console.error("加载统计概览失败", error);
@@ -161,7 +173,8 @@ export function useGeoProviderStatus() {
 
   async function loadDropdown() {
     try {
-      const { data } = await getGeoProviderDropdownOptions<GeoProviderDropdownOptions>();
+      const { data } =
+        await getGeoProviderDropdownOptions<GeoProviderDropdownOptions>();
       Object.assign(dropdownOptions, data);
     } catch (error) {
       console.error("加载下拉字典失败", error);
@@ -171,11 +184,23 @@ export function useGeoProviderStatus() {
   async function onSearch() {
     loading.value = true;
     try {
-      const { data } = await getGeoProviderHealthPage<GeoProviderHealthItem>({ current: 1, size: 100 });
-      dataList.value = (data.records ?? []).map(item => ({ ...item, _probing: false, _resetting: false, _toggling: false }));
+      const { data } = await getGeoProviderHealthPage<GeoProviderHealthItem>({
+        current: 1,
+        size: 100
+      });
+      dataList.value = (data.records ?? []).map(item => ({
+        ...item,
+        _probing: false,
+        _resetting: false,
+        _toggling: false
+      }));
       // clean selections
-      const names = new Set(dataList.value.map(i => `${i.poolName}|${i.provider}`));
-      selectedProviders.value = selectedProviders.value.filter(p => names.has(`${p.poolName}|${p.provider}`));
+      const names = new Set(
+        dataList.value.map(i => `${i.poolName}|${i.provider}`)
+      );
+      selectedProviders.value = selectedProviders.value.filter(p =>
+        names.has(`${p.poolName}|${p.provider}`)
+      );
       await loadStats();
     } catch (error) {
       console.error("加载地理来源健康数据失败", error);
@@ -189,9 +214,14 @@ export function useGeoProviderStatus() {
   async function onProbe(row: ProviderCardItem) {
     row._probing = true;
     try {
-      const { data } = await probeGeoProvider<GeoProviderHealthItem>(row.poolName as string, row.provider);
+      const { data } = await probeGeoProvider<GeoProviderHealthItem>(
+        row.poolName as string,
+        row.provider
+      );
       Object.assign(row, data);
-      message(`探测完成：${row.provider} ${getStatusLabel(row.status)}`, { type: row.status === "UP" ? "success" : "warning" });
+      message(`探测完成：${row.provider} ${getStatusLabel(row.status)}`, {
+        type: row.status === "UP" ? "success" : "warning"
+      });
       loadStats();
     } catch (error) {
       console.error("探测失败", error);
@@ -204,10 +234,17 @@ export function useGeoProviderStatus() {
   async function onToggleEnable(row: ProviderCardItem) {
     const action = row.enabled ? "禁用" : "启用";
     try {
-      await ElMessageBox.confirm(`确认${action}来源 ${row.poolName}/${row.provider}？`, "提示", { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" });
+      await ElMessageBox.confirm(
+        `确认${action}来源 ${row.poolName}/${row.provider}？`,
+        "提示",
+        { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      );
       row._toggling = true;
       const api = row.enabled ? disableGeoProvider : enableGeoProvider;
-      const { data } = await api<GeoProviderHealthItem>(row.poolName as string, row.provider);
+      const { data } = await api<GeoProviderHealthItem>(
+        row.poolName as string,
+        row.provider
+      );
       Object.assign(row, data);
       message(`${action}成功`, { type: "success" });
       loadStats();
@@ -223,9 +260,16 @@ export function useGeoProviderStatus() {
 
   async function onReset(row: ProviderCardItem) {
     try {
-      await ElMessageBox.confirm(`确认重置 ${row.poolName}/${row.provider} 的熔断状态？`, "提示", { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" });
+      await ElMessageBox.confirm(
+        `确认重置 ${row.poolName}/${row.provider} 的熔断状态？`,
+        "提示",
+        { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      );
       row._resetting = true;
-      const { data } = await resetGeoProviderCircuit<GeoProviderHealthItem>(row.poolName as string, row.provider);
+      const { data } = await resetGeoProviderCircuit<GeoProviderHealthItem>(
+        row.poolName as string,
+        row.provider
+      );
       Object.assign(row, data);
       message("熔断已重置", { type: "success" });
       loadStats();
@@ -240,7 +284,10 @@ export function useGeoProviderStatus() {
   }
 
   function selectedItems() {
-    return selectedProviders.value.map(row => ({ poolName: row.poolName as string, provider: row.provider }));
+    return selectedProviders.value.map(row => ({
+      poolName: row.poolName as string,
+      provider: row.provider
+    }));
   }
 
   async function runBatch(action: "enable" | "disable" | "reset") {
@@ -248,10 +295,18 @@ export function useGeoProviderStatus() {
       message("请先勾选来源", { type: "warning" });
       return;
     }
-    const labelMap = { enable: "批量启用", disable: "批量禁用", reset: "批量重置熔断" } as const;
+    const labelMap = {
+      enable: "批量启用",
+      disable: "批量禁用",
+      reset: "批量重置熔断"
+    } as const;
     const label = labelMap[action];
     try {
-      await ElMessageBox.confirm(`确认对已选 ${selectedProviders.value.length} 个来源执行「${label}」？`, "提示", { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" });
+      await ElMessageBox.confirm(
+        `确认对已选 ${selectedProviders.value.length} 个来源执行「${label}」？`,
+        "提示",
+        { confirmButtonText: "确定", cancelButtonText: "取消", type: "warning" }
+      );
       batchWorking.value = true;
       const providers = selectedItems();
       if (action === "enable") await batchEnableGeoProviders(providers);

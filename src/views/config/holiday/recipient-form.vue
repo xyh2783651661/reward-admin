@@ -5,8 +5,8 @@ import type { RecipientOption } from "./utils/types";
 interface Props {
   holidayId: number;
   holidayName: string;
-  recipientOptions: RecipientOption[];
-  selectedRecipientIds: number[];
+  recipientOptions?: RecipientOption[];
+  selectedRecipientIds?: number[];
 }
 
 const props = withDefaults(defineProps<Props>(), {

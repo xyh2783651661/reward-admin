@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import { ref, h } from "vue";
@@ -138,14 +139,16 @@ export function useMailSendTask() {
       }
     )
       .then(async () => {
-        const r: any = await retryMailSendTask(row.id);
-        if (r.code === 200) {
+        try {
+          const r: any = await retryMailSendTask(row.id);
+          if (r.code !== 200) throw new Error(r.msg || "重试失败");
           message("失败收件人已重新进入发送队列", { type: "success" });
           onSearch();
-        } else {
-          message(r.msg || "重试失败", { type: "error" });
+        } catch (e) {
+          message(getErrorMessage(e, "重试失败"), { type: "error" });
         }
       })
+      // 用户取消确认框时静默处理
       .catch(() => {});
   }
 
@@ -154,7 +157,7 @@ export function useMailSendTask() {
       const { data } = await getMailSendTaskOptions();
       statusOptions.value = data?.statusOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载状态选项失败"), { type: "error" });
     }
   }
 

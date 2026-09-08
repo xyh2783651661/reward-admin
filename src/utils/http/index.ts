@@ -166,12 +166,13 @@ class PureHttp {
       (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
-        // 401：登录态失效，清理 token 并跳转登录页
+        // 401：登录态失效，清理 token 并跳转登录页（不弹 toast，已跳转登录）
         if ($error?.response?.status === 401) {
           removeToken();
           if (location.hash !== "#/login") location.hash = "#/login";
+          return Promise.reject($error);
         }
-        // 所有的响应异常 区分来源为取消请求/非取消请求
+        // 其余响应异常交由业务侧 catch 处理（不在此做全局 toast，避免重复弹窗）
         return Promise.reject($error);
       }
     );

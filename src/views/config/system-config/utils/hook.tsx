@@ -1,6 +1,7 @@
 ﻿import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import { addDialog } from "@/components/ReDialog";
@@ -18,6 +19,7 @@ import {
 import { computed, h, reactive, ref, toRaw } from "vue";
 import { useTableExport } from "../../composables";
 import ReJsonField from "@/components/ReJsonField/index.vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import type {
   ToggleValue,
   OptionItem,
@@ -44,14 +46,6 @@ const DEFAULT_FORM_OPTIONS: SystemConfigOptions = {
   sensitiveOptions: [],
   groups: []
 };
-
-function getErrorMessage(error: unknown, fallback = "操作失败") {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-}
 
 function cloneDefaultFormInline() {
   return {
@@ -161,7 +155,8 @@ export function useSystemConfig() {
     {
       label: "ID",
       prop: "id",
-      width: 88
+      width: 80,
+      hide: true
     },
     {
       label: "配置 Key",
@@ -242,19 +237,22 @@ export function useSystemConfig() {
       label: "说明",
       prop: "description",
       minWidth: 220,
+      hide: true,
+      showOverflowTooltip: true,
       formatter: ({ description }) => description || "-"
     },
     {
       label: "更新时间",
       prop: "updatedTime",
-      minWidth: 168,
+      width: 168,
       formatter: ({ updatedTime }) =>
         updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "创建时间",
       prop: "createdTime",
-      minWidth: 168,
+      width: 168,
+      hide: true,
       formatter: ({ createdTime }) =>
         createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
@@ -473,6 +471,7 @@ export function useSystemConfig() {
         message(`已删除配置 ${row.configKey}`, {
           type: "success"
         });
+        form.current = 1;
       })
       .catch(error => {
         message(getErrorMessage(error, "删除失败"), {
@@ -503,11 +502,49 @@ export function useSystemConfig() {
     () => toRaw(form)
   );
 
+  const searchFields = computed<SearchField[]>(() => [
+    { prop: "configKey", label: "配置 Key", type: "input", width: "lg" },
+    { prop: "configValue", label: "配置值", type: "input" },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: formOptions.value.statusOptions,
+      optionsLoading: optionsLoading.value
+    },
+    { prop: "description", label: "说明", type: "input" },
+    {
+      prop: "configGroup",
+      label: "配置分组",
+      type: "select",
+      filterable: true,
+      allowCreate: true,
+      options: formOptions.value.groups,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "valueType",
+      label: "值类型",
+      type: "select",
+      options: formOptions.value.valueTypes,
+      optionsLoading: optionsLoading.value
+    },
+    {
+      prop: "sensitive",
+      label: "敏感标识",
+      type: "select",
+      options: formOptions.value.sensitiveOptions,
+      optionsLoading: optionsLoading.value
+    }
+  ]);
+
   void Promise.all([onSearch(), loadOptions()]);
 
   return {
     form,
     formOptions,
+    searchFields,
     loading,
     optionsLoading,
     columns,

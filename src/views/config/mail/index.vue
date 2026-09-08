@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { useMailRecipient as useRole } from "./utils/hook";
-import { ref, computed, nextTick, onMounted } from "vue";
+import { useMailRecipient } from "./utils/hook";
+import { ref, nextTick, onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import { useIconClass } from "@/hooks/usePublicHooks";
 import {
   delay,
   subBefore,
@@ -13,7 +15,6 @@ import {
 import { transformI18n } from "@/plugins/i18n";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
-import Refresh from "~icons/ep/refresh";
 import FluentPersonMail20Regular from "~icons/fluent/person-mail-20-regular";
 import AddFill from "~icons/ri/add-circle-line";
 import Close from "~icons/ep/close";
@@ -23,25 +24,9 @@ defineOptions({
   name: "Mail"
 });
 
-const iconClass = computed(() => {
-  return [
-    "w-[22px]",
-    "h-[22px]",
-    "flex",
-    "justify-center",
-    "items-center",
-    "outline-hidden",
-    "rounded-[4px]",
-    "cursor-pointer",
-    "transition-colors",
-    "hover:bg-[#0000000f]",
-    "dark:hover:bg-[#ffffff1f]",
-    "dark:hover:text-[#ffffffd9]"
-  ];
-});
+const iconClass = useIconClass();
 
 const treeRef = ref();
-const formRef = ref();
 const tableRef = ref();
 const contentRef = ref();
 const treeHeight = ref();
@@ -61,7 +46,8 @@ const {
   isExpandAll,
   isSelectAll,
   treeSearchValue,
-  enabledOptions,
+  searchFields,
+  saveLoading,
   onSearch,
   resetForm,
   openDialog,
@@ -73,7 +59,12 @@ const {
   handleSizeChange,
   handleCurrentChange,
   handleSelectionChange
-} = useRole(treeRef);
+} = useMailRecipient(treeRef);
+
+function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
 
 onMounted(() => {
   useResizeObserver(contentRef, async () => {
@@ -89,64 +80,20 @@ onMounted(() => {
 
 <template>
   <div class="main">
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="邮件：" prop="email">
-        <el-input
-          v-model="form.email"
-          placeholder="请输入邮件"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item label="姓名：" prop="name">
-        <el-input
-          v-model="form.name"
-          placeholder="请输入姓名"
-          clearable
-          class="w-[180px]!"
-        />
-      </el-form-item>
-      <el-form-item label="状态：" prop="enabled">
-        <el-select
-          v-model="form.enabled"
-          placeholder="请选择状态"
-          clearable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="o in enabledOptions"
-            :key="o.value"
-            :label="o.label"
-            :value="o.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri/search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
-      </el-form-item>
-    </el-form>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="resetForm"
+    />
 
     <div
       ref="contentRef"
       :class="['flex', deviceDetection() ? 'flex-wrap' : '']"
     >
       <PureTableBar
+        title="邮件收件人"
         :class="[isShow && !deviceDetection() ? 'w-[60vw]!' : 'w-full']"
         style="transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1)"
         :columns="columns"
@@ -295,11 +242,5 @@ onMounted(() => {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
 }
 </style>
