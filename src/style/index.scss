@@ -56,7 +56,9 @@
   padding: 16px 24px 0;
   border-radius: var(--ra-radius-card);
 
-  .el-form-item {
+  /* 用 .el-form--inline 提升 specificity，确保覆盖 Element Plus 的默认 inline 样式
+     （main.ts 中 element-plus/dist/index.css 在 index.scss 之后加载，同等 specificity 会被覆盖） */
+  &.el-form--inline .el-form-item {
     flex-shrink: 0;
     margin-bottom: 16px;
   }
