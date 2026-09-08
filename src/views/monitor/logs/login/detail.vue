@@ -220,6 +220,34 @@ const mqStatusText = computed(() => {
       return "未知";
   }
 });
+
+const priorityType = computed(() => {
+  switch (props.record.priority) {
+    case 1:
+      return "danger";
+    case 2:
+      return "warning";
+    case 3:
+      return "info";
+    case 4:
+    case 5:
+      return "info";
+    default:
+      return "info";
+  }
+});
+
+const priorityText = computed(() => {
+  const map: Record<number, string> = {
+    1: "高",
+    2: "较高",
+    3: "中",
+    4: "较低",
+    5: "低"
+  };
+  return map[props.record.priority ?? -1] ?? props.record.priority ?? "-";
+});
+
 const fmtTime = (t?: string) =>
   t ? dayjs(t).format("YYYY-MM-DD HH:mm:ss") : "-";
 
@@ -329,12 +357,12 @@ const rawHtmlContent = computed(() => props.record.content || "");
 
 <template>
   <div class="mail-detail-page">
-    <div class="mail-toolbar">
-      <div>
-        <div class="mail-title">{{ props.record.subject || "无主题邮件" }}</div>
-        <div class="mail-subtitle">
+    <header class="mail-header">
+      <div class="mail-header-main">
+        <h1 class="mail-title">{{ props.record.subject || "无主题邮件" }}</h1>
+        <p class="mail-subtitle">
           预览会尽量保留原邮件结构，并按邮箱客户端习惯过滤脚本和危险跳转
-        </div>
+        </p>
       </div>
       <div class="mail-actions">
         <el-radio-group v-model="previewMode" size="small">
@@ -343,97 +371,203 @@ const rawHtmlContent = computed(() => props.record.content || "");
         </el-radio-group>
         <el-button size="small" @click="openInNewWindow">新窗口预览</el-button>
       </div>
-    </div>
+    </header>
 
-    <el-descriptions :column="2" border class="mail-meta">
-      <el-descriptions-item label="收件人">
-        {{ props.record.recipient || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="抄送">
-        {{ props.record.cc || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="消息ID">
-        {{ props.record.messageId || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="邮件类型">
-        {{ props.record.type || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="模板编码">
-        {{ props.record.templateCode || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="供应商">
-        {{ props.record.provider || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="状态">
-        <el-tag :type="statusType" effect="plain">{{ statusText }}</el-tag>
-      </el-descriptions-item>
-      <el-descriptions-item label="MQ状态">
-        <el-tag :type="mqStatusType" effect="plain">{{ mqStatusText }}</el-tag>
-      </el-descriptions-item>
-      <el-descriptions-item label="优先级">
-        {{ props.record.priority ?? "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="供应商消息ID">
-        {{ props.record.providerMessageId || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="发送次数">
-        {{ props.record.sendAttempts ?? "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="发布次数">
-        {{ props.record.publishAttempts ?? "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="最大重试次数">
-        {{ props.record.maxRetryCount ?? "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item label="发送时间">
-        {{ fmtTime(props.record.lastSendTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item label="最后尝试时间">
-        {{ fmtTime(props.record.lastAttemptTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item label="发布时间">
-        {{ fmtTime(props.record.publishedTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item label="下次重试时间">
-        {{ fmtTime(props.record.nextRetryTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item label="完成时间">
-        {{ fmtTime(props.record.finishedTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item label="创建时间">
-        {{ fmtTime(props.record.createdTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item label="更新时间">
-        {{ fmtTime(props.record.updatedTime) }}
-      </el-descriptions-item>
-      <el-descriptions-item :span="2" label="失败原因">
-        {{ props.record.errorMessage || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item :span="2" label="最后错误码">
-        {{ props.record.lastErrorCode || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item :span="2" label="最后错误类型">
-        {{ props.record.lastErrorType || "-" }}
-      </el-descriptions-item>
-      <el-descriptions-item
-        v-if="attachmentPaths.length"
-        :span="2"
-        label="附件路径"
-      >
-        <div class="attachment-list">
-          <el-tag
-            v-for="path in attachmentPaths"
-            :key="path"
-            size="small"
-            effect="plain"
-          >
-            {{ path }}
-          </el-tag>
+    <section class="mail-meta-grid">
+      <el-card class="meta-card" shadow="never">
+        <template #header>
+          <span class="card-title">收发方信息</span>
+        </template>
+        <div class="meta-list">
+          <div class="meta-item">
+            <span class="meta-label">收件人</span>
+            <span class="meta-value text-primary">{{
+              props.record.recipient || "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">抄送</span>
+            <span class="meta-value">{{ props.record.cc || "-" }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">消息ID</span>
+            <span class="meta-value font-mono">{{
+              props.record.messageId || "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">邮件类型</span>
+            <span class="meta-value">{{ props.record.type || "-" }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">模板编码</span>
+            <span class="meta-value font-mono">{{
+              props.record.templateCode || "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">供应商</span>
+            <span class="meta-value">{{ props.record.provider || "-" }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">供应商消息ID</span>
+            <span class="meta-value font-mono">{{
+              props.record.providerMessageId || "-"
+            }}</span>
+          </div>
         </div>
-      </el-descriptions-item>
-    </el-descriptions>
+      </el-card>
 
-    <el-tabs v-model="activeTab" class="mail-tabs">
+      <el-card class="meta-card" shadow="never">
+        <template #header>
+          <span class="card-title">发送状态</span>
+        </template>
+        <div class="meta-list">
+          <div class="meta-item">
+            <span class="meta-label">状态</span>
+            <span class="meta-value">
+              <el-tag :type="statusType" effect="light" size="small">{{
+                statusText
+              }}</el-tag>
+            </span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">MQ状态</span>
+            <span class="meta-value">
+              <el-tag :type="mqStatusType" effect="light" size="small">{{
+                mqStatusText
+              }}</el-tag>
+            </span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">优先级</span>
+            <span class="meta-value">
+              <el-tag
+                v-if="props.record.priority != null"
+                :type="priorityType"
+                effect="light"
+                size="small"
+              >
+                {{ priorityText }}
+              </el-tag>
+              <span v-else>-</span>
+            </span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">发送次数</span>
+            <span class="meta-value">{{
+              props.record.sendAttempts ?? "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">发布次数</span>
+            <span class="meta-value">{{
+              props.record.publishAttempts ?? "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">最大重试次数</span>
+            <span class="meta-value">{{
+              props.record.maxRetryCount ?? "-"
+            }}</span>
+          </div>
+        </div>
+      </el-card>
+
+      <el-card class="meta-card" shadow="never">
+        <template #header>
+          <span class="card-title">时间线</span>
+        </template>
+        <div class="meta-list">
+          <div class="meta-item">
+            <span class="meta-label">发送时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.lastSendTime)
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">最后尝试时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.lastAttemptTime)
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">发布时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.publishedTime)
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">下次重试时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.nextRetryTime)
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">完成时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.finishedTime)
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">创建时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.createdTime)
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">更新时间</span>
+            <span class="meta-value">{{
+              fmtTime(props.record.updatedTime)
+            }}</span>
+          </div>
+        </div>
+      </el-card>
+
+      <el-card class="meta-card is-wide" shadow="never">
+        <template #header>
+          <span class="card-title">错误与附件</span>
+        </template>
+        <div class="meta-list is-wide">
+          <div class="meta-item">
+            <span class="meta-label">失败原因</span>
+            <span class="meta-value">{{
+              props.record.errorMessage || "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">最后错误码</span>
+            <span class="meta-value font-mono">{{
+              props.record.lastErrorCode || "-"
+            }}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">最后错误类型</span>
+            <span class="meta-value">{{
+              props.record.lastErrorType || "-"
+            }}</span>
+          </div>
+          <div v-if="attachmentPaths.length" class="meta-item">
+            <span class="meta-label">附件路径</span>
+            <div class="meta-value">
+              <div class="attachment-list">
+                <el-tag
+                  v-for="path in attachmentPaths"
+                  :key="path"
+                  size="small"
+                  effect="plain"
+                  type="info"
+                >
+                  {{ path }}
+                </el-tag>
+              </div>
+            </div>
+          </div>
+        </div>
+      </el-card>
+    </section>
+
+    <el-tabs v-model="activeTab" class="mail-tabs" type="border-card">
       <el-tab-pane label="邮件预览" name="preview">
         <div class="mail-preview-shell">
           <div class="mail-preview-note">
@@ -465,13 +599,49 @@ const rawHtmlContent = computed(() => props.record.content || "");
 </template>
 
 <style scoped>
+/* 响应式 */
+@media (width <= 1200px) {
+  .mail-meta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 768px) {
+  .mail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mail-actions {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .mail-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-list.is-wide {
+    grid-template-columns: 1fr;
+  }
+
+  .meta-label {
+    width: 80px;
+  }
+
+  .mail-preview-shell {
+    padding: 12px;
+  }
+}
+
 .mail-detail-page {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.mail-toolbar {
+/* 顶部标题栏 */
+.mail-header {
   display: flex;
   gap: 16px;
   align-items: flex-start;
@@ -479,6 +649,7 @@ const rawHtmlContent = computed(() => props.record.content || "");
 }
 
 .mail-title {
+  margin: 0;
   font-size: 20px;
   font-weight: 700;
   line-height: 1.4;
@@ -493,12 +664,80 @@ const rawHtmlContent = computed(() => props.record.content || "");
 
 .mail-actions {
   display: flex;
+  flex-shrink: 0;
   gap: 12px;
   align-items: center;
 }
 
-.mail-meta {
-  background: var(--el-bg-color);
+/* 信息卡片网格 */
+.mail-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.meta-card {
+  --el-card-padding: 16px;
+
+  border-radius: 8px;
+}
+
+.meta-card :deep(.el-card__header) {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.meta-card.is-wide {
+  grid-column: 1 / -1;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+/* 卡片内字段列表 */
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.meta-list.is-wide {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px 24px;
+}
+
+.meta-item {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.meta-label {
+  flex-shrink: 0;
+  width: 90px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.meta-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  word-break: break-word;
+}
+
+.meta-value.text-primary {
+  color: var(--el-color-primary);
+}
+
+.meta-value.font-mono {
+  font-family:
+    SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
 .attachment-list {
@@ -507,8 +746,14 @@ const rawHtmlContent = computed(() => props.record.content || "");
   gap: 8px;
 }
 
+/* 预览标签页 */
 .mail-tabs {
   background: var(--el-bg-color);
+  border-radius: 8px;
+}
+
+.mail-tabs :deep(.el-tabs__content) {
+  padding: 0;
 }
 
 .mail-preview-shell {
@@ -516,7 +761,7 @@ const rawHtmlContent = computed(() => props.record.content || "");
   background:
     linear-gradient(180deg, rgb(246 248 251 / 96%), rgb(234 238 243 / 96%)),
     radial-gradient(circle at top, rgb(64 158 255 / 8%), transparent 36%);
-  border-radius: 12px;
+  border-radius: 0 0 8px 8px;
 }
 
 .mail-preview-note {
@@ -547,27 +792,12 @@ const rawHtmlContent = computed(() => props.record.content || "");
 }
 
 .mail-source {
+  padding: 16px;
   margin: 0;
   font-size: 12px;
   line-height: 1.6;
   color: var(--el-text-color-primary);
   word-break: break-word;
   white-space: pre-wrap;
-}
-
-@media (width <= 768px) {
-  .mail-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .mail-actions {
-    flex-wrap: wrap;
-    justify-content: space-between;
-  }
-
-  .mail-preview-shell {
-    padding: 12px;
-  }
 }
 </style>
