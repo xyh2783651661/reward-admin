@@ -174,7 +174,8 @@ export function useGeoProviderAlertRecord(
     {
       label: "内容",
       prop: "content",
-      minWidth: 260,
+      minWidth: 220,
+      showOverflowTooltip: true,
       formatter: ({ content }) => content || "-"
     },
     {
@@ -186,6 +187,7 @@ export function useGeoProviderAlertRecord(
       label: "首次告警",
       prop: "firstSentTime",
       minWidth: 180,
+      hide: true,
       formatter: ({ firstSentTime }) => formatTime(firstSentTime)
     },
     {
@@ -198,6 +200,7 @@ export function useGeoProviderAlertRecord(
       label: "解决时间",
       prop: "resolvedTime",
       minWidth: 180,
+      hide: true,
       formatter: ({ resolvedTime }) => formatTime(resolvedTime)
     },
     {

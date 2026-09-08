@@ -1,6 +1,11 @@
-import dayjs from "dayjs";
 import { computed, reactive, ref } from "vue";
 import { message } from "@/utils/message";
+import {
+  formatTime,
+  formatRelative,
+  getStatusLabel,
+  createReasonLabelGetter
+} from "@/views/monitor/utils";
 import { ElMessageBox } from "element-plus";
 import {
   getImageProviderHealthPage,
@@ -36,45 +41,20 @@ const STATUS_SEVERITY: Record<string, number> = {
   UP: 3
 };
 
-export function formatTime(value?: string | null) {
-  return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
-}
+export { formatTime, formatRelative, getStatusLabel };
 
-/** 相对时间（面向运维快速扫读） */
-export function formatRelative(value?: string | null) {
-  if (!value) return "-";
-  const target = dayjs(value);
-  const diffMin = dayjs().diff(target, "minute");
-  if (diffMin < 1) return "刚刚";
-  if (diffMin < 60) return `${diffMin} 分钟前`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour} 小时前`;
-  const diffDay = Math.floor(diffHour / 24);
-  if (diffDay < 30) return `${diffDay} 天前`;
-  return target.format("YYYY-MM-DD");
-}
+const REASON_LABEL_MAP: Record<string, string> = {
+  OK: "正常",
+  RATE_LIMIT: "频率限制",
+  QUOTA_EXCEEDED: "配额超限",
+  AUTH_FAILED: "认证失败",
+  NETWORK_ERROR: "网络错误",
+  PROVIDER_ERROR: "供应商错误",
+  NO_RESULT: "无结果",
+  UNKNOWN_ERROR: "未知错误"
+};
 
-export function getStatusLabel(status?: string) {
-  if (status === "UP") return "正常";
-  if (status === "WARN") return "警告";
-  if (status === "DOWN") return "不可用";
-  if (status === "SUSPENDED") return "已暂停";
-  return status || "-";
-}
-
-export function getReasonLabel(reason?: string) {
-  const map: Record<string, string> = {
-    OK: "正常",
-    RATE_LIMIT: "频率限制",
-    QUOTA_EXCEEDED: "配额超限",
-    AUTH_FAILED: "认证失败",
-    NETWORK_ERROR: "网络错误",
-    PROVIDER_ERROR: "供应商错误",
-    NO_RESULT: "无结果",
-    UNKNOWN_ERROR: "未知错误"
-  };
-  return map[reason || ""] || reason || "-";
-}
+export const getReasonLabel = createReasonLabelGetter(REASON_LABEL_MAP);
 
 export function useImageProviderStatus() {
   const dataList = ref<ImageProviderCardItem[]>([]);

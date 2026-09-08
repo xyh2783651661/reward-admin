@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import editForm from "./form.vue";
 import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { addDialog } from "@/components/ReDialog";
 import type { FormItemProps } from "./utils/types";
 import { deviceDetection } from "@pureadmin/utils";
@@ -15,6 +16,7 @@ import {
   getSysNoticeOptions
 } from "@/api/notice";
 import { useCrudTable } from "@/views/config/composables";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { type Ref, ref, h, computed, onMounted } from "vue";
 
 type TagType = "primary" | "success" | "warning" | "info" | "danger" | "";
@@ -106,11 +108,6 @@ function getTimeRange(row: FormItemProps) {
   return `${publishTime} 至 ${offlineTime}`;
 }
 
-function getErrorMessage(error: unknown, fallback = "操作失败") {
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
-}
-
 function validateTimeRange(data: FormItemProps) {
   if (!data.publishTime || !data.offlineTime) return true;
   return dayjs(data.offlineTime).isAfter(dayjs(data.publishTime));
@@ -158,13 +155,51 @@ export function useSysNotice(_tableRef?: Ref) {
       platformOptions.value = data?.platformOptions ?? [];
       statusOptions.value = data?.statusOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载公告选项失败"), { type: "error" });
     }
   }
 
   onMounted(() => {
     loadSysNoticeOptions();
   });
+
+  const searchFields = computed<SearchField[]>(() => [
+    {
+      prop: "keyword",
+      label: "关键词",
+      type: "input",
+      width: "lg",
+      placeholder: "搜索标题或内容"
+    },
+    {
+      prop: "filterNoticeType",
+      label: "类型",
+      type: "select",
+      width: "sm",
+      options: noticeTypeOptions.value
+    },
+    {
+      prop: "priority",
+      label: "优先级",
+      type: "select",
+      width: "sm",
+      options: priorityOptions.value
+    },
+    {
+      prop: "platformMask",
+      label: "平台",
+      type: "select",
+      width: "sm",
+      options: platformOptions.value
+    },
+    {
+      prop: "status",
+      label: "状态",
+      type: "select",
+      width: "sm",
+      options: statusOptions.value
+    }
+  ]);
 
   const noticeStats = computed(() => {
     const initialStats = {
@@ -319,6 +354,7 @@ export function useSysNotice(_tableRef?: Ref) {
       },
       width: "720px",
       draggable: true,
+      sureBtnLoading: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
       closeOnClickModal: false,
@@ -329,9 +365,13 @@ export function useSysNotice(_tableRef?: Ref) {
 
         try {
           const valid = await FormRef.validate().catch(() => false);
-          if (!valid) return;
+          if (!valid) {
+            closeLoading();
+            return;
+          }
           if (!validateTimeRange(curData)) {
             message("下线时间必须晚于发布时间", { type: "warning" });
+            closeLoading();
             return;
           }
 
@@ -341,18 +381,18 @@ export function useSysNotice(_tableRef?: Ref) {
           };
           const api = title === "新增" ? addSysNotice : updateSysNotice;
           const result = await api(submitData);
+          if (result.code !== 200) {
+            throw new Error(result.msg || `${title}公告失败`);
+          }
 
-          message(result.msg || `${title}公告成功`, {
-            type: result.code === 200 ? "success" : "error"
-          });
+          message(result.msg || `${title}公告成功`, { type: "success" });
           done();
           onSearch();
         } catch (error) {
+          closeLoading();
           message(getErrorMessage(error, `${title}公告失败`), {
             type: "error"
           });
-        } finally {
-          closeLoading();
         }
       }
     });
@@ -421,10 +461,7 @@ export function useSysNotice(_tableRef?: Ref) {
     dataList,
     pagination,
     noticeStats,
-    platformOptions,
-    noticeTypeOptions,
-    priorityOptions,
-    statusOptions,
+    searchFields,
     onSearch,
     resetForm,
     openDialog,

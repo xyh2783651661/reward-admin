@@ -1,3 +1,38 @@
+import dayjs from "dayjs";
+
+/** 绝对时间：YYYY-MM-DD HH:mm:ss，空值返回 "-" */
+export function formatTime(value?: string | number | null): string {
+  return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
+}
+
+/** 相对时间（面向运维快速扫读） */
+export function formatRelative(value?: string | number | null): string {
+  if (!value) return "-";
+  const target = dayjs(value);
+  const diffMin = dayjs().diff(target, "minute");
+  if (diffMin < 1) return "刚刚";
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} 小时前`;
+  const diffDay = Math.floor(diffHour / 24);
+  if (diffDay < 30) return `${diffDay} 天前`;
+  return target.format("YYYY-MM-DD");
+}
+
+/** 供应商健康状态文案（三套 health 页面共用） */
+export function getStatusLabel(status?: string): string {
+  if (status === "UP") return "正常";
+  if (status === "WARN") return "警告";
+  if (status === "DOWN") return "不可用";
+  if (status === "SUSPENDED") return "已暂停";
+  return status || "-";
+}
+
+/** 由各模块自己的 reasonMap 生成 getReasonLabel */
+export function createReasonLabelGetter(map: Record<string, string>) {
+  return (reason?: string) => map[reason || ""] ?? reason ?? "-";
+}
+
 /** 日期、时间选择器快捷选项，常搭配 [DatePicker](https://element-plus.org/zh-CN/component/date-picker.html) 和 [DateTimePicker](https://element-plus.org/zh-CN/component/datetime-picker.html) 的`shortcuts`属性使用 */
 export const getPickerShortcuts = (): Array<{
   text: string;
