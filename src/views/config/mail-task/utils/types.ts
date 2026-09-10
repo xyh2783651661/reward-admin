@@ -54,3 +54,22 @@ export interface MailSendTaskCheck {
   invalidEmail: number;
   duplicateEmail: number;
 }
+
+/** 收件人姓名/邮箱快照（编辑态回显标签用） */
+export interface MailSendTaskRecipientSnapshot {
+  recipientId?: number;
+  recipientName?: string;
+  recipientEmail?: string;
+}
+
+/** 新建/编辑表单内联数据（父组件 fetch 后传入，弹层内容组件接收） */
+export interface MailSendTaskFormInline {
+  id?: number;
+  taskName?: string;
+  subject?: string;
+  content?: string;
+  remark?: string;
+  recipientIds?: number[];
+  attachments?: MailSendTaskAttachment[];
+  recipients?: MailSendTaskRecipientSnapshot[];
+}

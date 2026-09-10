@@ -28,9 +28,8 @@ const {
   handleSizeChange,
   handleCurrentChange,
   onSelectionChange,
-  goCreate,
-  goEdit,
-  goDetail,
+  openDialog,
+  openDetail,
   handleSearch,
   handleExport,
   handleRefreshAll
@@ -54,7 +53,7 @@ const {
           v-perms="'config:aiPrompt:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
-          @click="goCreate"
+          @click="openDialog()"
         >
           新建提示词
         </el-button>
@@ -107,7 +106,7 @@ const {
               type="primary"
               :size="size"
               :icon="useRenderIcon(View)"
-              @click="goDetail(row)"
+              @click="openDetail(row)"
             >
               查看
             </el-button>
@@ -118,7 +117,7 @@ const {
               type="primary"
               :size="size"
               :icon="useRenderIcon(EditPen)"
-              @click="goEdit(row)"
+              @click="openDialog(row)"
             >
               编辑
             </el-button>

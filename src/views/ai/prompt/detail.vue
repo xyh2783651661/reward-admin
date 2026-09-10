@@ -1,67 +1,60 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, computed } from "vue";
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
-import { getErrorMessage } from "@/utils/error";
-import {
-  getAiPromptDetail,
-  testRenderAiPrompt,
-  deleteAiPrompt
-} from "@/api/prompt";
+import { testRenderAiPrompt } from "@/api/prompt";
 import PromptEditor from "./components/PromptEditor.vue";
 import { STATUS_MAP } from "./utils/types";
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 defineOptions({
   name: "AiPromptDetail"
 });
 
-const route = useRoute();
-const router = useRouter();
-const loading = ref(true);
-const detail = ref<any>({});
+const props = defineProps<{ record: any }>();
+
+const detail = computed(() => props.record);
 
 const editorLanguage = computed<"text" | "html" | "json" | "markdown">(() => {
-  const f = detail.value.contentFormat;
+  const f = detail.value?.contentFormat;
   if (f === "json") return "json";
   if (f === "html") return "html";
   if (f === "markdown") return "markdown";
   return "text";
 });
 
-async function loadDetail() {
-  loading.value = true;
-  try {
-    const { data } = await getAiPromptDetail(route.params.id as string);
-    detail.value = data;
-  } catch (e) {
-    message(getErrorMessage(e, "加载失败"), { type: "error" });
-  } finally {
-    loading.value = false;
-  }
-}
+const summaryItems = computed(() => [
+  {
+    label: "状态",
+    value: STATUS_MAP[detail.value?.status]?.label ?? "-",
+    tagType: STATUS_MAP[detail.value?.status]?.tag ?? "info"
+  },
+  { label: "版本", value: `v${detail.value?.version ?? "-"}`, tagType: "" },
+  { label: "分类", value: detail.value?.category ?? "-", tagType: "" },
+  { label: "输出格式", value: detail.value?.contentFormat ?? "-", tagType: "" },
+  { label: "语言", value: detail.value?.language ?? "-", tagType: "" }
+]);
 
-function handleBack() {
-  router.back();
-}
-
-function handleEdit() {
-  router.push(`/ai/prompt/edit/${detail.value.id}`);
-}
-
-async function handleDelete() {
-  try {
-    const r: any = await deleteAiPrompt(detail.value.id);
-    if (r.code === 200) {
-      message("已删除", { type: "success" });
-      router.push("/ai/prompt/index");
-    } else {
-      message(r.msg || "删除失败", { type: "error" });
-    }
-  } catch (e) {
-    message(getErrorMessage(e, "删除失败"), { type: "error" });
-  }
-}
+const descriptionColumns = [
+  { label: "编码", prop: "code" },
+  { label: "名称", prop: "name" },
+  { label: "绑定场景", prop: "scene" },
+  { label: "模型标签", prop: "modelHint" },
+  { label: "标签", prop: "tags" },
+  {
+    label: "创建时间",
+    prop: "createdTime",
+    formatter: ({ createdTime }) =>
+      createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+  },
+  {
+    label: "更新时间",
+    prop: "updatedTime",
+    formatter: ({ updatedTime }) =>
+      updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+  },
+  { label: "备注", prop: "remark" }
+];
 
 // 测试渲染（右侧抽屉）
 const drawerVisible = ref(false);
@@ -85,7 +78,7 @@ async function handleTestRender() {
   previewLoading.value = true;
   try {
     const r: any = await testRenderAiPrompt({
-      code: detail.value.code,
+      code: detail.value?.code,
       variables: tryParsePreviewVars()
     });
     if (r.code === 200) {
@@ -94,7 +87,7 @@ async function handleTestRender() {
     } else {
       message(r.msg || "渲染失败", { type: "error" });
     }
-  } catch (e) {
+  } catch {
     message("渲染失败", { type: "error" });
   } finally {
     previewLoading.value = false;
@@ -103,7 +96,7 @@ async function handleTestRender() {
 
 function tryParseVariablesSchema(): any[] {
   try {
-    const parsed = JSON.parse(detail.value.variablesSchema || "[]");
+    const parsed = JSON.parse(detail.value?.variablesSchema || "[]");
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -111,135 +104,93 @@ function tryParseVariablesSchema(): any[] {
 }
 
 const variablesList = computed(() => tryParseVariablesSchema());
-
-onMounted(loadDetail);
 </script>
 
 <template>
-  <div v-loading="loading" class="ai-prompt-detail">
-    <el-page-header class="page-header" @back="handleBack">
-      <template #content>
-        <span class="page-title">提示词详情</span>
-      </template>
-      <template #extra>
-        <el-button :loading="previewLoading" @click="handleTestRender">
+  <div class="ai-prompt-detail">
+    <div class="detail-toolbar">
+      <div class="detail-toolbar__main">
+        <div class="detail-toolbar__title">AI 提示词详情</div>
+        <div class="detail-toolbar__subtitle">
+          {{ detail.name || "-" }}
+          <span class="mx-2 text-[var(--el-border-color)]">/</span>
+          {{ detail.code || "-" }}
+        </div>
+      </div>
+      <div class="detail-toolbar__actions">
+        <el-button
+          :loading="previewLoading"
+          :icon="useRenderIcon('ri/eye-line')"
+          @click="handleTestRender"
+        >
           渲染预览
         </el-button>
-        <el-button type="primary" @click="handleEdit">编辑</el-button>
-        <el-popconfirm
-          :title="`确认删除「${detail.name || detail.code}」？`"
-          @confirm="handleDelete"
-        >
-          <template #reference>
-            <el-button type="danger" plain>删除</el-button>
-          </template>
-        </el-popconfirm>
-      </template>
-    </el-page-header>
+      </div>
+    </div>
 
-    <el-descriptions :column="3" border class="info-table">
-      <el-descriptions-item label="编码">{{
-        detail.code
-      }}</el-descriptions-item>
-      <el-descriptions-item label="名称">{{
-        detail.name
-      }}</el-descriptions-item>
-      <el-descriptions-item label="分类">{{
-        detail.category
-      }}</el-descriptions-item>
-      <el-descriptions-item label="绑定场景">{{
-        detail.scene || "-"
-      }}</el-descriptions-item>
-      <el-descriptions-item label="输出格式">{{
-        detail.contentFormat
-      }}</el-descriptions-item>
-      <el-descriptions-item label="语言">{{
-        detail.language
-      }}</el-descriptions-item>
-      <el-descriptions-item label="状态">
+    <div class="summary-grid">
+      <div v-for="item in summaryItems" :key="item.label" class="summary-card">
+        <span class="summary-card__label">{{ item.label }}</span>
         <el-tag
-          :type="(STATUS_MAP[detail.status]?.tag as any) || 'info'"
+          v-if="item.tagType"
+          :type="item.tagType as any"
+          effect="plain"
+          class="summary-card__tag"
+        >
+          {{ item.value }}
+        </el-tag>
+        <strong v-else class="summary-card__value">{{ item.value }}</strong>
+      </div>
+    </div>
+
+    <PureDescriptions
+      border
+      :data="[detail]"
+      :columns="descriptionColumns"
+      :column="3"
+    />
+
+    <el-tabs type="border-card" class="detail-tabs">
+      <el-tab-pane label="提示词正文">
+        <PromptEditor
+          :model-value="detail.content || ''"
+          :language="editorLanguage"
+          theme="light"
+          readonly
+          height="420px"
+        />
+      </el-tab-pane>
+
+      <el-tab-pane :label="`变量定义（${variablesList.length} 项）`">
+        <el-table
+          v-if="variablesList.length > 0"
+          :data="variablesList"
+          border
           size="small"
         >
-          {{ STATUS_MAP[detail.status]?.label || detail.status }}
-        </el-tag>
-      </el-descriptions-item>
-      <el-descriptions-item label="版本"
-        >v{{ detail.version }}</el-descriptions-item
-      >
-      <el-descriptions-item label="模型标签">{{
-        detail.modelHint || "-"
-      }}</el-descriptions-item>
-      <el-descriptions-item label="标签" :span="3">{{
-        detail.tags || "-"
-      }}</el-descriptions-item>
-      <el-descriptions-item label="创建时间">
-        {{
-          detail.createdTime
-            ? dayjs(detail.createdTime).format("YYYY-MM-DD HH:mm:ss")
-            : "-"
-        }}
-      </el-descriptions-item>
-      <el-descriptions-item label="更新时间">
-        {{
-          detail.updatedTime
-            ? dayjs(detail.updatedTime).format("YYYY-MM-DD HH:mm:ss")
-            : "-"
-        }}
-      </el-descriptions-item>
-      <el-descriptions-item label="创建人">{{
-        detail.createdBy || "-"
-      }}</el-descriptions-item>
-      <el-descriptions-item label="备注" :span="3">
-        {{ detail.remark || "-" }}
-      </el-descriptions-item>
-    </el-descriptions>
+          <el-table-column prop="name" label="名称" width="160" />
+          <el-table-column prop="type" label="类型" width="100" />
+          <el-table-column
+            prop="required"
+            label="必填"
+            width="80"
+            align="center"
+          >
+            <template #default="{ row }">
+              <el-tag v-if="row.required" type="danger" size="small">是</el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="default" label="默认值" width="140" />
+          <el-table-column prop="description" label="说明" />
+        </el-table>
+        <el-empty v-else description="未定义变量" :image-size="80" />
+      </el-tab-pane>
 
-    <el-card shadow="never" class="section-card">
-      <template #header>
-        <span class="card-title"
-          >变量定义（{{ variablesList.length }} 项）</span
-        >
-      </template>
-      <el-table
-        v-if="variablesList.length > 0"
-        :data="variablesList"
-        border
-        size="small"
-      >
-        <el-table-column prop="name" label="名称" width="160" />
-        <el-table-column prop="type" label="类型" width="100" />
-        <el-table-column prop="required" label="必填" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag v-if="row.required" type="danger" size="small">是</el-tag>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="default" label="默认值" width="140" />
-        <el-table-column prop="description" label="说明" />
-      </el-table>
-      <el-empty v-else description="未定义变量" :image-size="80" />
-    </el-card>
-
-    <el-card shadow="never" class="section-card">
-      <template #header>
-        <span class="card-title">提示词正文</span>
-      </template>
-      <PromptEditor
-        :model-value="detail.content || ''"
-        :language="editorLanguage"
-        theme="light"
-        readonly
-        height="420px"
-      />
-    </el-card>
-
-    <el-card v-if="detail.outputSchema" shadow="never" class="section-card">
-      <template #header>
-        <span class="card-title">输出结构</span>
-      </template>
-      <pre class="output-schema">{{ detail.outputSchema }}</pre>
-    </el-card>
+      <el-tab-pane v-if="detail.outputSchema" label="输出结构">
+        <pre class="output-schema">{{ detail.outputSchema }}</pre>
+      </el-tab-pane>
+    </el-tabs>
 
     <!-- 渲染预览抽屉 -->
     <el-drawer
@@ -271,30 +222,78 @@ onMounted(loadDetail);
 
 <style scoped>
 .ai-prompt-detail {
-  max-width: 1200px;
-  padding: 16px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.page-header {
-  margin-bottom: 16px;
+.detail-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
 }
 
-.page-title {
+.detail-toolbar__title {
   font-size: 18px;
   font-weight: 600;
+  line-height: 1.4;
+  color: var(--el-text-color-primary);
 }
 
-.info-table {
-  margin-bottom: 16px;
+.detail-toolbar__subtitle {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  word-break: break-all;
 }
 
-.section-card {
-  margin-bottom: 16px;
+.detail-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
-.card-title {
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: var(--el-fill-color-blank);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+}
+
+.summary-card__label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.summary-card__value {
+  font-size: 18px;
   font-weight: 600;
+  line-height: 1.3;
+  color: var(--el-text-color-primary);
+  word-break: break-all;
+}
+
+.summary-card__tag {
+  width: fit-content;
+}
+
+.detail-tabs {
+  margin-top: 2px;
 }
 
 .output-schema,
@@ -311,5 +310,17 @@ onMounted(loadDetail);
 .preview-result {
   max-height: 400px;
   overflow: auto;
+}
+
+@media (width <= 1400px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 640px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

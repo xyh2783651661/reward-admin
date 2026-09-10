@@ -1,21 +1,25 @@
 import dayjs from "dayjs";
 import { h, ref, computed } from "vue";
-import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
 import type { SearchField } from "@/components/ReSearchBar/types";
+import { addDialog } from "@/components/ReDialog";
+import editForm from "../form.vue";
+import detailComp from "../detail.vue";
 import {
   getAiPromptPage,
+  getAiPromptDetail,
   deleteAiPrompt,
   exportAiPromptList,
   refreshAiPromptCache
 } from "@/api/prompt";
 import { useCrudTable } from "@/views/config/composables/useCrudTable";
-import { STATUS_MAP } from "./types";
+import { STATUS_MAP, DEFAULT_PROMPT_FORM } from "./types";
+import type { AiPromptFormData } from "./types";
 
 export function useAiPrompt() {
-  const router = useRouter();
+  const formRef = ref();
 
   const {
     form,
@@ -123,14 +127,75 @@ export function useAiPrompt() {
     }
   ]);
 
-  function goCreate() {
-    router.push("/ai/prompt/create");
+  /** 新建/编辑：全屏弹层，footer 确定触发 beforeSure 提交 */
+  function openDialog(row?: any) {
+    const isEdit = !!row?.id;
+
+    const open = (formInline: AiPromptFormData) => {
+      addDialog({
+        title: isEdit ? "编辑提示词" : "新建提示词",
+        fullscreen: true,
+        fullscreenIcon: true,
+        closeOnClickModal: false,
+        contentRenderer: () =>
+          h(editForm, { ref: formRef, formInline, isEdit }),
+        beforeSure: async (done, { closeLoading }) => {
+          const ok = await formRef.value?.handleSubmit();
+          if (ok) {
+            done();
+            onSearch();
+          } else {
+            closeLoading();
+          }
+        }
+      });
+    };
+
+    if (!isEdit) {
+      open({ ...DEFAULT_PROMPT_FORM });
+      return;
+    }
+
+    getAiPromptDetail(row.id)
+      .then(({ data }) => {
+        open({
+          id: data.id,
+          code: data.code,
+          name: data.name,
+          category: data.category,
+          scene: data.scene ?? "",
+          content: data.content,
+          contentFormat: data.contentFormat ?? "text",
+          language: data.language ?? "zh",
+          modelHint: data.modelHint ?? "",
+          variablesSchema: data.variablesSchema ?? "",
+          outputSchema: data.outputSchema ?? "",
+          status: data.status,
+          sortOrder: data.sortOrder ?? 0,
+          tags: data.tags ?? "",
+          remark: data.remark ?? ""
+        });
+      })
+      .catch(e => {
+        message(getErrorMessage(e, "加载提示词失败"), { type: "error" });
+      });
   }
-  function goEdit(row: any) {
-    router.push(`/ai/prompt/edit/${row.id}`);
-  }
-  function goDetail(row: any) {
-    router.push(`/ai/prompt/detail/${row.id}`);
+
+  /** 详情：全屏弹层，props 传数据 */
+  function openDetail(row: any) {
+    getAiPromptDetail(row.id)
+      .then(({ data }) => {
+        addDialog({
+          title: data.name || data.code || "提示词详情",
+          fullscreen: true,
+          fullscreenIcon: true,
+          hideFooter: true,
+          contentRenderer: () => h(detailComp, { record: data })
+        });
+      })
+      .catch(e => {
+        message(getErrorMessage(e, "加载提示词详情失败"), { type: "error" });
+      });
   }
 
   function handleSearch() {
@@ -204,9 +269,8 @@ export function useAiPrompt() {
     handleSizeChange,
     handleCurrentChange,
     onSelectionChange,
-    goCreate,
-    goEdit,
-    goDetail,
+    openDialog,
+    openDetail,
     handleSearch,
     handleExport,
     handleRefreshAll

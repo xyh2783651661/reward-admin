@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useAiPromptForm } from "./utils/formHook";
+import type { AiPromptFormData } from "./utils/types";
 import PromptEditor from "./components/PromptEditor.vue";
 import {
   PROMPT_CATEGORIES,
@@ -15,15 +16,15 @@ defineOptions({
   name: "AiPromptForm"
 });
 
-const {
-  form,
-  formRef,
-  loading,
-  submitting,
-  isEdit,
-  handleSubmit,
-  handleCancel
-} = useAiPromptForm();
+const props = defineProps<{
+  formInline: AiPromptFormData;
+  isEdit: boolean;
+}>();
+
+const { form, formRef, submitting, isEdit, handleSubmit } =
+  useAiPromptForm(props);
+
+defineExpose({ handleSubmit, getRef: () => formRef.value });
 
 // CodeMirror 语言模式推断
 const contentLanguage = computed<"text" | "html" | "json" | "markdown">(() => {
@@ -74,7 +75,7 @@ async function renderPreview() {
     } else {
       message(r.msg || "渲染失败", { type: "error" });
     }
-  } catch (e) {
+  } catch {
     message("渲染失败", { type: "error" });
   } finally {
     previewLoading.value = false;
@@ -97,15 +98,7 @@ const mustache = "{{varName}}";
 </script>
 
 <template>
-  <div v-loading="loading" class="ai-prompt-form">
-    <el-page-header class="page-header" @back="handleCancel">
-      <template #content>
-        <span class="page-title">
-          {{ isEdit ? "编辑提示词" : "新建提示词" }}
-        </span>
-      </template>
-    </el-page-header>
-
+  <div class="ai-prompt-form">
     <el-form
       ref="formRef"
       :model="form"
@@ -261,13 +254,6 @@ const mustache = "{{varName}}";
       <el-form-item label="备注">
         <el-input v-model="form.remark" type="textarea" :rows="2" />
       </el-form-item>
-
-      <el-form-item>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">
-          {{ isEdit ? "保存修改" : "创建" }}
-        </el-button>
-        <el-button @click="handleCancel">取消</el-button>
-      </el-form-item>
     </el-form>
 
     <el-drawer
@@ -299,18 +285,7 @@ const mustache = "{{varName}}";
 
 <style scoped>
 .ai-prompt-form {
-  max-width: 1200px;
-  padding: 16px;
-  margin: 0 auto;
-}
-
-.page-header {
-  margin-bottom: 16px;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
+  padding: 8px 0;
 }
 
 .editor-toolbar {

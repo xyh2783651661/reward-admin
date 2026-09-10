@@ -28,9 +28,8 @@ const {
   handleDelete,
   handleSizeChange,
   handleCurrentChange,
-  goCreate,
-  goEdit,
-  goDetail,
+  openDialog,
+  openDetail,
   handleSend,
   handleRetry,
   loadStatusOptions
@@ -63,7 +62,7 @@ onMounted(() => {
           v-perms="'config:mailTask:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
-          @click="goCreate"
+          @click="openDialog()"
         >
           新建邮件
         </el-button>
@@ -95,7 +94,7 @@ onMounted(() => {
               type="primary"
               :size="size"
               :icon="useRenderIcon(View)"
-              @click="goDetail(row)"
+              @click="openDetail(row)"
             >
               查看
             </el-button>
@@ -107,7 +106,7 @@ onMounted(() => {
               type="primary"
               :size="size"
               :icon="useRenderIcon(EditPen)"
-              @click="goEdit(row)"
+              @click="openDialog(row)"
             >
               编辑
             </el-button>

@@ -2,11 +2,15 @@ import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
-import { useRouter } from "vue-router";
 import { ref, h, computed } from "vue";
 import type { SearchField } from "@/components/ReSearchBar/types";
+import { addDialog, closeDialog } from "@/components/ReDialog";
+import editForm from "../form.vue";
+import detailComp from "../detail.vue";
+import type { MailSendTaskFormInline } from "./types";
 import {
   getMailSendTaskList,
+  getMailSendTaskDetail,
   deleteMailSendTask,
   sendMailSendTask,
   retryMailSendTask,
@@ -26,7 +30,6 @@ export const taskStatusMap: Record<number, { label: string; tag: string }> = {
 };
 
 export function useMailSendTask() {
-  const router = useRouter();
   const statusOptions = ref<Array<{ value: number; label: string }>>([]);
   const sendLoadingMap = ref<Record<string, boolean>>({});
 
@@ -81,16 +84,80 @@ export function useMailSendTask() {
     { label: "操作", fixed: "right", width: 260, slot: "operation" }
   ];
 
-  function goCreate() {
-    router.push("/config/mail-task/create");
+  /** 新建/编辑：全屏弹层，内联按钮提交 */
+  function openDialog(row?: any) {
+    const isEdit = !!row?.id;
+
+    const open = (formInline: MailSendTaskFormInline) => {
+      addDialog({
+        title: isEdit ? "编辑邮件发送任务" : "新建邮件发送任务",
+        fullscreen: true,
+        fullscreenIcon: true,
+        closeOnClickModal: false,
+        hideFooter: true,
+        contentRenderer: ({ options, index }) =>
+          h(editForm, {
+            formInline,
+            isEdit,
+            onSuccess: () => {
+              closeDialog(options, index);
+              onSearch();
+            },
+            onClose: () => closeDialog(options, index)
+          })
+      });
+    };
+
+    if (!isEdit) {
+      open({
+        taskName: "",
+        subject: "",
+        content: "",
+        remark: "",
+        recipientIds: [],
+        attachments: []
+      });
+      return;
+    }
+
+    getMailSendTaskDetail(row.id)
+      .then(({ data }) => {
+        open({
+          id: data.id,
+          taskName: data.taskName ?? "",
+          subject: data.subject ?? "",
+          content: data.content ?? "",
+          remark: data.remark ?? "",
+          recipientIds: data.recipientIds ?? [],
+          attachments: (data.attachments ?? []).map(a => ({
+            fileName: a.fileName ?? "",
+            filePath: a.filePath ?? "",
+            fileSize: a.fileSize ?? 0,
+            contentType: a.contentType ?? ""
+          })),
+          recipients: data.recipients ?? []
+        });
+      })
+      .catch(e => {
+        message(getErrorMessage(e, "加载任务数据失败"), { type: "error" });
+      });
   }
 
-  function goEdit(row: any) {
-    router.push(`/config/mail-task/edit/${row.id}`);
-  }
-
-  function goDetail(row: any) {
-    router.push(`/config/mail-task/detail/${row.id}`);
+  /** 详情：全屏弹层，props 传数据 */
+  function openDetail(row: any) {
+    getMailSendTaskDetail(row.id)
+      .then(({ data }) => {
+        addDialog({
+          title: data.taskName || data.taskNo || "邮件发送任务详情",
+          fullscreen: true,
+          fullscreenIcon: true,
+          hideFooter: true,
+          contentRenderer: () => h(detailComp, { record: data })
+        });
+      })
+      .catch(e => {
+        message(getErrorMessage(e, "加载任务详情失败"), { type: "error" });
+      });
   }
 
   /** 发送：先检查再确认 */
@@ -190,9 +257,8 @@ export function useMailSendTask() {
     handleDelete,
     handleSizeChange,
     handleCurrentChange,
-    goCreate,
-    goEdit,
-    goDetail,
+    openDialog,
+    openDetail,
     handleSend,
     handleRetry,
     loadStatusOptions

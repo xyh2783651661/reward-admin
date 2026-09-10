@@ -1,78 +1,31 @@
-import { ref, reactive, onMounted } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, reactive } from "vue";
 import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
-import { getAiPromptDetail, addAiPrompt, updateAiPrompt } from "@/api/prompt";
+import { addAiPrompt, updateAiPrompt } from "@/api/prompt";
+import type { AiPromptFormData } from "./types";
 
-const DEFAULT_FORM = {
-  id: undefined as number | undefined,
-  code: "",
-  name: "",
-  category: "other",
-  scene: "",
-  content: "",
-  contentFormat: "text",
-  language: "zh",
-  modelHint: "",
-  variablesSchema: "",
-  outputSchema: "",
-  status: 1,
-  sortOrder: 0,
-  tags: "",
-  remark: ""
-};
+export interface AiPromptFormProps {
+  formInline: AiPromptFormData;
+  isEdit: boolean;
+}
 
-export type AiPromptForm = typeof DEFAULT_FORM;
-
-export function useAiPromptForm() {
-  const route = useRoute();
-  const router = useRouter();
-  const isEdit = !!route.params.id;
+export function useAiPromptForm(props: AiPromptFormProps) {
+  const isEdit = !!props.isEdit;
   const formRef = ref<any>();
-  const loading = ref(false);
   const submitting = ref(false);
 
-  const form = reactive<AiPromptForm>({ ...DEFAULT_FORM });
+  const form = reactive<AiPromptFormData>({ ...props.formInline });
 
-  async function loadDetail() {
-    if (!isEdit) return;
-    loading.value = true;
-    try {
-      const { data } = await getAiPromptDetail(route.params.id as string);
-      Object.assign(form, {
-        id: data.id,
-        code: data.code,
-        name: data.name,
-        category: data.category,
-        scene: data.scene ?? "",
-        content: data.content,
-        contentFormat: data.contentFormat ?? "text",
-        language: data.language ?? "zh",
-        modelHint: data.modelHint ?? "",
-        variablesSchema: data.variablesSchema ?? "",
-        outputSchema: data.outputSchema ?? "",
-        status: data.status,
-        sortOrder: data.sortOrder ?? 0,
-        tags: data.tags ?? "",
-        remark: data.remark ?? ""
-      });
-    } catch (e) {
-      message(getErrorMessage(e, "加载失败"), { type: "error" });
-    } finally {
-      loading.value = false;
-    }
-  }
-
-  async function handleSubmit() {
-    if (!formRef.value) return;
+  async function handleSubmit(): Promise<boolean> {
+    if (!formRef.value) return false;
     try {
       await formRef.value.validate();
     } catch {
-      return;
+      return false;
     }
     if (!form.content?.trim()) {
       message("提示词正文不能为空", { type: "warning" });
-      return;
+      return false;
     }
     submitting.value = true;
     try {
@@ -101,30 +54,23 @@ export function useAiPromptForm() {
       }
       if (r.code === 200) {
         message(isEdit ? "修改成功" : "新建成功", { type: "success" });
-        router.push("/ai/prompt/index");
-      } else {
-        message(r.msg || "操作失败", { type: "error" });
+        return true;
       }
+      message(r.msg || "操作失败", { type: "error" });
+      return false;
     } catch (e) {
       message(getErrorMessage(e, "操作失败"), { type: "error" });
+      return false;
     } finally {
       submitting.value = false;
     }
   }
 
-  function handleCancel() {
-    router.back();
-  }
-
-  onMounted(loadDetail);
-
   return {
     form,
     formRef,
-    loading,
     submitting,
     isEdit,
-    handleSubmit,
-    handleCancel
+    handleSubmit
   };
 }

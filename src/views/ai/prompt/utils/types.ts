@@ -38,3 +38,39 @@ export const STATUS_MAP: Record<number, { label: string; tag: string }> = {
   1: { label: "启用", tag: "success" },
   0: { label: "禁用", tag: "info" }
 };
+
+// 新建/编辑表单数据（弹层内容组件通过 props 接收）
+export interface AiPromptFormData {
+  id?: number;
+  code: string;
+  name: string;
+  category: string;
+  scene: string;
+  content: string;
+  contentFormat: string;
+  language: string;
+  modelHint: string;
+  variablesSchema: string;
+  outputSchema: string;
+  status: number;
+  sortOrder: number;
+  tags: string;
+  remark: string;
+}
+
+export const DEFAULT_PROMPT_FORM: AiPromptFormData = {
+  code: "",
+  name: "",
+  category: "other",
+  scene: "",
+  content: "",
+  contentFormat: "text",
+  language: "zh",
+  modelHint: "",
+  variablesSchema: "",
+  outputSchema: "",
+  status: 1,
+  sortOrder: 0,
+  tags: "",
+  remark: ""
+};
