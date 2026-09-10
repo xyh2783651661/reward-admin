@@ -107,6 +107,12 @@ export function useAiPrompt() {
   ];
 
   const searchFields = computed<SearchField[]>(() => [
+    {
+      prop: "keyword",
+      label: "关键词",
+      type: "input",
+      placeholder: "编码/名称/内容"
+    },
     { prop: "code", label: "编码", type: "input" },
     { prop: "name", label: "名称", type: "input" },
     {
