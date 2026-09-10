@@ -36,6 +36,11 @@ export interface SearchField {
   /** input-number 的范围 */
   min?: number;
   max?: number;
-  /** sm → ra-select-sm / md → ra-input | ra-select / lg → ra-input-lg，默认 md */
+  /**
+   * 控件宽度档位，默认 md。注意 select 只区分 sm/md：
+   * sm → ra-select-sm(160px)，md/lg → ra-select(180px)；
+   * input/date 类：sm → ra-input-sm(160px)，md → ra-input(200px)，lg → ra-input-lg(220px)。
+   * 具体像素由 src/style/index.scss 的 --ra-search-width token 定义。
+   */
   width?: SearchFieldWidth;
 }

@@ -70,29 +70,74 @@
 
 /* 筛选控件宽度 token —— 替换写死的 w-[180px]! 等
    宽度取值兼顾「选项文字可读 + 下拉弹层可点」：
-   select 过窄会导致下拉项换行、clearable 图标挤压文字，故选择类比输入类只小 20px */
+   select 过窄会导致下拉项换行、clearable 图标挤压文字，故选择类比输入类只小 20px
+
+   实现要点：不直接写 width，而是改写 Element Plus 各自用来算宽度的 CSS 变量。
+   EP 内部宽度规则（theme-chalk/index.css）：
+     .el-select                     { --el-select-width: 100%; width: var(--el-select-width) }
+     .el-date-editor.el-input__wrapper { width: var(--el-date-editor-width) }  // 默认 220px
+     .el-date-editor--daterange     { --el-date-editor-width: 350px }
+     .el-date-editor--datetimerange { --el-date-editor-width: 400px }
+     .el-input-number               { width: 150px }  // 硬编码，需单独覆盖
+   这些规则特异性不低、且由不同变量驱动，逐个写 width 会顾此失彼；
+   覆盖变量则天然胜出（变量就近生效），且三类控件能被同一套 token 统一约束。 */
+
+/* 宽度 token 声明在 el-form-item 上，供其内部控件继承 */
 .ra-input {
-  width: 200px;
+  --ra-search-width: 200px;
 }
 
 .ra-input-lg {
-  width: 220px;
+  --ra-search-width: 220px;
+}
+
+.ra-input-sm {
+  --ra-search-width: 160px;
 }
 
 .ra-select {
-  width: 180px;
+  --ra-search-width: 180px;
 }
 
 .ra-select-sm {
-  width: 160px;
+  --ra-search-width: 160px;
 }
 
 .ra-daterange {
-  width: 260px;
+  --ra-search-width: 260px;
 }
 
 .ra-datetimerange {
-  width: 340px;
+  --ra-search-width: 340px;
+}
+
+/* 把 token 映射到各控件实际读取的变量上。
+   注意类名挂在 el-form-item 上（不透传到内部控件），故用后代选择器命中。 */
+.search-form .el-form-item[class*="ra-"] {
+  /* el-select：改写它的宽度变量 */
+  .el-select {
+    --el-select-width: var(--ra-search-width);
+  }
+
+  /* el-date-picker：三种类型分别读各自的变量，
+     直接覆盖"叶子变量"最稳，避免与 EP 的 `--el-date-editor-width` 赋值规则比特异性 */
+  .el-date-editor {
+    --el-date-editor-width: var(--ra-search-width);
+    --el-date-editor-daterange-width: var(--ra-search-width);
+    --el-date-editor-datetimerange-width: var(--ra-search-width);
+
+    width: var(--ra-search-width);
+  }
+
+  /* el-input（含 select 内部、input-number 内部）保持填满即可 */
+  .el-input {
+    width: var(--ra-search-width);
+  }
+
+  /* el-input-number 是硬编码 width，必须显式覆盖 */
+  .el-input-number {
+    width: var(--ra-search-width);
+  }
 }
 
 /* 下拉弹层最小宽度兜底：输入框窄但选项文字长时，弹层不被压缩换行。

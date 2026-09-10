@@ -41,6 +41,15 @@ const visibleFields = computed(() =>
     : props.fields.slice(0, props.visibleCount)
 );
 
+/**
+ * 宽度类名 → 实际宽度由 `src/style/index.scss` 的 `--ra-search-width` token 驱动。
+ *
+ * 为什么不能把宽度类直接挂在 el-select 上：
+ * Element Plus 的宽度规则是 `.el-select { width: var(--el-select-width) }`，
+ * `--el-select-width` 默认 100%，与自定义 width 同特异性且后加载，会覆盖掉它。
+ * 因此宽度类统一挂在 el-form-item 上，由 CSS 侧改写 EP 各自读取的宽度变量，
+ * 这样 el-input / el-select / el-date-editor / el-input-number 能被同一套 token 约束。
+ */
 function widthClass(field: SearchField) {
   const width: SearchFieldWidth = field.width ?? "md";
   if (field.type === "daterange") return "ra-daterange";
@@ -49,7 +58,7 @@ function widthClass(field: SearchField) {
     return width === "sm" ? "ra-select-sm" : "ra-select";
   }
   if (width === "lg") return "ra-input-lg";
-  if (width === "sm") return "ra-select-sm";
+  if (width === "sm") return "ra-input-sm";
   return "ra-input";
 }
 
@@ -96,6 +105,7 @@ defineExpose({ getRef: () => formRef.value, expanded });
       :key="field.prop"
       :label="`${field.label}：`"
       :prop="field.prop"
+      :class="widthClass(field)"
     >
       <el-select
         v-if="field.type === 'select'"
@@ -107,7 +117,6 @@ defineExpose({ getRef: () => formRef.value, expanded });
         :default-first-option="field.allowCreate"
         popper-class="ra-select-popper"
         clearable
-        :class="widthClass(field)"
       >
         <el-option
           v-for="option in field.options ?? []"
@@ -123,7 +132,6 @@ defineExpose({ getRef: () => formRef.value, expanded });
         :placeholder="placeholderOf(field)"
         :value-format="field.valueFormat ?? 'YYYY-MM-DD'"
         clearable
-        :class="widthClass(field)"
       />
       <el-date-picker
         v-else-if="field.type === 'daterange'"
@@ -135,7 +143,6 @@ defineExpose({ getRef: () => formRef.value, expanded });
         :value-format="field.valueFormat ?? 'YYYY-MM-DD'"
         :shortcuts="field.shortcuts ? getPickerShortcuts() : undefined"
         clearable
-        :class="widthClass(field)"
       />
       <el-date-picker
         v-else-if="field.type === 'datetimerange'"
@@ -147,7 +154,6 @@ defineExpose({ getRef: () => formRef.value, expanded });
         :value-format="field.valueFormat"
         :shortcuts="field.shortcuts ? getPickerShortcuts() : undefined"
         clearable
-        :class="widthClass(field)"
       />
       <el-input-number
         v-else-if="field.type === 'input-number'"
@@ -156,14 +162,12 @@ defineExpose({ getRef: () => formRef.value, expanded });
         :min="field.min"
         :max="field.max"
         controls-position="right"
-        :class="widthClass(field)"
       />
       <el-input
         v-else
         v-model="model[field.prop]"
         :placeholder="placeholderOf(field)"
         clearable
-        :class="widthClass(field)"
       />
     </el-form-item>
 
