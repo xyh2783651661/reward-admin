@@ -65,7 +65,7 @@ export interface AiPromptTestRenderReq {
 export const getAiPromptPage = (data?: AiPromptQuery) => {
   return http.request<ApiPageResult<AiPromptTemplate>>(
     "post",
-    "/ai/prompts/page",
+    "/api/ai/prompts/page",
     { data }
   );
 };
@@ -73,44 +73,52 @@ export const getAiPromptPage = (data?: AiPromptQuery) => {
 export const getAiPromptDetail = (id: number | string) => {
   return http.request<ApiResult<AiPromptTemplate>>(
     "get",
-    `/ai/prompts/detail/${id}`
+    `/api/ai/prompts/detail/${id}`
   );
 };
 
 export const addAiPrompt = (data?: AiPromptReq) => {
-  return http.request<ApiResult<AiPromptTemplate>>("post", "/ai/prompts/add", {
-    data
-  });
+  return http.request<ApiResult<AiPromptTemplate>>(
+    "post",
+    "/api/ai/prompts/add",
+    {
+      data
+    }
+  );
 };
 
 export const updateAiPrompt = (data?: AiPromptReq) => {
   return http.request<ApiResult<AiPromptTemplate>>(
     "post",
-    "/ai/prompts/update",
+    "/api/ai/prompts/update",
     { data }
   );
 };
 
 export const deleteAiPrompt = (id: number | string) => {
-  return http.request<ApiResult>("delete", `/ai/prompts/${id}`);
+  return http.request<ApiResult>("delete", `/api/ai/prompts/${id}`);
 };
 
 export const refreshAiPromptCache = (code?: string) => {
-  return http.request<ApiResult>("post", "/ai/prompts/refresh", {
+  return http.request<ApiResult>("post", "/api/ai/prompts/refresh", {
     params: code ? { code } : undefined
   });
 };
 
 export const testRenderAiPrompt = (data?: AiPromptTestRenderReq) => {
-  return http.request<ApiResult<string>>("post", "/ai/prompts/test-render", {
-    data
-  });
+  return http.request<ApiResult<string>>(
+    "post",
+    "/api/ai/prompts/test-render",
+    {
+      data
+    }
+  );
 };
 
 /** 导出 — 后端返回 JSON 文件下载流（application/json） */
 export const exportAiPromptList = (ids?: Array<number | string>) => {
   const params = ids && ids.length > 0 ? { ids: ids.join(",") } : undefined;
-  return http.request<Blob>("get", "/ai/prompts/export", {
+  return http.request<Blob>("get", "/api/ai/prompts/export", {
     params,
     responseType: "blob"
   });
