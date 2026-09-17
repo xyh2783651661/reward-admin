@@ -62,12 +62,6 @@ interface SysHolidayRecipientReq {
   remark?: string;
 }
 
-interface RecipientOption {
-  id: number;
-  name: string;
-  email: string;
-}
-
 interface FormProps {
   formInline: SysHolidayConfig;
   formOptions: SysHolidayOptions;
@@ -82,6 +76,5 @@ export type {
   SysHolidayConfigPageReq,
   SysHolidayOptions,
   SysHolidayRecipient,
-  SysHolidayRecipientReq,
-  RecipientOption
+  SysHolidayRecipientReq
 };

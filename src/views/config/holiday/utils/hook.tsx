@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import editForm from "../form.vue";
-import recipientForm from "../recipient-form.vue";
 import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
 import { ElMessageBox } from "element-plus";
@@ -17,7 +16,6 @@ import {
   getHolidayRecipientList,
   updateHolidayRecipient
 } from "@/api/system";
-import { getMailRecipientList } from "@/api/mail";
 import { computed, h, reactive, ref, toRaw } from "vue";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import type {
@@ -25,8 +23,7 @@ import type {
   OptionItem,
   SysHolidayConfig,
   SysHolidayConfigPageReq,
-  SysHolidayOptions,
-  RecipientOption
+  SysHolidayOptions
 } from "./types";
 
 const DEFAULT_FORM_INLINE: SysHolidayConfig = {
@@ -210,7 +207,6 @@ export function useHolidayConfig() {
     status: ""
   });
   const formRef = ref();
-  const recipientFormRef = ref();
   const dataList = ref<SysHolidayConfig[]>([]);
   const loading = ref(true);
   const optionsLoading = ref(false);
@@ -223,7 +219,11 @@ export function useHolidayConfig() {
     background: true
   });
 
-  const recipientOptions = ref<RecipientOption[]>([]);
+  /** 收件人关联弹窗状态（复用公共 ReFriendPicker，选择即提交） */
+  const recipientVisible = ref(false);
+  const recipientTitle = ref("收件人关联");
+  const recipientIds = ref<number[]>([]);
+  const recipientHolidayId = ref<number>();
 
   const holidayTypeLabelMap = computed(() => {
     return new Map(
@@ -426,21 +426,6 @@ export function useHolidayConfig() {
     }
   }
 
-  async function loadRecipientOptions() {
-    try {
-      const { data } = await getMailRecipientList({ current: 1, size: 1000 });
-      recipientOptions.value = (data?.records ?? []).map(item => ({
-        id: item.id,
-        name: item.name,
-        email: item.email
-      }));
-    } catch (error) {
-      message(getErrorMessage(error, "加载收件人列表失败"), {
-        type: "error"
-      });
-    }
-  }
-
   async function onSearch() {
     loading.value = true;
 
@@ -567,19 +552,16 @@ export function useHolidayConfig() {
     });
   }
 
+  /**
+   * 打开「收件人关联」弹窗：复用公共 ReFriendPicker，交互与邮件发送任务完全一致。
+   * 改为选择即提交（beforeConfirm），不再需要 el-transfer 一次性拉全量收件人。
+   */
   async function openRecipientDialog(row: SysHolidayConfig) {
     if (!row?.id) return;
 
-    let selectedIds: number[] = [];
-
     try {
-      const [, holidayRecipientResult] = await Promise.all([
-        loadRecipientOptions(),
-        getHolidayRecipientList(row.id)
-      ]);
-      selectedIds = (holidayRecipientResult?.data ?? []).map(
-        item => item.recipientId
-      );
+      const { data } = await getHolidayRecipientList(row.id);
+      recipientIds.value = (data ?? []).map(item => item.recipientId);
     } catch (error) {
       message(getErrorMessage(error, "加载收件人数据失败"), {
         type: "error"
@@ -587,53 +569,35 @@ export function useHolidayConfig() {
       return;
     }
 
-    addDialog({
-      title: `收件人关联 - ${row.holidayName}`,
-      props: {
-        holidayId: row.id,
-        holidayName: row.holidayName,
-        recipientOptions: recipientOptions.value,
-        selectedRecipientIds: selectedIds
-      },
-      width: "800px",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      sureBtnLoading: true,
-      contentRenderer: () =>
-        h(recipientForm, {
-          ref: recipientFormRef,
-          holidayId: row.id,
-          holidayName: row.holidayName,
-          recipientOptions: recipientOptions.value,
-          selectedRecipientIds: selectedIds
-        }),
-      beforeSure: async (done, { closeLoading }) => {
-        const curRecipientIds = recipientFormRef.value?.getRecipientIds() ?? [];
+    recipientHolidayId.value = row.id;
+    recipientTitle.value = `收件人关联 - ${row.holidayName}`;
+    recipientVisible.value = true;
+  }
 
-        try {
-          const result = await updateHolidayRecipient({
-            holidayId: row.id,
-            recipientIds: curRecipientIds
-          });
+  /** 提交收件人关联；返回 false 时弹窗保持打开，便于失败后重试 */
+  async function saveHolidayRecipients(ids: number[]) {
+    if (!recipientHolidayId.value) return false;
 
-          if (result.code !== 200) {
-            throw new Error(result.msg || "更新收件人关联失败");
-          }
+    try {
+      const result = await updateHolidayRecipient({
+        holidayId: recipientHolidayId.value,
+        recipientIds: ids
+      });
 
-          message("收件人关联更新成功", {
-            type: "success"
-          });
-          done();
-        } catch (error) {
-          closeLoading();
-          message(getErrorMessage(error, "更新收件人关联失败"), {
-            type: "error"
-          });
-        }
+      if (result.code !== 200) {
+        throw new Error(result.msg || "更新收件人关联失败");
       }
-    });
+
+      message("收件人关联更新成功", {
+        type: "success"
+      });
+      return true;
+    } catch (error) {
+      message(getErrorMessage(error, "更新收件人关联失败"), {
+        type: "error"
+      });
+      return false;
+    }
   }
 
   async function onStatusChange({ row, index }) {
@@ -741,6 +705,10 @@ export function useHolidayConfig() {
     columns,
     dataList,
     pagination,
+    recipientVisible,
+    recipientTitle,
+    recipientIds,
+    saveHolidayRecipients,
     onSearch,
     resetForm,
     openDialog,

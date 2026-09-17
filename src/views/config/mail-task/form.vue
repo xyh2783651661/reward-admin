@@ -2,7 +2,7 @@
 import { useMailSendTaskForm } from "./utils/formHook";
 import type { MailSendTaskFormInline } from "./utils/types";
 import MailRichEditor from "./components/MailRichEditor.vue";
-import MailRecipientSelector from "./components/MailRecipientSelector.vue";
+import ReFriendPicker from "@/components/ReFriendPicker/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 defineOptions({
@@ -202,11 +202,10 @@ async function preview() {
       </el-form-item>
     </el-form>
 
-    <MailRecipientSelector
-      v-if="selectorVisible"
-      v-model="form.recipientIds"
+    <ReFriendPicker
+      v-model:visible="selectorVisible"
+      :model-value="form.recipientIds"
       @update:model-value="onRecipientsChange"
-      @close="selectorVisible = false"
     />
   </div>
 </template>

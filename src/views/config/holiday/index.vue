@@ -2,6 +2,7 @@
 import { useHolidayConfig } from "./utils/hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import ReSearchBar from "@/components/ReSearchBar/index.vue";
+import ReFriendPicker from "@/components/ReFriendPicker/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
@@ -19,6 +20,10 @@ const {
   columns,
   dataList,
   pagination,
+  recipientVisible,
+  recipientTitle,
+  recipientIds,
+  saveHolidayRecipients,
   onSearch,
   resetForm,
   openDialog,
@@ -120,5 +125,22 @@ function handleSearch() {
         </pure-table>
       </template>
     </PureTableBar>
+
+    <!-- 收件人关联：与「邮件发送任务」共用同一个选择器组件 -->
+    <ReFriendPicker
+      v-model:visible="recipientVisible"
+      v-model="recipientIds"
+      :title="recipientTitle"
+      :before-confirm="saveHolidayRecipients"
+    >
+      <template #tip="{ count }">
+        <el-text v-if="count === 0" type="info">
+          未指定收件人，将发送给所有用户
+        </el-text>
+        <el-text v-else type="info">
+          仅发送给 {{ count }} 位指定收件人
+        </el-text>
+      </template>
+    </ReFriendPicker>
   </div>
 </template>
