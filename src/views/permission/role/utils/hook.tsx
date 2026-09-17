@@ -1,7 +1,7 @@
 import editForm from "../form.vue";
-import permForm from "../perm-form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
+import ReMenuTree from "@/components/ReMenuTree/index.vue";
 import { deviceDetection } from "@pureadmin/utils";
 import type { PaginationProps } from "@pureadmin/table";
 import {
@@ -22,7 +22,6 @@ import type { SearchField } from "@/components/ReSearchBar/types";
 
 export function useRole() {
   const formRef = ref();
-  const permFormRef = ref();
   const loading = ref(true);
   const dataList = ref<SysRoleVo[]>([]);
   const menuTree = ref<SysMenuVo[]>([]);
@@ -181,34 +180,35 @@ export function useRole() {
     try {
       await loadMenuTree();
       const { data: detail } = await getRoleDetail(row.id);
-      const checkedKeys: number[] = detail.menuIds ?? [];
+
+      /**
+       * 已授权的菜单 id（含联动模式下自动计入的半选父级），
+       * 由弹窗内的 ReMenuTree 通过 v-model 实时回写，点确定时直接提交。
+       */
+      const checkedIds = ref<number[]>(detail.menuIds ?? []);
 
       addDialog({
         title: `分配菜单权限（${row.roleName}）`,
-        props: {
-          menuTree: menuTree.value,
-          checkedKeys
-        },
-        width: "680px",
+        width: "900px",
         draggable: true,
         fullscreen: deviceDetection(),
         fullscreenIcon: true,
         closeOnClickModal: false,
         sureBtnLoading: true,
         contentRenderer: () =>
-          h(permForm, {
-            ref: permFormRef,
-            menuTree: menuTree.value,
-            checkedKeys
+          h(ReMenuTree, {
+            data: menuTree.value,
+            modelValue: checkedIds.value,
+            maxHeight: "460px",
+            "onUpdate:modelValue": (value: number[]) => {
+              checkedIds.value = value;
+            }
           }),
         beforeSure: async (done, { closeLoading }) => {
-          const checked = permFormRef.value?.getCheckedKeys() ?? [];
-          const half = permFormRef.value?.getHalfCheckedKeys() ?? [];
-
           try {
             const result = await assignRoleMenus({
               roleId: row.id,
-              menuIds: [...checked, ...half]
+              menuIds: checkedIds.value
             });
 
             if (result.code !== 200) {
