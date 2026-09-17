@@ -8,11 +8,20 @@ import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import Refresh from "~icons/ep/refresh";
 import AddFill from "~icons/ri/add-circle-line";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({ name: "SysMenu" });
 
-const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
-  useMenu();
+const {
+  loading,
+  exportLoading,
+  columns,
+  dataList,
+  onSearch,
+  exportExcel,
+  openDialog,
+  handleDelete
+} = useMenu();
 </script>
 
 <template>
@@ -26,6 +35,15 @@ const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
           @click="openDialog()"
         >
           新增菜单
+        </el-button>
+        <el-button
+          v-perms="'permission:menu:export'"
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
         </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">

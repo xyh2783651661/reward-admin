@@ -1,12 +1,14 @@
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
+import { DownloadError, useDownload } from "@/hooks/useDownload";
 import { deviceDetection } from "@pureadmin/utils";
 import {
   getMenuTree,
   addMenu,
   updateMenu,
   deleteMenu,
+  exportMenuExcel,
   type SysMenuVo,
   type SysMenuReq,
   type MenuType
@@ -87,6 +89,27 @@ export function useMenu() {
     } finally {
       loading.value = false;
     }
+  }
+
+  const { loading: exportLoading, runExport } = useDownload();
+
+  /**
+   * 导出全量菜单 Excel（后端把树拍平成行）
+   *
+   * 后端在「没有菜单数据」时是直接 `return`，没有写响应流，HTTP 仍是 200，
+   * 前端拿到的是一个 0 字节 Blob。若不拦截就会落盘一个打不开的空 xlsx，
+   * 页面还提示「导出成功」——所以这里显式抛错，走统一的失败提示。
+   */
+  function exportExcel() {
+    return runExport(async () => {
+      const data = await exportMenuExcel();
+
+      if (data instanceof Blob && data.size === 0) {
+        throw new DownloadError("没有菜单数据可导出");
+      }
+
+      return data;
+    }, "系统菜单.xlsx");
   }
 
   function openDialog(title = "新增", row?: SysMenuVo) {
@@ -191,9 +214,11 @@ export function useMenu() {
 
   return {
     loading,
+    exportLoading,
     columns,
     dataList,
     onSearch,
+    exportExcel,
     openDialog,
     handleDelete
   };

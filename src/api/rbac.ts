@@ -84,6 +84,18 @@ export const deleteMenu = (id: number) => {
   return http.request<ApiResult>("delete", `/api/admin/menus/${id}`);
 };
 
+/**
+ * 全量菜单导出 Excel（后端把树拍平成行，含层级 / 父级名 / 中文标签）
+ *
+ * 后端在无数据时直接 `return`，不会写响应流，前端拿到的是 0 字节响应体，
+ * 因此调用方需要自行判断空结果，避免下载出打不开的空文件。
+ */
+export const exportMenuExcel = () => {
+  return http.request<Blob>("get", "/api/admin/menus/export-excel", {
+    responseType: "blob"
+  });
+};
+
 /** 角色分页 */
 export const getRolePage = (data: SysRoleReq) => {
   return http.request<ApiPageResult<SysRoleVo>>(
