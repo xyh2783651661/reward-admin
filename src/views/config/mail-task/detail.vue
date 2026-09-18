@@ -174,7 +174,7 @@ onMounted(() => {
           v-if="detail.status === 3 || detail.status === 4"
           v-perms="'config:mailTask:retry'"
           type="warning"
-          :icon="useRenderIcon('ri/refresh-line')"
+          :icon="useRenderIcon('ri:refresh-line')"
           @click="handleRetry"
         >
           重试失败
