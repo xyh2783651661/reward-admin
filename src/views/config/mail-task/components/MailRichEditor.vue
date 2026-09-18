@@ -10,9 +10,25 @@ defineOptions({
   name: "MailRichEditor"
 });
 
-const props = defineProps<{
-  modelValue: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    modelValue: string;
+    /**
+     * 编辑器整体高度（含工具栏），如 `380px` 或 `calc(100vh - 620px)`。
+     *
+     * 注意：高度必须落在**外层** `.mail-rich-editor` 上。
+     * wangeditor 内部的可编辑区靠一条百分比高度链撑开：
+     *   .mail-rich-editor → .w-e-text-container(height:100%)
+     *   → .w-e-scroll(height:100%) → [data-slate-editor](min-height:100%)
+     * 只要这条链的起点高度不确定，`100%` 就会退化成 `auto`，
+     * 可编辑区塌缩成一行高（表现为「必须点到第一行才能输入」）。
+     */
+    height?: string;
+  }>(),
+  {
+    height: "380px"
+  }
+);
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
@@ -69,7 +85,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mail-rich-editor">
+  <div class="mail-rich-editor" :style="{ height: props.height }">
     <Toolbar
       class="mail-rich-editor__toolbar"
       :editor="editorRef"
@@ -81,7 +97,6 @@ onBeforeUnmount(() => {
       class="mail-rich-editor__editor"
       :defaultConfig="editorConfig"
       mode="default"
-      style="height: 380px"
       @onCreated="handleCreated"
       @onChange="handleChange"
     />
@@ -93,6 +108,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-height: 240px;
   overflow: hidden;
   border: 1px solid var(--el-border-color);
   border-radius: 4px;
@@ -103,14 +119,28 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--el-border-color);
 }
 
+/*
+ * min-height 必须是 0，不能用 min-height 撑高：
+ * 本元素是 flex 子项，父级 .mail-rich-editor 的高度才是这条百分比链的「确定值」来源。
+ * 在这里写 min-height 会让父容器高度变成内容推导（不确定），
+ * 进而使下面 :deep 里的 height:100% 全部退化成 auto。
+ */
 .mail-rich-editor__editor {
   flex: 1;
-  min-height: 380px;
+  min-height: 0;
   overflow-y: auto;
 }
 
+/* 百分比高度链的显式声明（父级已有确定高度，这几条才能解析为实际像素） */
 .mail-rich-editor__editor :deep(.w-e-text-container) {
-  height: 100% !important;
-  min-height: 100% !important;
+  height: 100%;
+}
+
+.mail-rich-editor__editor :deep(.w-e-scroll) {
+  height: 100%;
+}
+
+.mail-rich-editor__editor :deep([data-slate-editor]) {
+  min-height: 100%;
 }
 </style>
