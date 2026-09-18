@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { ElMessage } from "element-plus";
 import { isExternalUrl } from "@/utils/navigation";
+import { IconSelect } from "@/components/ReIcon";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
 
@@ -98,10 +99,7 @@ defineExpose({ getRef });
         <el-input v-model="newFormInline.routeName" placeholder="如 Reward" />
       </el-form-item>
       <el-form-item label="图标">
-        <el-input
-          v-model="newFormInline.icon"
-          placeholder="如 ri:medal-2-line"
-        />
+        <IconSelect v-model="newFormInline.icon" />
       </el-form-item>
       <el-form-item label="外链地址">
         <el-input

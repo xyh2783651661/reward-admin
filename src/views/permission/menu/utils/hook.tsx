@@ -14,6 +14,7 @@ import {
   type MenuType
 } from "@/api/rbac";
 import { h, ref } from "vue";
+import { IconifyIconOnline } from "@/components/ReIcon";
 
 const menuTypeText = (t: MenuType) => ({ 0: "目录", 1: "菜单", 2: "按钮" })[t];
 
@@ -61,7 +62,20 @@ export function useMenu() {
         </el-tag>
       )
     },
-    { label: "图标", prop: "icon", width: 120 },
+    {
+      label: "图标",
+      prop: "icon",
+      width: 70,
+      align: "center",
+      cellRenderer: ({ row }) =>
+        row.icon
+          ? h(IconifyIconOnline, {
+              icon: row.icon,
+              width: "18px",
+              height: "18px"
+            })
+          : ""
+    },
     { label: "路由路径", prop: "path", minWidth: 160 },
     { label: "组件路径", prop: "component", minWidth: 180 },
     { label: "权限标识", prop: "perms", width: 120 },

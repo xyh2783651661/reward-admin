@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import type { MenuTreeNodeType } from "./types";
+import { IconifyIconOnline } from "@/components/ReIcon";
 
 defineOptions({
   name: "ReMenuTree"
@@ -27,6 +28,8 @@ interface Props {
   typeKey?: string;
   /** 权限标识字段，有值时在节点名后以等宽字体展示 */
   permsKey?: string;
+  /** 图标字段，有值时在节点名前渲染对应图标 */
+  iconKey?: string;
   /** 节点类型 → 标签映射，传 `{}` 可关闭类型标签 */
   typeMap?: Record<string | number, MenuTreeNodeType>;
   /** 父子联动：勾选上级同时授权其全部下级；关闭后各级独立勾选 */
@@ -47,6 +50,7 @@ const props = withDefaults(defineProps<Props>(), {
   childrenKey: "children",
   typeKey: "menuType",
   permsKey: "perms",
+  iconKey: "icon",
   typeMap: () => ({
     0: { label: "目录", tag: "info" },
     1: { label: "菜单", tag: "success" },
@@ -279,6 +283,11 @@ watch(
       >
         <template #default="{ data: node }">
           <span class="flex items-center gap-2 min-w-0">
+            <IconifyIconOnline
+              v-if="node[iconKey]"
+              :icon="node[iconKey]"
+              class="w-[18px] h-[18px] shrink-0"
+            />
             <el-tag
               v-if="typeMap[node[typeKey]]"
               size="small"
