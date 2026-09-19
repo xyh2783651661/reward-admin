@@ -104,7 +104,7 @@ function handleSearch() {
                   v-perms="'config:morningGreeting:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

@@ -2,6 +2,7 @@ import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
 
 import type { PaginationProps } from "@pureadmin/table";
+import { RA_PAGINATION } from "@/constants";
 import { reactive, ref, toRaw, onMounted } from "vue";
 
 interface ApiResult {
@@ -43,9 +44,10 @@ export function useCrudTable<TForm extends Record<string, any>>(
   const loading = ref(true);
   const pagination = reactive<PaginationProps>({
     total: 0,
-    pageSize: 10,
     currentPage: 1,
-    background: true
+    ...RA_PAGINATION,
+    // 克隆 pageSizes，避免多页面共享同一可变数组引用
+    pageSizes: [...RA_PAGINATION.pageSizes]
   });
 
   async function onSearch() {

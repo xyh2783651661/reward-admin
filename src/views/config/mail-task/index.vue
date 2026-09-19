@@ -145,7 +145,7 @@ onMounted(() => {
                   v-perms="'config:mailTask:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

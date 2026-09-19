@@ -102,7 +102,7 @@ function handleSearch() {
                   v-perms="'config:holiday:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

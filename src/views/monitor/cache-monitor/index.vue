@@ -257,7 +257,7 @@ const {
           :columns="topKeyColumns"
           empty-text="暂无热点 Key 数据"
           :header-cell-style="{
-            background: 'var(--el-fill-color-lighter)',
+            background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
           }"
         />
@@ -276,7 +276,7 @@ const {
           :columns="bigKeyColumns"
           empty-text="暂无大 Key 数据"
           :header-cell-style="{
-            background: 'var(--el-fill-color-lighter)',
+            background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
           }"
         />
@@ -297,7 +297,7 @@ const {
         :columns="logColumns"
         empty-text="暂无操作日志"
         :header-cell-style="{
-          background: 'var(--el-fill-color-lighter)',
+          background: 'var(--el-fill-color-light)',
           color: 'var(--el-text-color-primary)'
         }"
       />

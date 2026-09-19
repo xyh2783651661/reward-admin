@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { useDailyImage } from "./hook";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { message } from "@/utils/message";
+import { RA_PAGINATION } from "@/constants";
 
 import Refresh from "~icons/ep/refresh";
 import Upload from "~icons/ep/upload";
@@ -557,9 +558,9 @@ function uploadStatusLabel(status: string) {
       <el-pagination
         v-model:current-page="pagination.currentPage"
         v-model:page-size="pagination.pageSize"
-        :page-sizes="[15, 30, 60, 100]"
+        :page-sizes="RA_PAGINATION.pageSizes"
         :total="pagination.total"
-        layout="total, sizes, prev, pager, next, jumper"
+        :layout="RA_PAGINATION.layout"
         background
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"

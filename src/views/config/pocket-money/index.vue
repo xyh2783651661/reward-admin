@@ -117,7 +117,7 @@ function handleSearch() {
                   v-perms="'config:pocketMoney:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

@@ -71,7 +71,7 @@ const { loading, columns, dataList, onSearch, openDialog, handleDelete } =
                   v-perms="'love:anniversaries:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

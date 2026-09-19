@@ -152,7 +152,7 @@ onMounted(() => {
                     v-perms="'config:mail:delete'"
                     class="reset-margin"
                     link
-                    type="primary"
+                    type="danger"
                     :size="size"
                     :icon="useRenderIcon(Delete)"
                   >

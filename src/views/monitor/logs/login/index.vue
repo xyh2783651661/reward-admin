@@ -36,7 +36,6 @@ function handleSearch() {
       v-model="form"
       :fields="searchFields"
       :loading="loading"
-      :visible-count="3"
       @search="handleSearch"
       @reset="resetForm"
     />

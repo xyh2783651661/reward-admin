@@ -46,7 +46,6 @@ function handleSearch() {
       v-model="form"
       :fields="searchFields"
       :loading="loading"
-      :visible-count="3"
       @search="handleSearch"
       @reset="resetForm"
     />
@@ -118,7 +117,7 @@ function handleSearch() {
                   v-perms="'config:reward:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

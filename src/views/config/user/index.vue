@@ -114,7 +114,7 @@ function handleSearch() {
                   v-perms="'config:user:delete'"
                   class="reset-margin"
                   link
-                  type="primary"
+                  type="danger"
                   :size="size"
                   :icon="useRenderIcon(Delete)"
                 >

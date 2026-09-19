@@ -53,7 +53,7 @@ export function useDailyImage() {
 
   const pagination = reactive<PaginationProps>({
     total: 0,
-    pageSize: 30,
+    pageSize: 10,
     currentPage: 1,
     background: true
   });
