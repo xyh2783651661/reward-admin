@@ -7,13 +7,12 @@ import {
   REASON_LABELS
 } from "../hook/useCheckRecord";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import { getPickerShortcuts } from "../../utils";
 import { useCopyToClipboard } from "@pureadmin/utils";
 import { message } from "@/utils/message";
 import ReJsonField from "@/components/ReJsonField/index.vue";
-
-import Refresh from "~icons/ep/refresh";
 
 defineOptions({
   name: "CheckRecord"
@@ -28,7 +27,6 @@ const emit = defineEmits<{
   (e: "consumed"): void;
 }>();
 
-const formRef = ref();
 const tableRef = ref();
 const moreFilterVisible = ref(false);
 
@@ -73,6 +71,31 @@ const parsedPayload = computed(() => {
   }
 });
 
+const searchFields = computed<SearchField[]>(() => [
+  {
+    prop: "provider",
+    label: "供应商",
+    type: "select",
+    options: dropdownOptions.providers,
+    filterable: true,
+    width: "md"
+  },
+  {
+    prop: "status",
+    label: "结果",
+    type: "select",
+    options: dropdownOptions.checkStatusList,
+    width: "sm"
+  },
+  {
+    prop: "createdTime",
+    label: "检测时间",
+    type: "datetimerange",
+    valueFormat: "YYYY-MM-DD HH:mm:ss",
+    shortcuts: true
+  }
+]);
+
 onMounted(() => {
   onSearch();
   if (props.initialProvider) emit("consumed");
@@ -80,63 +103,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="main">
     <!-- 一行式筛选栏 -->
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="filter-bar bg-bg_color w-full pl-4 pt-[12px] overflow-auto"
-      @submit.prevent
-    >
-      <el-form-item label="供应商" prop="provider">
-        <el-select
-          v-model="form.provider"
-          placeholder="全部"
-          clearable
-          filterable
-          class="w-[150px]!"
-          @change="onSearch"
-        >
-          <el-option
-            v-for="item in dropdownOptions.providers"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="结果" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="全部"
-          clearable
-          class="w-[110px]!"
-          @change="onSearch"
-        >
-          <el-option
-            v-for="item in dropdownOptions.checkStatusList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="检测时间" prop="createdTime">
-        <el-date-picker
-          v-model="form.createdTime"
-          :shortcuts="getPickerShortcuts()"
-          type="datetimerange"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          range-separator="至"
-          start-placeholder="开始"
-          end-placeholder="结束"
-          class="w-[340px]!"
-          @change="onSearch"
-        />
-      </el-form-item>
-      <el-form-item>
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      @search="onSearch"
+      @reset="resetForm"
+    />
+
+    <PureTableBar title="检测流水" :columns="columns" @refresh="onSearch">
+      <template #buttons>
         <el-popover
           :visible="moreFilterVisible"
           placement="bottom-start"
@@ -209,32 +187,16 @@ onMounted(() => {
             </div>
           </div>
         </el-popover>
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
         <el-button
           type="success"
-          :icon="useRenderIcon('ep:download')"
           plain
+          :icon="useRenderIcon('ep:download')"
           :loading="exportLoading"
           @click="onExport"
         >
           导出
         </el-button>
-      </el-form-item>
-    </el-form>
-
-    <PureTableBar title="检测流水" :columns="columns" @refresh="onSearch">
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           ref="tableRef"
@@ -394,12 +356,6 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
-.filter-bar {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-
 .more-filter-panel {
   display: flex;
   flex-direction: column;

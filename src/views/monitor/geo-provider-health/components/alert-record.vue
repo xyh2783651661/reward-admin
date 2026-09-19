@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useGeoProviderAlertRecord } from "../hook/useGeoProviderAlertRecord";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import { getPickerShortcuts } from "../../utils";
-
-import Refresh from "~icons/ep/refresh";
 
 defineOptions({
   name: "GeoProviderAlertRecord"
@@ -18,7 +17,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: "consumed"): void }>();
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
@@ -42,6 +40,50 @@ const {
   props.initialPoolName
 );
 
+const searchFields = computed<SearchField[]>(() => [
+  {
+    prop: "poolName",
+    label: "池子",
+    type: "select",
+    options: dropdownOptions.pools,
+    width: "md"
+  },
+  {
+    prop: "provider",
+    label: "来源",
+    type: "input",
+    width: "sm"
+  },
+  {
+    prop: "alertType",
+    label: "告警类型",
+    type: "select",
+    options: dropdownOptions.alertTypeList,
+    width: "md"
+  },
+  {
+    prop: "alertLevel",
+    label: "级别",
+    type: "select",
+    options: dropdownOptions.alertLevelList,
+    width: "sm"
+  },
+  {
+    prop: "status",
+    label: "状态",
+    type: "select",
+    options: dropdownOptions.alertStatusList,
+    width: "sm"
+  },
+  {
+    prop: "createdTime",
+    label: "时间",
+    type: "datetimerange",
+    valueFormat: "YYYY-MM-DD HH:mm:ss",
+    shortcuts: true
+  }
+]);
+
 onMounted(() => {
   onSearch();
   if (props.initialProvider || props.initialPoolName) emit("consumed");
@@ -49,105 +91,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="池子" prop="poolName">
-        <el-select
-          v-model="form.poolName"
-          placeholder="全部池子"
-          clearable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.pools"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="来源" prop="provider">
-        <el-input
-          v-model="form.provider"
-          placeholder="来源名"
-          clearable
-          class="w-[160px]!"
-        />
-      </el-form-item>
-      <el-form-item label="告警类型" prop="alertType">
-        <el-select
-          v-model="form.alertType"
-          placeholder="请选择告警类型"
-          clearable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.alertTypeList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="级别" prop="alertLevel">
-        <el-select
-          v-model="form.alertLevel"
-          placeholder="请选择级别"
-          clearable
-          class="w-[140px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.alertLevelList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="状态" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="请选择状态"
-          clearable
-          class="w-[140px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.alertStatusList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="时间" prop="createdTime">
-        <el-date-picker
-          v-model="form.createdTime"
-          :shortcuts="getPickerShortcuts()"
-          type="datetimerange"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          range-separator="~"
-          start-placeholder="开始"
-          end-placeholder="结束"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
+  <div class="main">
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      :visible-count="6"
+      @search="onSearch"
+      @reset="resetForm"
+    />
+
+    <PureTableBar title="告警记录" :columns="columns" @refresh="onSearch">
+      <template #buttons>
         <el-button
           type="warning"
           :icon="useRenderIcon('ep:check')"
@@ -163,10 +118,7 @@ onMounted(() => {
         >
           导出
         </el-button>
-      </el-form-item>
-    </el-form>
-
-    <PureTableBar title="告警记录" :columns="columns" @refresh="onSearch">
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           ref="tableRef"
@@ -204,11 +156,3 @@ onMounted(() => {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>

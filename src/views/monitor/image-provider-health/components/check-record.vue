@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useImageProviderCheckRecord } from "../hook/useImageProviderCheckRecord";
 import { PureTableBar } from "@/components/RePureTableBar";
+import ReSearchBar from "@/components/ReSearchBar/index.vue";
+import type { SearchField } from "@/components/ReSearchBar/types";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import { getPickerShortcuts } from "../../utils";
-
-import Refresh from "~icons/ep/refresh";
 
 defineOptions({
   name: "ImageProviderCheckRecord"
@@ -15,7 +14,6 @@ const props = defineProps<{ initialProvider?: string }>();
 
 const emit = defineEmits<{ (e: "consumed"): void }>();
 
-const formRef = ref();
 const tableRef = ref();
 
 const {
@@ -33,6 +31,48 @@ const {
   handleCurrentChange
 } = useImageProviderCheckRecord(tableRef, props.initialProvider);
 
+const searchFields = computed<SearchField[]>(() => [
+  {
+    prop: "provider",
+    label: "来源",
+    type: "select",
+    options: dropdownOptions.providers,
+    filterable: true,
+    width: "md"
+  },
+  {
+    prop: "checkType",
+    label: "检测类型",
+    type: "select",
+    options: dropdownOptions.checkTypeList,
+    filterable: true,
+    width: "md"
+  },
+  {
+    prop: "status",
+    label: "结果",
+    type: "select",
+    options: dropdownOptions.checkStatusList,
+    filterable: true,
+    width: "sm"
+  },
+  {
+    prop: "reason",
+    label: "故障原因",
+    type: "select",
+    options: dropdownOptions.failureReasonList,
+    filterable: true,
+    width: "md"
+  },
+  {
+    prop: "createdTime",
+    label: "时间",
+    type: "datetimerange",
+    valueFormat: "YYYY-MM-DD HH:mm:ss",
+    shortcuts: true
+  }
+]);
+
 onMounted(() => {
   onSearch();
   if (props.initialProvider) emit("consumed");
@@ -40,101 +80,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <el-form
-      ref="formRef"
-      v-search-enter="onSearch"
-      :inline="true"
-      :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-[12px] overflow-auto"
-    >
-      <el-form-item label="来源" prop="provider">
-        <el-select
-          v-model="form.provider"
-          placeholder="请选择来源"
-          clearable
-          filterable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.providers"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="检测类型" prop="checkType">
-        <el-select
-          v-model="form.checkType"
-          placeholder="请选择检测类型"
-          clearable
-          filterable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.checkTypeList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="结果" prop="status">
-        <el-select
-          v-model="form.status"
-          placeholder="请选择结果"
-          clearable
-          filterable
-          class="w-[150px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.checkStatusList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="故障原因" prop="reason">
-        <el-select
-          v-model="form.reason"
-          placeholder="请选择原因"
-          clearable
-          filterable
-          class="w-[180px]!"
-        >
-          <el-option
-            v-for="item in dropdownOptions.failureReasonList"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="时间" prop="createdTime">
-        <el-date-picker
-          v-model="form.createdTime"
-          :shortcuts="getPickerShortcuts()"
-          type="datetimerange"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          range-separator="~"
-          start-placeholder="开始日期时间"
-          end-placeholder="结束日期时间"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button
-          type="primary"
-          :icon="useRenderIcon('ri:search-line')"
-          :loading="loading"
-          @click="onSearch"
-        >
-          搜索
-        </el-button>
-        <el-button :icon="useRenderIcon(Refresh)" @click="resetForm(formRef)">
-          重置
-        </el-button>
+  <div class="main">
+    <ReSearchBar
+      v-model="form"
+      :fields="searchFields"
+      :loading="loading"
+      :visible-count="5"
+      @search="onSearch"
+      @reset="resetForm"
+    />
+
+    <PureTableBar title="调用流水" :columns="columns" @refresh="onSearch">
+      <template #buttons>
         <el-button
           type="success"
           :icon="useRenderIcon('ep:download')"
@@ -143,10 +100,7 @@ onMounted(() => {
         >
           导出
         </el-button>
-      </el-form-item>
-    </el-form>
-
-    <PureTableBar title="调用流水" :columns="columns" @refresh="onSearch">
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           ref="tableRef"
@@ -171,11 +125,3 @@ onMounted(() => {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
-</style>
