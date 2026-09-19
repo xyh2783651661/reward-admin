@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { useAiPromptForm } from "./utils/formHook";
 import type { AiPromptFormData } from "./utils/types";
 import PromptEditor from "./components/PromptEditor.vue";
+import ReJsonField from "@/components/ReJsonField/index.vue";
 import {
   PROMPT_CATEGORIES,
   CONTENT_FORMATS,
@@ -207,10 +208,11 @@ const mustache = "{{varName}}";
       </el-form-item>
 
       <el-form-item label="变量定义">
-        <el-input
+        <ReJsonField
           v-model="form.variablesSchema"
-          type="textarea"
-          :rows="3"
+          edit-mode="text"
+          :min-rows="3"
+          :max-rows="12"
           placeholder="JSON 数组：[ {name, type, required, default, description} ]"
         />
       </el-form-item>
@@ -243,10 +245,11 @@ const mustache = "{{varName}}";
       </el-form-item>
 
       <el-form-item label="输出结构">
-        <el-input
+        <ReJsonField
           v-model="form.outputSchema"
-          type="textarea"
-          :rows="2"
+          edit-mode="text"
+          :min-rows="2"
+          :max-rows="12"
           placeholder="可选：JSON Schema 或结构说明"
         />
       </el-form-item>

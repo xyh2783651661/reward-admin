@@ -9,6 +9,8 @@ import View from "~icons/ep/view";
 import Delete from "~icons/ep/delete";
 import Download from "~icons/ep/download";
 import RefreshRight from "~icons/ep/refresh-right";
+import VideoPlay from "~icons/ep/video-play";
+import Clock from "~icons/ep/clock";
 
 defineOptions({
   name: "AiPrompt"
@@ -30,6 +32,8 @@ const {
   onSelectionChange,
   openDialog,
   openDetail,
+  openVersionHistory,
+  openTestRender,
   handleSearch,
   handleExport,
   handleRefreshAll
@@ -120,6 +124,28 @@ const {
               @click="openDialog(row)"
             >
               编辑
+            </el-button>
+            <el-button
+              v-perms="'config:aiPrompt:query'"
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
+              :icon="useRenderIcon(VideoPlay)"
+              @click="openTestRender(row)"
+            >
+              测试渲染
+            </el-button>
+            <el-button
+              v-perms="'config:aiPrompt:query'"
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
+              :icon="useRenderIcon(Clock)"
+              @click="openVersionHistory(row)"
+            >
+              版本
             </el-button>
             <el-popconfirm
               :title="`是否确认删除「${row.name || row.code}」？`"

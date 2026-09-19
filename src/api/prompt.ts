@@ -33,7 +33,34 @@ export interface AiPromptQuery {
   size?: number;
   category?: string;
   status?: number;
+  builtin?: number;
+  code?: string;
+  name?: string;
   keyword?: string;
+}
+
+/** 历史版本 */
+export interface AiPromptVersion {
+  id: number;
+  templateId: number;
+  code: string;
+  version: number;
+  content: string;
+  contentFormat: string | null;
+  variablesSchema: string | null;
+  outputSchema: string | null;
+  /** create / update / rollback */
+  changeType: string;
+  changeSummary: string | null;
+  createdBy: number | null;
+  createdTime: string | null;
+  remark: string | null;
+}
+
+/** 回滚请求 */
+export interface AiPromptRollbackReq {
+  id: number;
+  version: number;
 }
 
 /** 新增/编辑请求 */
@@ -122,4 +149,21 @@ export const exportAiPromptList = (ids?: Array<number | string>) => {
     params,
     responseType: "blob"
   });
+};
+
+/** 历史版本列表（最新在前） */
+export const getAiPromptVersions = (id: number | string) => {
+  return http.request<ApiResult<AiPromptVersion[]>>(
+    "get",
+    `/api/ai/prompts/versions/${id}`
+  );
+};
+
+/** 回滚到指定历史版本（后端会先存当前快照再生成 rollback 快照，历史可追溯） */
+export const rollbackAiPrompt = (data: AiPromptRollbackReq) => {
+  return http.request<ApiResult<AiPromptTemplate>>(
+    "post",
+    "/api/ai/prompts/rollback",
+    { data }
+  );
 };

@@ -7,6 +7,8 @@ import type { SearchField } from "@/components/ReSearchBar/types";
 import { addDialog } from "@/components/ReDialog";
 import editForm from "../form.vue";
 import detailComp from "../detail.vue";
+import versionHistoryComp from "../components/VersionHistory.vue";
+import testRenderComp from "../components/TestRenderDialog.vue";
 import {
   getAiPromptPage,
   getAiPromptDetail,
@@ -39,6 +41,7 @@ export function useAiPrompt() {
       name: "",
       category: "",
       status: undefined as number | undefined,
+      builtin: undefined as number | undefined,
       keyword: ""
     },
     deleteMessage: row => `已删除「${row.name || row.code}」`
@@ -103,7 +106,7 @@ export function useAiPrompt() {
       formatter: ({ updatedTime }) =>
         updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
-    { label: "操作", fixed: "right", width: 220, slot: "operation" }
+    { label: "操作", fixed: "right", width: 360, slot: "operation" }
   ];
 
   const searchFields = computed<SearchField[]>(() => [
@@ -129,6 +132,16 @@ export function useAiPrompt() {
       options: [
         { value: 1, label: "启用" },
         { value: 0, label: "禁用" }
+      ]
+    },
+    {
+      prop: "builtin",
+      label: "来源",
+      type: "select",
+      width: "sm",
+      options: [
+        { value: 1, label: "内置" },
+        { value: 0, label: "自建" }
       ]
     }
   ]);
@@ -204,6 +217,29 @@ export function useAiPrompt() {
       });
   }
 
+  /** 版本历史：展示所有历史快照并支持回滚（回滚前二次确认） */
+  function openVersionHistory(row: any) {
+    addDialog({
+      title: `版本历史 · ${row.name || row.code}`,
+      width: "960px",
+      closeOnClickModal: false,
+      hideFooter: true,
+      contentRenderer: () =>
+        h(versionHistoryComp, { record: row, onReverted: onSearch })
+    });
+  }
+
+  /** 测试渲染：按 variables_schema 生成变量骨架，调用后端真实渲染 */
+  function openTestRender(row: any) {
+    addDialog({
+      title: `测试渲染 · ${row.name || row.code}`,
+      width: "720px",
+      closeOnClickModal: false,
+      hideFooter: true,
+      contentRenderer: () => h(testRenderComp, { record: row })
+    });
+  }
+
   function handleSearch() {
     form.current = 1;
     onSearch();
@@ -277,6 +313,8 @@ export function useAiPrompt() {
     onSelectionChange,
     openDialog,
     openDetail,
+    openVersionHistory,
+    openTestRender,
     handleSearch,
     handleExport,
     handleRefreshAll
