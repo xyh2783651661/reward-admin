@@ -131,7 +131,7 @@ async function preview() {
       ref="formRef"
       :model="form"
       :rules="rules"
-      label-width="90px"
+      label-width="100px"
       class="mail-task-form__body"
     >
       <section class="mail-task-form-section">
@@ -167,23 +167,27 @@ async function preview() {
 
         <el-form-item label="收件人：" required>
           <div class="recipient-field">
-            <el-tag
-              v-for="r in selectedRecipients"
-              :key="r.id"
-              closable
-              effect="plain"
-              @close="
-                onRecipientsChange(form.recipientIds.filter(id => id !== r.id))
-              "
-            >
-              {{ r.name || "-" }} &lt;{{ r.email || "邮箱未设置" }}&gt;
-            </el-tag>
-            <span
-              v-if="!selectedRecipients.length"
-              class="recipient-field__placeholder"
-            >
-              尚未选择收件人
-            </span>
+            <div class="recipient-field__tags">
+              <el-tag
+                v-for="r in selectedRecipients"
+                :key="r.id"
+                closable
+                effect="plain"
+                @close="
+                  onRecipientsChange(
+                    form.recipientIds.filter(id => id !== r.id)
+                  )
+                "
+              >
+                {{ r.name || "-" }} &lt;{{ r.email || "邮箱未设置" }}&gt;
+              </el-tag>
+              <span
+                v-if="!selectedRecipients.length"
+                class="recipient-field__placeholder"
+              >
+                尚未选择收件人
+              </span>
+            </div>
             <span class="recipient-field__ops">
               <el-button
                 link
@@ -335,9 +339,10 @@ async function preview() {
   .recipient-field {
     box-sizing: border-box;
     display: flex;
-    flex-wrap: wrap;
     gap: 8px;
-    align-items: center;
+
+    /* 操作区固定右上角：标签再多也只让左侧标签区换行，按钮不跟着往下跑 */
+    align-items: flex-start;
     width: 100%;
     min-height: 32px;
     padding: 3px 8px;
@@ -350,6 +355,19 @@ async function preview() {
     }
   }
 
+  /* 标签区：占满剩余宽度，内部自行换行，min-width:0 防长标签撑破父容器 */
+  .recipient-field__tags {
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    min-width: 0;
+
+    /* 与右侧 32px 高的 link 按钮垂直居中（单行状态） */
+    min-height: 32px;
+  }
+
   .recipient-field__placeholder {
     font-size: 13px;
     color: var(--el-text-color-placeholder);
@@ -357,9 +375,9 @@ async function preview() {
 
   .recipient-field__ops {
     display: flex;
+    flex-shrink: 0;
     gap: 4px;
     align-items: center;
-    margin-left: auto;
   }
 
   .recipient-field__meta {
