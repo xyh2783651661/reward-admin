@@ -36,7 +36,8 @@ const {
   openTestRender,
   handleSearch,
   handleExport,
-  handleRefreshAll
+  handleRefreshAll,
+  exportLoading
 } = useAiPrompt();
 </script>
 
@@ -65,6 +66,7 @@ const {
           v-perms="'config:aiPrompt:export'"
           type="success"
           plain
+          :loading="exportLoading"
           :icon="useRenderIcon(Download)"
           @click="handleExport"
         >

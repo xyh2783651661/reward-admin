@@ -16,6 +16,8 @@ import {
   exportAiPromptList,
   refreshAiPromptCache
 } from "@/api/prompt";
+import { useDownload } from "@/hooks/useDownload";
+import { saveBlob } from "@/utils/download";
 import { useCrudTable } from "@/views/config/composables/useCrudTable";
 import { STATUS_MAP, DEFAULT_PROMPT_FORM } from "./types";
 import type { AiPromptFormData } from "./types";
@@ -52,6 +54,9 @@ export function useAiPrompt() {
   function onSelectionChange(rows: any[]) {
     selectedRows.value = rows || [];
   }
+
+  // 导出走项目统一的 download.ts + useDownload.ts 分层（transport + UI/loading/幂等）
+  const { loading: exportLoading, run: runExportTask } = useDownload();
 
   const columns: TableColumnList = [
     { type: "selection", width: 44, fixed: "left" },
@@ -248,30 +253,28 @@ export function useAiPrompt() {
   /**
    * 导出 JSON。
    * 优先使用选中的行；未选中时导出当前过滤条件下的全部。
+   * 通过 useDownload 获得 loading / 幂等 / 统一错误提示，落盘复用 download.ts 的 saveBlob。
    */
   async function handleExport() {
-    try {
-      const ids =
-        selectedRows.value.length > 0
-          ? selectedRows.value.map(r => r.id)
-          : undefined;
-      const blob = await exportAiPromptList(ids);
-      const url = URL.createObjectURL(blob as Blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const today = dayjs().format("YYYYMMDD");
-      a.download =
-        ids && ids.length > 0
-          ? `ai_prompts_selected_${today}.json`
-          : `ai_prompts_all_${today}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      message("导出已生成", { type: "success" });
-    } catch (e) {
-      message(getErrorMessage(e, "导出失败"), { type: "error" });
-    }
+    const ids =
+      selectedRows.value.length > 0
+        ? selectedRows.value.map(r => r.id)
+        : undefined;
+    await runExportTask(
+      async () => {
+        const blob = await exportAiPromptList(ids);
+        const today = dayjs().format("YYYYMMDD");
+        const fileName =
+          ids && ids.length > 0
+            ? `ai_prompts_selected_${today}.json`
+            : `ai_prompts_all_${today}.json`;
+        // 导出接口返回 JSON 文件流（Content-Type: application/json），
+        // 与「200 + JSON 错误体」无法区分，故不走 runExport 的 isErrorResponse 探测，
+        // 直接用 transport 层 saveBlob 落盘（后端错误以 400/500 非 2xx 返回，会被 run 的异常分支捕获）。
+        saveBlob(blob as Blob, fileName);
+      },
+      { successText: "导出已生成" }
+    );
   }
 
   /** 刷新提示词缓存（全局） */
@@ -317,6 +320,7 @@ export function useAiPrompt() {
     openTestRender,
     handleSearch,
     handleExport,
-    handleRefreshAll
+    handleRefreshAll,
+    exportLoading
   };
 }

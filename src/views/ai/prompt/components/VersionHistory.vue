@@ -25,6 +25,9 @@ const loading = ref(false);
 const rolling = ref(false);
 const versions = ref<AiPromptVersion[]>([]);
 
+/** 当前版本号（回滚成功后同步更新，保证禁用逻辑准确） */
+const currentVersion = ref<number>(props.record?.version ?? 0);
+
 const CHANGE_TYPE_MAP: Record<string, { label: string; tag: string }> = {
   create: { label: "新建", tag: "success" },
   update: { label: "修改", tag: "primary" },
@@ -70,6 +73,7 @@ async function handleRollback(row: AiPromptVersion) {
     });
     if (r.code === 200) {
       message(`已回滚到 v${row.version}`, { type: "success" });
+      currentVersion.value = r.data?.version ?? currentVersion.value;
       await load();
       props.onReverted?.();
     } else {
@@ -98,6 +102,7 @@ onMounted(load);
     <el-table
       v-loading="loading"
       :data="versions"
+      row-key="id"
       border
       size="small"
       max-height="520"
@@ -141,7 +146,7 @@ onMounted(load);
             link
             type="primary"
             :loading="rolling"
-            :disabled="row.version === props.record.version"
+            :disabled="row.version >= currentVersion"
             @click="handleRollback(row)"
           >
             回滚

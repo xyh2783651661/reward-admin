@@ -6,6 +6,7 @@ import { testRenderAiPrompt } from "@/api/prompt";
 import PromptEditor from "./components/PromptEditor.vue";
 import { STATUS_MAP } from "./utils/types";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import EyeLine from "~icons/ri/eye-line";
 
 defineOptions({
   name: "AiPromptDetail"
@@ -120,7 +121,7 @@ const variablesList = computed(() => tryParseVariablesSchema());
       <div class="detail-toolbar__actions">
         <el-button
           :loading="previewLoading"
-          :icon="useRenderIcon('ri/eye-line')"
+          :icon="useRenderIcon(EyeLine)"
           @click="handleTestRender"
         >
           渲染预览
