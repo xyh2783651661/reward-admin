@@ -100,6 +100,7 @@ function handleReset() {
           ref="tableRef"
           row-key="key"
           align-whole="center"
+          showOverflowTooltip
           table-layout="auto"
           :loading="loading"
           :size="size"

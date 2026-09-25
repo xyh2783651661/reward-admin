@@ -40,6 +40,7 @@ function handleSearch() {
         <pure-table
           row-key="id"
           align-whole="center"
+          showOverflowTooltip
           table-layout="auto"
           :loading="loading"
           :size="size"
