@@ -6,6 +6,7 @@ interface FormItemProps {
   base: number | string;
   excellence: number | string;
   full: number | string;
+  sort: number | string;
 }
 
 interface FormProps {

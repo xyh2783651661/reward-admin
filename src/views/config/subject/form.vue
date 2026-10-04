@@ -11,7 +11,8 @@ const props = withDefaults(defineProps<FormProps>(), {
     stage: "",
     base: "",
     full: "",
-    excellence: ""
+    excellence: "",
+    sort: ""
   })
 });
 
@@ -91,6 +92,16 @@ defineExpose({ getRef });
         :step="1"
         controls-position="right"
         placeholder="请输入数值"
+      />
+    </el-form-item>
+
+    <el-form-item label="排序" prop="sort">
+      <el-input-number
+        v-model="newFormInline.sort"
+        :min="0"
+        :step="1"
+        controls-position="right"
+        placeholder="数值越小越靠前，留空自动排到末尾"
       />
     </el-form-item>
   </el-form>

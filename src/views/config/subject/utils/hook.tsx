@@ -67,6 +67,7 @@ export function useRewardSubject() {
 
   const columns: TableColumnList = [
     { label: "ID", prop: "id", width: 80, hide: true },
+    { label: "排序", prop: "sort", width: 80, sortable: true },
     { label: "科目", prop: "name", minWidth: 120, sortable: true },
     { label: "类型", prop: "type", minWidth: 100 },
     { label: "学段", prop: "stage", minWidth: 90 },
@@ -161,8 +162,17 @@ export function useRewardSubject() {
       stage: row?.stage ?? "",
       base: row?.base ?? "",
       full: row?.full ?? "",
-      excellence: row?.excellence ?? ""
+      excellence: row?.excellence ?? "",
+      sort: row?.sort ?? ""
     }),
+    // 排序留空时不提交该字段：新增走后端「追加到末尾」，修改则保持原排序不变
+    buildPayload: form => {
+      if (form.sort === "" || form.sort === null || form.sort === undefined) {
+        const { sort: _sort, ...rest } = form;
+        return rest as FormItemProps;
+      }
+      return form;
+    },
     submitApi: (payload, mode) =>
       mode === "新增" ? addRewardSubject(payload) : updateRewardSubject(payload)
   });
