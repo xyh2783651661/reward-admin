@@ -7,6 +7,7 @@ import { addDialog } from "@/components/ReDialog";
 import { useCrudDialog } from "@/hooks/useCrudDialog";
 import ReStatusSwitch from "@/components/ReStatusSwitch/index.vue";
 import type { FormItemProps } from "../utils/types";
+import { formatLunarBirthday } from "../utils/lunar";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { deviceDetection } from "@pureadmin/utils";
 import {
@@ -50,6 +51,7 @@ export function useRewardUser() {
       avatar: "",
       phone: "",
       birthday: "",
+      lunarBirthday: "",
       role: "",
       status: ""
     },
@@ -94,6 +96,12 @@ export function useRewardUser() {
       minWidth: 110,
       formatter: ({ birthday }) =>
         birthday ? dayjs(birthday).format("YYYY-MM-DD") : "-"
+    },
+    {
+      label: "农历生日",
+      prop: "lunarBirthday",
+      minWidth: 120,
+      formatter: ({ lunarBirthday }) => formatLunarBirthday(lunarBirthday)
     },
     {
       label: "状态",
@@ -184,6 +192,7 @@ export function useRewardUser() {
       avatar: row?.avatar ?? "",
       phone: row?.phone ?? "",
       birthday: row?.birthday ?? "",
+      lunarBirthday: row?.lunarBirthday ?? "",
       status: row?.status ?? 1
     }),
     submitApi: (payload, mode) =>
