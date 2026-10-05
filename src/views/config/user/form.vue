@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
+// 农历格式真源：解析 / 拼装 / 下拉选项都在 utils/lunar，列表列展示也复用它
+import {
+  LUNAR_DAY_OPTIONS,
+  LUNAR_MONTH_OPTIONS,
+  parseLunarBirthday,
+  stringifyLunarBirthday
+} from "./utils/lunar";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
@@ -20,46 +27,7 @@ const newFormInline = ref(props.formInline);
 
 // ============ 农历生日（可选字段）============
 // 后端存储格式统一为「月-日」，负月代表闰月（如 -8-15 = 闰八月十五）。
-// 表单上拆成「闰月开关 + 月 + 日」三个控件，通过下面的 computed 代理双向写回
-// formInline.lunarBirthday —— 父组件（useCrudDialog）直接读 formInline 提交，
-// 无需改动通用 dialog 链路。
-const LUNAR_MONTHS = [
-  { label: "正月", value: 1 },
-  { label: "二月", value: 2 },
-  { label: "三月", value: 3 },
-  { label: "四月", value: 4 },
-  { label: "五月", value: 5 },
-  { label: "六月", value: 6 },
-  { label: "七月", value: 7 },
-  { label: "八月", value: 8 },
-  { label: "九月", value: 9 },
-  { label: "十月", value: 10 },
-  { label: "冬月(十一月)", value: 11 },
-  { label: "腊月(十二月)", value: 12 }
-];
-
-const LUNAR_DAYS = Array.from({ length: 30 }, (_, i) => ({
-  label: `第 ${i + 1} 天`,
-  value: i + 1
-}));
-
-/** 合法格式：可选负号 + 1~12 月 + '-' + 1~30 日（与后端 LunarBirthdayUtil 保持一致）。 */
-const LUNAR_PATTERN = /^(-?[1-9]|1[0-2])-([1-9]|[12]\d|30)$/;
-
-/** 把后端返回的 "8-15" / "-8-15" 拆成三个控件的值；非法或空则全部置空。 */
-function parseLunarBirthday(raw?: string) {
-  if (!raw || !LUNAR_PATTERN.test(raw.trim())) {
-    return { month: undefined, day: undefined, leap: false };
-  }
-  const [m, d] = raw.trim().split("-");
-  const monthNum = Number(m);
-  return {
-    month: Math.abs(monthNum) as number,
-    day: Number(d),
-    leap: monthNum < 0
-  };
-}
-
+// 表单上拆成「闰月开关 + 月 + 日」三个控件。
 const parsed = parseLunarBirthday(props.formInline.lunarBirthday);
 const lunarMonth = ref<number | undefined>(parsed.month);
 const lunarDay = ref<number | undefined>(parsed.day);
@@ -76,19 +44,14 @@ watch(
   }
 );
 
-// 双向代理：控件变化 → 写回 formInline.lunarBirthday（未填完整则空串=未维护）
-const lunarBirthdayProxy = computed<string>({
-  get: () => newFormInline.value.lunarBirthday ?? "",
-  set: val => {
-    newFormInline.value.lunarBirthday = val;
-  }
-});
-
+// 控件变化 → 写回 formInline.lunarBirthday（未填完整则空串=未维护）
+// 父组件（useCrudDialog）直接读 formInline 提交，无需改动通用 dialog 链路。
 watch([lunarMonth, lunarDay, isLeapMonth], () => {
-  const month = lunarMonth.value;
-  const day = lunarDay.value;
-  lunarBirthdayProxy.value =
-    !month || !day ? "" : `${isLeapMonth.value ? "-" : ""}${month}-${day}`;
+  newFormInline.value.lunarBirthday = stringifyLunarBirthday(
+    lunarMonth.value,
+    lunarDay.value,
+    isLeapMonth.value
+  );
 });
 
 function getRef() {
@@ -131,24 +94,40 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="农历生日">
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <el-checkbox v-model="isLeapMonth" label="闰月" />
+        <!--
+          宽度必须改写 EP 自己的宽度变量，不能用 Tailwind 的 w-40 / w-32：
+          EP 的 `.el-select { width: var(--el-select-width) }`（默认 100%）与
+          Tailwind 宽度类同特异性且在 element-plus/dist/index.css 中后加载，会覆盖它；
+          覆盖后 width 变 100%，在 flex 容器里两个 select 的 basis 各自撑满并触发
+          flex-shrink 收缩，最终塌成 min-content 窄条、选中值被压不可见。
+        -->
         <el-select
           v-model="lunarMonth"
           placeholder="月份"
           clearable
-          class="w-40"
+          style="
+
+--el-select-width: 160px"
         >
           <el-option
-            v-for="m in LUNAR_MONTHS"
+            v-for="m in LUNAR_MONTH_OPTIONS"
             :key="m.value"
             :label="m.label"
             :value="m.value"
           />
         </el-select>
-        <el-select v-model="lunarDay" placeholder="日期" clearable class="w-32">
+        <el-select
+          v-model="lunarDay"
+          placeholder="日期"
+          clearable
+          style="
+
+--el-select-width: 128px"
+        >
           <el-option
-            v-for="d in LUNAR_DAYS"
+            v-for="d in LUNAR_DAY_OPTIONS"
             :key="d.value"
             :label="d.label"
             :value="d.value"
