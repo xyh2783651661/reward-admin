@@ -7,7 +7,9 @@ dist-ssr
 report.html
 vite.config.*.timestamp*
 
+# 本项目使用 pnpm，勿提交其他包管理器的 lockfile
 yarn.lock
+package-lock.json
 npm-debug.log*
 .pnpm-error.log*
 .pnpm-debug.log

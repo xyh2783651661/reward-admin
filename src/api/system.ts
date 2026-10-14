@@ -203,6 +203,18 @@ export {
   getRedisInfo
 } from "./cache";
 
+export {
+  getCompensableTasks,
+  getCompensableTaskDetail,
+  triggerTaskCompensation
+} from "./task";
+export type {
+  TaskMetadata,
+  TaskCompensationTriggerReq,
+  TriggerResult,
+  TriggerStatus
+} from "./task";
+
 import { http } from "@/utils/http";
 import type { ApiListResult, ApiPageResult } from "./types";
 
