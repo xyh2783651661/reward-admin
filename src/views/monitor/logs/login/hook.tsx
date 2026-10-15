@@ -33,7 +33,8 @@ export function useMailLog() {
     statusOptions: [],
     typeOptions: [],
     mqStatusOptions: [],
-    priorityOptions: []
+    priorityOptions: [],
+    providerOptions: []
   });
   const { tagStyle } = usePublicHooks();
 
@@ -275,7 +276,16 @@ export function useMailLog() {
       options: options.priorityOptions,
       optionsLoading: optionsLoading.value
     },
-    { prop: "provider", label: "供应商", type: "input" },
+    {
+      prop: "provider",
+      label: "供应商",
+      type: "select",
+      filterable: true,
+      width: "sm",
+      placeholder: "请选择",
+      options: options.providerOptions,
+      optionsLoading: optionsLoading.value
+    },
     {
       prop: "requestTime",
       label: "发送时间",
