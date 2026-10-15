@@ -253,6 +253,24 @@ export const resetPwdRewardUser = (data?: object) => {
   });
 };
 
+/** 查询某个用户已绑定的角色 ID */
+export const getRewardUserRoleIds = (id: string | number) => {
+  return http.request<ApiListResult<number>>(
+    "get",
+    `/api/reward-users/${id}/roles`
+  );
+};
+
+/** 给用户分配角色（全量覆盖，空数组表示清空） */
+export const assignRewardUserRoles = (
+  id: string | number,
+  roleIds: Array<number>
+) => {
+  return http.request<ApiResult>("put", `/api/reward-users/${id}/roles`, {
+    data: roleIds
+  });
+};
+
 // Reward APK Versions
 export const getRewardApkVersionsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/reward-apk/versions-page", {

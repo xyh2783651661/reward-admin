@@ -49,6 +49,8 @@ export {
   updateRewardUser,
   deleteRewardUser,
   resetPwdRewardUser,
+  getRewardUserRoleIds,
+  assignRewardUserRoles,
   getRewardApkVersionsList,
   getRewardOptions
 } from "./reward";
@@ -178,14 +180,6 @@ export {
   getHolidayRecipientList,
   updateHolidayRecipient
 } from "./holiday";
-
-export {
-  getAllRoleList,
-  getRoleIds,
-  getRoleList,
-  getRoleMenu,
-  getRoleMenuIds
-} from "./role";
 
 export {
   getCacheInfo,

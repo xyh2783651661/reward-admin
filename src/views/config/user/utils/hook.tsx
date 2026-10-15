@@ -6,15 +6,16 @@ import { getErrorMessage } from "@/utils/error";
 import { addDialog } from "@/components/ReDialog";
 import { useCrudDialog } from "@/hooks/useCrudDialog";
 import ReStatusSwitch from "@/components/ReStatusSwitch/index.vue";
-import type { FormItemProps } from "../utils/types";
+import type { FormItemProps, RoleFormItemProps } from "../utils/types";
 import { formatLunarBirthday } from "../utils/lunar";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { deviceDetection } from "@pureadmin/utils";
 import {
   addRewardUser,
+  assignRewardUserRoles,
   deleteRewardUser,
   getRewardUserPage,
-  getRoleIds,
+  getRewardUserRoleIds,
   resetPwdRewardUser,
   updateRewardUser
 } from "@/api/system";
@@ -304,9 +305,13 @@ export function useRewardUser() {
 
   /** 分配角色 */
   async function handleRole(row) {
-    let ids: Array<number | string> = [];
+    let ids: Array<number> = [];
     try {
-      ids = (await getRoleIds({ userId: row.id })).data ?? [];
+      const result = await getRewardUserRoleIds(row.id);
+      if (result.code !== 200) {
+        throw new Error(result.msg || "加载用户角色失败");
+      }
+      ids = result.data ?? [];
     } catch (error) {
       message(getErrorMessage(error, "加载用户角色失败"), { type: "error" });
       return;
@@ -327,8 +332,22 @@ export function useRewardUser() {
       closeOnClickModal: false,
       sureBtnLoading: true,
       contentRenderer: () => h(roleForm),
-      beforeSure: done => {
-        done();
+      beforeSure: async (done, { options, closeLoading }) => {
+        const curData = options?.props?.formInline as RoleFormItemProps;
+        // 全量覆盖语义：传 [] 即清空该用户的全部角色
+        const roleIds = (curData?.ids ?? []).map(Number);
+        try {
+          const result = await assignRewardUserRoles(row.id, roleIds);
+          if (result.code !== 200) {
+            throw new Error(result.msg || "分配角色失败");
+          }
+          message(`已更新 ${row.nickName} 的角色`, { type: "success" });
+          done();
+          await onSearch();
+        } catch (error) {
+          closeLoading?.();
+          message(getErrorMessage(error, "分配角色失败"), { type: "error" });
+        }
       }
     });
   }

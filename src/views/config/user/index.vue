@@ -159,6 +159,7 @@ function handleSearch() {
                   </el-dropdown-item>
                   <el-dropdown-item>
                     <el-button
+                      v-perms="'config:user:assign-roles'"
                       :class="buttonClass"
                       link
                       type="primary"
