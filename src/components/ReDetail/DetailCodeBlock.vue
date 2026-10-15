@@ -24,7 +24,11 @@ const { copyText } = useDetailCopy();
 
 <template>
   <div class="detail-code">
-    <el-empty v-if="!content.trim()" :description="emptyText" :image-size="60" />
+    <el-empty
+      v-if="!content.trim()"
+      :description="emptyText"
+      :image-size="60"
+    />
     <template v-else>
       <el-button
         class="detail-code__copy"

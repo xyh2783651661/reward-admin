@@ -1,4 +1,9 @@
-export type DetailTagType = "primary" | "success" | "warning" | "danger" | "info";
+export type DetailTagType =
+  | "primary"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info";
 
 /** DetailFields 中的单个字段 */
 export interface DetailFieldItem {

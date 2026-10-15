@@ -72,8 +72,20 @@ const summaryItems = computed<DetailSummaryItem[]>(() => [
 ]);
 
 const requestFields = computed<DetailFieldItem[]>(() => [
-  { label: "请求接口", value: item.value.uri, mono: true, copy: true, full: true },
-  { label: "TraceId", value: item.value.traceId, mono: true, copy: true, full: true },
+  {
+    label: "请求接口",
+    value: item.value.uri,
+    mono: true,
+    copy: true,
+    full: true
+  },
+  {
+    label: "TraceId",
+    value: item.value.traceId,
+    mono: true,
+    copy: true,
+    full: true
+  },
   { label: "所属模块", value: item.value.module },
   { label: "操作类型", value: item.value.action },
   { label: "资源类型", value: item.value.resourceType },
@@ -94,14 +106,22 @@ const operatorFields = computed<DetailFieldItem[]>(() => [
 const payloadTabs = computed(() => {
   const list = [
     { title: "响应体", name: "responseBody", data: item.value.responseBody },
-    { title: "响应头", name: "responseHeaders", data: item.value.responseHeaders },
+    {
+      title: "响应头",
+      name: "responseHeaders",
+      data: item.value.responseHeaders
+    },
     { title: "请求体", name: "requestBody", data: item.value.requestBody },
     { title: "请求头", name: "requestHeaders", data: item.value.requestHeaders }
   ];
 
   if (!item.value.success) {
     list.push(
-      { title: "异常类型", name: "exceptionType", data: item.value.exceptionType },
+      {
+        title: "异常类型",
+        name: "exceptionType",
+        data: item.value.exceptionType
+      },
       {
         title: "异常信息",
         name: "exceptionMessage",

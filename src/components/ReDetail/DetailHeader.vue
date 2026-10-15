@@ -80,8 +80,8 @@ defineProps<{
 
 .detail-header__actions {
   display: flex;
-  flex-wrap: wrap;
   flex-shrink: 0;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }

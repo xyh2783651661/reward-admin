@@ -76,9 +76,19 @@ const summaryItems = computed<DetailSummaryItem[]>(() => [
 
 const recipientFields = computed<DetailFieldItem[]>(() => [
   { label: "收件人", value: props.record.recipient, copy: true, full: true },
-  { label: "抄送", value: props.record.cc, full: true, hidden: !props.record.cc },
+  {
+    label: "抄送",
+    value: props.record.cc,
+    full: true,
+    hidden: !props.record.cc
+  },
   { label: "邮件类型", value: props.record.type },
-  { label: "模板编码", value: props.record.templateCode, mono: true, copy: true },
+  {
+    label: "模板编码",
+    value: props.record.templateCode,
+    mono: true,
+    copy: true
+  },
   { label: "供应商", value: props.record.provider },
   {
     label: "消息 ID",
@@ -107,7 +117,12 @@ const timelineFields = computed<DetailFieldItem[]>(() => [
 ]);
 
 const errorFields = computed<DetailFieldItem[]>(() => [
-  { label: "错误码", value: props.record.lastErrorCode, mono: true, copy: true },
+  {
+    label: "错误码",
+    value: props.record.lastErrorCode,
+    mono: true,
+    copy: true
+  },
   { label: "错误类型", value: props.record.lastErrorType }
 ]);
 </script>

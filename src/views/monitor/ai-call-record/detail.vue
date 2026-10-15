@@ -3,12 +3,21 @@ import dayjs from "dayjs";
 import MarkdownIt from "markdown-it";
 import { computed, reactive, ref, watch } from "vue";
 import ReJsonField from "@/components/ReJsonField/index.vue";
-import { useCopyToClipboard } from "@pureadmin/utils";
-import { message } from "@/utils/message";
+import {
+  DetailFields,
+  DetailHeader,
+  DetailLayout,
+  DetailPage,
+  DetailSection,
+  DetailSummary,
+  useDetailCopy,
+  type DetailFieldItem,
+  type DetailSummaryItem,
+  type DetailTagType
+} from "@/components/ReDetail";
 import type { AiCallRecordDetail, AiCallRecordStatus } from "./types";
 
 type ContentViewMode = "raw" | "markdown";
-type TagType = "primary" | "success" | "warning" | "danger" | "info";
 
 interface ContentTab {
   name: string;
@@ -61,7 +70,7 @@ markdown.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   return defaultLinkOpen(tokens, idx, options, env, self);
 };
 
-const { copied, update } = useCopyToClipboard();
+const { copyText } = useDetailCopy();
 const activeTab = ref("prompt");
 const contentViewModes = reactive<Record<string, ContentViewMode>>({});
 
@@ -70,23 +79,17 @@ function normalizeContent(value?: string | null) {
 }
 
 function formatTime(value?: string | null) {
-  return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
+  return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : undefined;
 }
 
 function toJsonData(value: string): unknown | null {
   if (!value.trim()) return null;
 
   try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed;
+    return JSON.parse(value) as unknown;
   } catch {
     return null;
   }
-}
-
-function renderMarkdown(value: string) {
-  if (!value.trim()) return "";
-  return markdown.render(value);
 }
 
 function createContentTab(
@@ -95,8 +98,7 @@ function createContentTab(
   content: string,
   emptyText: string
 ): ContentTab {
-  const jsonData = toJsonData(content);
-  const isJson = jsonData !== null;
+  const isJson = toJsonData(content) !== null;
 
   return {
     name,
@@ -104,12 +106,12 @@ function createContentTab(
     content,
     isJson,
     canPreviewMarkdown: !isJson && !!content.trim(),
-    markdownHtml: isJson ? "" : renderMarkdown(content),
+    markdownHtml: isJson || !content.trim() ? "" : markdown.render(content),
     emptyText
   };
 }
 
-function getStatusType(status?: AiCallRecordStatus): TagType {
+function getStatusType(status?: AiCallRecordStatus): DetailTagType {
   const normalized = `${status ?? ""}`.toUpperCase();
 
   if (normalized === "SUCCESS") return "success";
@@ -123,12 +125,8 @@ function getViewMode(name: string): ContentViewMode {
   return contentViewModes[name] ?? "raw";
 }
 
-function setViewMode(name: string, value: ContentViewMode) {
-  contentViewModes[name] = value;
-}
-
 function onViewModeChange(name: string, value: string | number | boolean) {
-  setViewMode(name, value === "markdown" ? "markdown" : "raw");
+  contentViewModes[name] = value === "markdown" ? "markdown" : "raw";
 }
 
 function getTabHint(tab: ContentTab) {
@@ -136,25 +134,6 @@ function getTabHint(tab: ContentTab) {
   return getViewMode(tab.name) === "markdown"
     ? "按 Markdown 预览显示"
     : "按原始文本显示";
-}
-
-async function copyText(value: string, label: string) {
-  if (!value.trim()) {
-    message(`${label}暂无可复制内容`, { type: "warning" });
-    return;
-  }
-
-  try {
-    await update(value);
-    if (copied.value) {
-      message(`${label}已复制`, { type: "success" });
-      return;
-    }
-  } catch {
-    // Ignore and fall through to the unified error message below.
-  }
-
-  message(`${label}复制失败`, { type: "error" });
 }
 
 const detailRecord = computed<AiCallRecordDetail>(() => {
@@ -193,8 +172,15 @@ const detailRecord = computed<AiCallRecordDetail>(() => {
   };
 });
 
-const summaryItems = computed(() => {
+const hasError = computed(() => !!detailRecord.value.errorMessage.trim());
+
+const headerTitle = computed(
+  () => detailRecord.value.templateName || "AI 调用详情"
+);
+
+const summaryItems = computed<DetailSummaryItem[]>(() => {
   const item = detailRecord.value;
+  const total = item.totalTokens || item.promptTokens + item.responseTokens;
 
   return [
     {
@@ -202,142 +188,61 @@ const summaryItems = computed(() => {
       value: item.status || "UNKNOWN",
       tagType: getStatusType(item.status)
     },
-    {
-      label: "调用耗时",
-      value: `${item.costTimeMs || 0} ms`
-    },
-    {
-      label: "Prompt Tokens",
-      value: `${item.promptTokens || 0}`
-    },
-    {
-      label: "Response Tokens",
-      value: `${item.responseTokens || 0}`
-    },
-    {
-      label: "总 Tokens",
-      value: `${
-        item.totalTokens != null
-          ? item.totalTokens
-          : item.promptTokens + item.responseTokens || 0
-      }`
-    },
-    {
-      label: "调用模型",
-      value: item.provider || "-"
-    },
-    {
-      label: "实际模型",
-      value: item.remoteModel || "-"
-    },
-    {
-      label: "结束原因",
-      value: item.finishReason || "-"
-    },
-    {
-      label: "调用模式",
-      value: item.streamMode === 1 ? "流式" : "同步"
-    },
-    {
-      label: "重试次数",
-      value: `${item.retryCount || 0}`
-    }
+    { label: "调用耗时", value: `${item.costTimeMs || 0} ms` },
+    { label: "总 Tokens", value: total },
+    { label: "Prompt Tokens", value: item.promptTokens },
+    { label: "Response Tokens", value: item.responseTokens }
   ];
 });
 
-const descriptionColumns = [
-  {
-    label: "记录ID",
-    prop: "id"
-  },
-  {
-    label: "业务类型",
-    prop: "bizType"
-  },
-  {
-    label: "业务ID",
-    prop: "bizId",
-    copy: true
-  },
-  {
-    label: "调用模型",
-    prop: "provider"
-  },
-  {
-    label: "实际模型",
-    prop: "remoteModel"
-  },
-  {
-    label: "模板名称",
-    prop: "templateName",
-    copy: true
-  },
-  {
-    label: "调用状态",
-    prop: "status"
-  },
-  {
-    label: "调用模式",
-    prop: "streamMode",
-    formatter: ({ streamMode }) => (streamMode === 1 ? "流式(1)" : "同步(0)")
-  },
-  {
-    label: "总 Tokens",
-    prop: "totalTokens"
-  },
-  {
-    label: "结束原因",
-    prop: "finishReason"
-  },
-  {
-    label: "max_tokens",
-    prop: "maxTokens"
-  },
-  {
-    label: "重试次数",
-    prop: "retryCount"
-  },
-  {
-    label: "故障转移供应商",
-    prop: "fallbackTried"
-  },
-  {
-    label: "异常类",
-    prop: "exceptionClass"
-  },
-  {
-    label: "操作人",
-    prop: "operator"
-  },
-  {
-    label: "TraceId",
-    prop: "traceId",
-    copy: true
-  },
-  {
-    label: "创建时间",
-    prop: "createdTime",
-    formatter: ({ createdTime }) => formatTime(createdTime)
-  },
-  {
-    label: "更新时间",
-    prop: "updatedTime",
-    formatter: ({ updatedTime }) => formatTime(updatedTime)
-  }
-];
+const callFields = computed<DetailFieldItem[]>(() => {
+  const item = detailRecord.value;
+
+  return [
+    { label: "调用模型", value: item.provider },
+    { label: "实际模型", value: item.remoteModel },
+    { label: "调用模式", value: item.streamMode === 1 ? "流式" : "同步" },
+    { label: "结束原因", value: item.finishReason },
+    { label: "max_tokens", value: item.maxTokens || undefined },
+    { label: "重试次数", value: item.retryCount },
+    { label: "故障转移供应商", value: item.fallbackTried, full: true },
+    { label: "异常类", value: item.exceptionClass, mono: true, full: true }
+  ];
+});
+
+const traceFields = computed<DetailFieldItem[]>(() => {
+  const item = detailRecord.value;
+
+  return [
+    { label: "记录 ID", value: item.id || undefined, mono: true },
+    { label: "操作人", value: item.operator },
+    { label: "业务类型", value: item.bizType },
+    { label: "业务 ID", value: item.bizId, mono: true, copy: true },
+    { label: "模板名称", value: item.templateName, copy: true, full: true },
+    {
+      label: "TraceId",
+      value: item.traceId,
+      mono: true,
+      copy: true,
+      full: true
+    },
+    { label: "创建时间", value: formatTime(item.createdTime), full: true },
+    { label: "更新时间", value: formatTime(item.updatedTime), full: true }
+  ];
+});
 
 const contentTabs = computed(() => {
   const item = detailRecord.value;
   const tabs = [
     createContentTab(
       "prompt",
-      `Prompt 全文 (${item.prompt.length} 字符)`,
+      `Prompt (${item.prompt.length})`,
       item.prompt,
       "暂无 Prompt 内容"
     ),
     createContentTab(
       "response",
-      `Response 全文 (${item.response.length} 字符)`,
+      `Response (${item.response.length})`,
       item.response,
       "暂无 Response 内容"
     )
@@ -374,12 +279,7 @@ watch(
     });
 
     tabs.forEach(tab => {
-      if (tab.isJson) {
-        contentViewModes[tab.name] = "raw";
-        return;
-      }
-
-      if (!contentViewModes[tab.name]) {
+      if (tab.isJson || !contentViewModes[tab.name]) {
         contentViewModes[tab.name] = "raw";
       }
     });
@@ -389,17 +289,19 @@ watch(
 </script>
 
 <template>
-  <div class="ai-call-detail">
-    <div class="detail-toolbar">
-      <div class="detail-toolbar__main">
-        <div class="detail-toolbar__title">AI 调用详情</div>
-        <div class="detail-toolbar__subtitle">
-          {{ detailRecord.bizType || "-" }}
-          <span class="mx-2 text-[var(--el-border-color)]">/</span>
-          {{ detailRecord.bizId || "-" }}
-        </div>
-      </div>
-      <div class="detail-toolbar__actions">
+  <DetailPage>
+    <DetailHeader :title="headerTitle">
+      <template #tags>
+        <el-tag :type="getStatusType(detailRecord.status)" effect="light">
+          {{ detailRecord.status || "UNKNOWN" }}
+        </el-tag>
+      </template>
+      <template #subtitle>
+        {{ detailRecord.bizType || "-" }}
+        <span class="ai-detail__sep">/</span>
+        {{ detailRecord.bizId || "-" }}
+      </template>
+      <template #actions>
         <el-button
           size="small"
           @click="copyText(detailRecord.traceId, 'TraceId')"
@@ -419,207 +321,143 @@ watch(
         >
           复制 Response
         </el-button>
-      </div>
-    </div>
+      </template>
+    </DetailHeader>
 
-    <div class="summary-grid">
-      <div v-for="item in summaryItems" :key="item.label" class="summary-card">
-        <span class="summary-card__label">{{ item.label }}</span>
-        <el-tag
-          v-if="item.tagType"
-          :type="item.tagType"
-          effect="plain"
-          class="summary-card__tag"
-        >
-          {{ item.value }}
-        </el-tag>
-        <strong v-else class="summary-card__value">{{ item.value }}</strong>
-      </div>
-    </div>
+    <DetailSummary :items="summaryItems" />
 
     <el-alert
-      v-if="detailRecord.errorMessage.trim()"
+      v-if="hasError"
       title="本次调用存在失败信息"
       type="error"
       :closable="false"
       show-icon
     />
 
-    <el-scrollbar>
-      <PureDescriptions
-        border
-        :data="[detailRecord]"
-        :columns="descriptionColumns"
-        :column="5"
-      />
-    </el-scrollbar>
+    <DetailLayout :aside-width="380">
+      <DetailSection title="调用内容" flush>
+        <el-tabs v-model="activeTab" class="ai-detail__tabs">
+          <el-tab-pane
+            v-for="tab in contentTabs"
+            :key="tab.name"
+            :name="tab.name"
+            :label="tab.label"
+            lazy
+          >
+            <div class="ai-detail__toolbar">
+              <span class="ai-detail__hint">{{ getTabHint(tab) }}</span>
+              <div class="ai-detail__toolbar-actions">
+                <el-radio-group
+                  v-if="tab.canPreviewMarkdown"
+                  :model-value="getViewMode(tab.name)"
+                  size="small"
+                  @update:model-value="onViewModeChange(tab.name, $event)"
+                >
+                  <el-radio-button value="raw">原文</el-radio-button>
+                  <el-radio-button value="markdown">Markdown</el-radio-button>
+                </el-radio-group>
+                <el-button
+                  size="small"
+                  @click="copyText(tab.content, tab.label)"
+                >
+                  复制内容
+                </el-button>
+              </div>
+            </div>
 
-    <el-tabs v-model="activeTab" type="border-card" class="detail-tabs">
-      <el-tab-pane
-        v-for="tab in contentTabs"
-        :key="tab.name"
-        :name="tab.name"
-        :label="tab.label"
-      >
-        <div class="tab-toolbar">
-          <span class="tab-toolbar__hint">{{ getTabHint(tab) }}</span>
-          <div class="tab-toolbar__actions">
-            <el-radio-group
-              v-if="tab.canPreviewMarkdown"
-              :model-value="getViewMode(tab.name)"
-              size="small"
-              @update:model-value="onViewModeChange(tab.name, $event)"
-            >
-              <el-radio-button value="raw">原文</el-radio-button>
-              <el-radio-button value="markdown">Markdown</el-radio-button>
-            </el-radio-group>
-            <el-button size="small" @click="copyText(tab.content, tab.label)">
-              复制内容
-            </el-button>
-          </div>
-        </div>
+            <el-empty
+              v-if="!tab.content.trim()"
+              :description="tab.emptyText"
+              :image-size="60"
+            />
 
-        <el-empty v-if="!tab.content.trim()" :description="tab.emptyText" />
+            <el-scrollbar v-else max-height="calc(100vh - 360px)">
+              <div class="ai-detail__content">
+                <ReJsonField
+                  v-if="tab.isJson"
+                  :model-value="tab.content"
+                  readonly
+                  :deep="3"
+                />
+                <div
+                  v-else-if="getViewMode(tab.name) === 'markdown'"
+                  class="markdown-body"
+                  v-html="tab.markdownHtml"
+                />
+                <pre v-else class="ai-detail__text">{{ tab.content }}</pre>
+              </div>
+            </el-scrollbar>
+          </el-tab-pane>
+        </el-tabs>
+      </DetailSection>
 
-        <el-scrollbar
-          v-else
-          max-height="calc(100vh - 320px)"
-          class="content-scroll"
-        >
-          <ReJsonField
-            v-if="tab.isJson"
-            :model-value="tab.content"
-            readonly
-            :deep="3"
-          />
-          <div
-            v-else-if="getViewMode(tab.name) === 'markdown'"
-            class="markdown-body"
-            v-html="tab.markdownHtml"
-          />
-          <pre v-else class="content-block">{{ tab.content }}</pre>
-        </el-scrollbar>
-      </el-tab-pane>
-    </el-tabs>
-  </div>
+      <template #aside>
+        <DetailSection title="调用参数">
+          <DetailFields :items="callFields" :min-column-width="150" />
+        </DetailSection>
+        <DetailSection title="业务与追踪">
+          <DetailFields :items="traceFields" :min-column-width="150" />
+        </DetailSection>
+      </template>
+    </DetailLayout>
+  </DetailPage>
 </template>
 
-<style lang="scss" scoped>
-.ai-call-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+<style scoped>
+.ai-detail__sep {
+  margin: 0 6px;
+  color: var(--el-border-color);
 }
 
-.detail-toolbar {
+.ai-detail__tabs :deep(.el-tabs__header) {
+  padding: 0 16px;
+  margin: 0;
+}
+
+.ai-detail__toolbar {
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
+  gap: 12px;
+  align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  padding: 12px 16px 0;
 }
 
-.detail-toolbar__title {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--el-text-color-primary);
-}
-
-.detail-toolbar__subtitle {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  word-break: break-all;
-}
-
-.detail-toolbar__actions,
-.tab-toolbar__actions {
+.ai-detail__toolbar-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.summary-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--el-fill-color-blank);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-}
-
-.summary-card__label {
+.ai-detail__hint {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
 
-.summary-card__value {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.3;
-  color: var(--el-text-color-primary);
-  word-break: break-all;
+.ai-detail__content {
+  padding: 12px 16px 16px;
 }
 
-.summary-card__tag {
-  width: fit-content;
-}
-
-.detail-tabs {
-  margin-top: 2px;
-}
-
-.tab-toolbar {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.tab-toolbar__hint {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.content-scroll {
-  padding-right: 8px;
-}
-
-.content-block,
-.markdown-body {
+.ai-detail__text {
   padding: 16px;
-  background: var(--el-fill-color-blank);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-}
-
-.content-block {
   margin: 0;
   font-size: 13px;
   line-height: 1.8;
   color: var(--el-text-color-primary);
   word-break: break-word;
   white-space: pre-wrap;
+  background: var(--el-fill-color-lighter);
+  border-radius: 6px;
 }
 
 .markdown-body {
+  padding: 16px;
   font-size: 14px;
   line-height: 1.8;
   color: var(--el-text-color-primary);
   word-break: break-word;
+  background: var(--el-fill-color-lighter);
+  border-radius: 6px;
 }
 
 .markdown-body :deep(*:first-child) {
@@ -661,7 +499,7 @@ watch(
 .markdown-body :deep(code) {
   padding: 2px 6px;
   font-size: 12px;
-  background: var(--el-fill-color-light);
+  background: var(--el-fill-color);
   border-radius: 4px;
 }
 
@@ -708,27 +546,10 @@ watch(
   text-decoration: underline;
 }
 
-@media (width <= 1400px) {
-  .summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (width <= 900px) {
-  .detail-toolbar,
-  .tab-toolbar {
+@media (width <= 700px) {
+  .ai-detail__toolbar {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (width <= 640px) {
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>

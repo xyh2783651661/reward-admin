@@ -11,7 +11,10 @@ withDefaults(
 </script>
 
 <template>
-  <div class="detail-layout" :style="{ '--detail-aside-width': `${asideWidth}px` }">
+  <div
+    class="detail-layout"
+    :style="{ '--detail-aside-width': `${asideWidth}px` }"
+  >
     <div class="detail-layout__main">
       <slot />
     </div>
