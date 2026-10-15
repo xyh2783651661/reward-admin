@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect, type SelectOption } from "@/components/ReSelect";
 import { ref } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
@@ -23,6 +24,12 @@ function getRef() {
 }
 
 defineExpose({ getRef });
+
+const rewardTypeOptions: SelectOption[] = [
+  { label: "BASE", value: "BASE" },
+  { label: "EXTRA", value: "EXTRA" },
+  { label: "SPECIAL", value: "SPECIAL" }
+];
 </script>
 
 <template>
@@ -41,15 +48,11 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="类型" prop="rewardType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.rewardType"
         placeholder="请选择类型"
-        clearable
-      >
-        <el-option label="BASE" value="BASE" />
-        <el-option label="EXTRA" value="EXTRA" />
-        <el-option label="SPECIAL" value="SPECIAL" />
-      </el-select>
+        :options="rewardTypeOptions"
+      />
     </el-form-item>
 
     <el-form-item label="数值" prop="rewardValue">

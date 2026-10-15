@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { onMounted, ref, computed } from "vue";
 import {
   useCheckRecord,
@@ -133,34 +134,18 @@ onMounted(() => {
           </template>
           <div class="more-filter-panel">
             <el-form-item label="检测类型" prop="checkType" class="w-full!">
-              <el-select
+              <ReSelect
                 v-model="form.checkType"
                 placeholder="全部"
-                clearable
-                class="w-full!"
-              >
-                <el-option
-                  v-for="item in dropdownOptions.checkTypeList"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
+                :options="dropdownOptions.checkTypeList"
+              />
             </el-form-item>
             <el-form-item label="故障原因" prop="reason" class="w-full!">
-              <el-select
+              <ReSelect
                 v-model="form.reason"
                 placeholder="全部"
-                clearable
-                class="w-full!"
-              >
-                <el-option
-                  v-for="item in dropdownOptions.failureReasonList"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
+                :options="dropdownOptions.failureReasonList"
+              />
             </el-form-item>
             <div class="more-filter-panel__footer">
               <el-button

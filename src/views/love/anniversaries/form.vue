@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect, type SelectOption } from "@/components/ReSelect";
 import { ref } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
@@ -24,6 +25,18 @@ function getRef() {
 }
 
 defineExpose({ getRef });
+
+const anniversaryTypeOptions: SelectOption[] = [
+  { label: "纪念日", value: "DATE" },
+  { label: "其他", value: "OTHER" }
+];
+
+const repeatTypeOptions: SelectOption[] = [
+  { label: "不重复", value: "NONE" },
+  { label: "每年", value: "YEARLY" },
+  { label: "每月", value: "MONTHLY" },
+  { label: "每周", value: "WEEKLY" }
+];
 </script>
 
 <template>
@@ -53,27 +66,19 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="类型" prop="anniversaryType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.anniversaryType"
         placeholder="请选择类型"
-        clearable
-      >
-        <el-option label="纪念日" value="DATE" />
-        <el-option label="其他" value="OTHER" />
-      </el-select>
+        :options="anniversaryTypeOptions"
+      />
     </el-form-item>
 
     <el-form-item label="重复方式" prop="repeatType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.repeatType"
         placeholder="请选择重复方式"
-        clearable
-      >
-        <el-option label="不重复" value="NONE" />
-        <el-option label="每年" value="YEARLY" />
-        <el-option label="每月" value="MONTHLY" />
-        <el-option label="每周" value="WEEKLY" />
-      </el-select>
+        :options="repeatTypeOptions"
+      />
     </el-form-item>
 
     <el-form-item label="提前提醒天数" prop="remindDays">

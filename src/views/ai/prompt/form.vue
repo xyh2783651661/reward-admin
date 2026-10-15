@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { computed, ref } from "vue";
 import { useAiPromptForm } from "./utils/formHook";
 import type { AiPromptFormData } from "./utils/types";
@@ -134,43 +135,22 @@ const mustache = "{{varName}}";
       <el-row :gutter="20">
         <el-col :span="8">
           <el-form-item label="分类" prop="category">
-            <el-select
+            <ReSelect
               v-model="form.category"
-              placeholder="请选择"
               allow-create
               filterable
-            >
-              <el-option
-                v-for="c in PROMPT_CATEGORIES"
-                :key="c.value"
-                :value="c.value"
-                :label="c.label"
-              />
-            </el-select>
+              :options="PROMPT_CATEGORIES"
+            />
           </el-form-item>
         </el-col>
         <el-col :span="8">
           <el-form-item label="输出格式" prop="contentFormat">
-            <el-select v-model="form.contentFormat" placeholder="请选择">
-              <el-option
-                v-for="f in CONTENT_FORMATS"
-                :key="f.value"
-                :value="f.value"
-                :label="f.label"
-              />
-            </el-select>
+            <ReSelect v-model="form.contentFormat" :options="CONTENT_FORMATS" />
           </el-form-item>
         </el-col>
         <el-col :span="8">
           <el-form-item label="语言" prop="language">
-            <el-select v-model="form.language" placeholder="请选择">
-              <el-option
-                v-for="l in LANGUAGES"
-                :key="l.value"
-                :value="l.value"
-                :label="l.label"
-              />
-            </el-select>
+            <ReSelect v-model="form.language" :options="LANGUAGES" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -178,14 +158,7 @@ const mustache = "{{varName}}";
       <el-row :gutter="20">
         <el-col :span="8">
           <el-form-item label="状态" prop="status">
-            <el-select v-model="form.status" placeholder="请选择">
-              <el-option
-                v-for="s in STATUS_OPTIONS"
-                :key="s.value"
-                :value="s.value"
-                :label="s.label"
-              />
-            </el-select>
+            <ReSelect v-model="form.status" :options="STATUS_OPTIONS" />
           </el-form-item>
         </el-col>
         <el-col :span="8">

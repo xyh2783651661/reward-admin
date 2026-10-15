@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { computed, ref } from "vue";
 import { useDailyImage } from "./hook";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -330,21 +331,14 @@ function uploadStatusLabel(status: string) {
           :prefix-icon="Search"
           aria-label="搜索当前页图片"
         />
-        <el-select
+        <ReSelect
           v-model="form.source"
           class="toolbar__source"
           placeholder="全部来源"
-          clearable
           aria-label="按来源筛选"
+          :options="sourceOptions"
           @change="handleSourceChange"
-        >
-          <el-option
-            v-for="item in sourceOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
+        />
       </div>
       <div class="toolbar__right">
         <el-segmented

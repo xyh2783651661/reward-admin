@@ -1,6 +1,6 @@
 import { http } from "@/utils/http";
 import type { ApiResult, ApiListResult, ApiPageResult } from "./types";
-import type { OptionsResponse } from "@/components/DictSelect/types";
+import type { OptionsResponse } from "@/components/ReSelect/types";
 
 // Mail Recipients
 export const getMailRecipientList = (data?: object) => {

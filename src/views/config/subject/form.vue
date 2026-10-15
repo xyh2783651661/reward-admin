@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect, type SelectOption } from "@/components/ReSelect";
 import { ref } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
@@ -24,6 +25,18 @@ function getRef() {
 }
 
 defineExpose({ getRef });
+
+const typeOptions: SelectOption[] = [
+  { label: "CORE", value: "CORE" },
+  { label: "GENERAL", value: "GENERAL" }
+];
+
+const stageOptions: SelectOption[] = [
+  { label: "小学", value: "小学" },
+  { label: "初中", value: "初中" },
+  { label: "高中", value: "高中" },
+  { label: "大学", value: "大学" }
+];
 </script>
 
 <template>
@@ -42,27 +55,19 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="类型" prop="type">
-      <el-select
+      <ReSelect
         v-model="newFormInline.type"
         placeholder="请选择类型"
-        clearable
-      >
-        <el-option label="CORE" value="CORE" />
-        <el-option label="GENERAL" value="GENERAL" />
-      </el-select>
+        :options="typeOptions"
+      />
     </el-form-item>
 
     <el-form-item label="学段" prop="stage">
-      <el-select
+      <ReSelect
         v-model="newFormInline.stage"
         placeholder="请选择学段"
-        clearable
-      >
-        <el-option label="小学" value="小学" />
-        <el-option label="初中" value="初中" />
-        <el-option label="高中" value="高中" />
-        <el-option label="大学" value="大学" />
-      </el-select>
+        :options="stageOptions"
+      />
     </el-form-item>
 
     <el-form-item label="基础" prop="base">

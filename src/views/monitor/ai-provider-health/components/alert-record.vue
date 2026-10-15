@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { onMounted, ref, computed } from "vue";
 import {
   useAlertRecord,
@@ -141,34 +142,18 @@ onMounted(() => {
           </template>
           <div class="more-filter-panel">
             <el-form-item label="告警类型" prop="alertType" class="w-full!">
-              <el-select
+              <ReSelect
                 v-model="form.alertType"
                 placeholder="全部"
-                clearable
-                class="w-full!"
-              >
-                <el-option
-                  v-for="item in dropdownOptions.alertTypeList"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
+                :options="dropdownOptions.alertTypeList"
+              />
             </el-form-item>
             <el-form-item label="告警级别" prop="alertLevel" class="w-full!">
-              <el-select
+              <ReSelect
                 v-model="form.alertLevel"
                 placeholder="全部"
-                clearable
-                class="w-full!"
-              >
-                <el-option
-                  v-for="item in dropdownOptions.alertLevelList"
-                  :key="item.value"
-                  :label="item.label"
-                  :value="item.value"
-                />
-              </el-select>
+                :options="dropdownOptions.alertLevelList"
+              />
             </el-form-item>
             <div class="more-filter-panel__footer">
               <el-button
