@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { ref, reactive, computed, onMounted } from "vue";
 import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
@@ -196,21 +197,15 @@ onMounted(() => {
       flush
     >
       <template #extra>
-        <el-select
+        <ReSelect
           v-model="filterStatus"
           placeholder="全部状态"
-          clearable
           size="small"
           class="w-[140px]!"
+          :block="false"
+          :options="recipientStatusOptions"
           @change="handleFilterChange"
-        >
-          <el-option
-            v-for="option in recipientStatusOptions"
-            :key="option.value"
-            :label="option.label"
-            :value="option.value"
-          />
-        </el-select>
+        />
       </template>
 
       <el-table v-loading="recipientLoading" :data="recipients">

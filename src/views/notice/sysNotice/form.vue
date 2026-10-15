@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect, type SelectOption } from "@/components/ReSelect";
 import { computed, ref } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
@@ -58,6 +59,13 @@ function getRef() {
 }
 
 defineExpose({ getRef });
+
+const priorityOptions: SelectOption[] = [
+  { label: "信息", value: 4 },
+  { label: "普通", value: 5 },
+  { label: "警告", value: 7 },
+  { label: "紧急", value: 9 }
+];
 </script>
 
 <template>
@@ -106,16 +114,11 @@ defineExpose({ getRef });
         </el-col>
         <el-col :span="12">
           <el-form-item label="优先级" prop="priority">
-            <el-select
+            <ReSelect
               v-model="newFormInline.priority"
               placeholder="请选择优先级"
-              class="w-full!"
-            >
-              <el-option label="信息" :value="4" />
-              <el-option label="普通" :value="5" />
-              <el-option label="警告" :value="7" />
-              <el-option label="紧急" :value="9" />
-            </el-select>
+              :options="priorityOptions"
+            />
           </el-form-item>
         </el-col>
       </el-row>

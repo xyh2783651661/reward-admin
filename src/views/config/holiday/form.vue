@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { ref, computed } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps, RepeatType } from "./utils/types";
@@ -113,19 +114,12 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="重复类型" prop="repeatType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.repeatType"
         placeholder="请选择重复类型"
-        class="w-full!"
+        :options="repeatTypes"
         @change="onRepeatTypeChange"
-      >
-        <el-option
-          v-for="item in repeatTypes"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+      />
     </el-form-item>
 
     <!-- 固定公历日期 -->
@@ -170,32 +164,18 @@ defineExpose({ getRef });
       />
     </el-form-item>
     <el-form-item v-if="showWeekdayOfMonth" label="星期几" prop="repeatWeekday">
-      <el-select
+      <ReSelect
         v-model="newFormInline.repeatWeekday"
         placeholder="请选择星期几"
-        class="w-full!"
-      >
-        <el-option
-          v-for="item in weekdayOptions"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+        :options="weekdayOptions"
+      />
     </el-form-item>
     <el-form-item v-if="showWeekdayOfMonth" label="第几个" prop="repeatOrdinal">
-      <el-select
+      <ReSelect
         v-model="newFormInline.repeatOrdinal"
         placeholder="请选择第几个"
-        class="w-full!"
-      >
-        <el-option
-          v-for="item in ordinalOptions"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+        :options="ordinalOptions"
+      />
     </el-form-item>
 
     <!-- 某月最后一天 -->
@@ -210,19 +190,11 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="节假日类型" prop="holidayType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.holidayType"
-        clearable
         placeholder="请选择节假日类型"
-        class="w-full!"
-      >
-        <el-option
-          v-for="item in formOptions.holidayTypes"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+        :options="formOptions.holidayTypes"
+      />
     </el-form-item>
 
     <el-form-item label="状态" prop="status">

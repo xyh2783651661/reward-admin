@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { ref, watch } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
@@ -103,36 +104,22 @@ defineExpose({ getRef });
           覆盖后 width 变 100%，在 flex 容器里两个 select 的 basis 各自撑满并触发
           flex-shrink 收缩，最终塌成 min-content 窄条、选中值被压不可见。
         -->
-        <el-select
+        <ReSelect
           v-model="lunarMonth"
           placeholder="月份"
-          clearable
           style="
 
 --el-select-width: 160px"
-        >
-          <el-option
-            v-for="m in LUNAR_MONTH_OPTIONS"
-            :key="m.value"
-            :label="m.label"
-            :value="m.value"
-          />
-        </el-select>
-        <el-select
+          :options="LUNAR_MONTH_OPTIONS"
+        />
+        <ReSelect
           v-model="lunarDay"
           placeholder="日期"
-          clearable
           style="
 
 --el-select-width: 128px"
-        >
-          <el-option
-            v-for="d in LUNAR_DAY_OPTIONS"
-            :key="d.value"
-            :label="d.label"
-            :value="d.value"
-          />
-        </el-select>
+          :options="LUNAR_DAY_OPTIONS"
+        />
       </div>
       <div class="text-xs text-gray-400 mt-1">
         可选。不填则由公历生日自动推断；填写后生日邮件按农历日期（含闰月）精确匹配

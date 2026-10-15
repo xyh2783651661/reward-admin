@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { ref, watch } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
@@ -45,36 +46,22 @@ defineExpose({ getRef });
     label-width="82px"
   >
     <el-form-item label="规则标识" prop="ruleKey">
-      <el-select
+      <ReSelect
         v-model="newFormInline.ruleKey"
         placeholder="请选择或输入规则标识"
         :disabled="!!newFormInline.id"
         filterable
         allow-create
-        clearable
-      >
-        <el-option
-          v-for="opt in ruleKeyOptions"
-          :key="opt.value"
-          :label="opt.label"
-          :value="opt.value"
-        />
-      </el-select>
+        :options="ruleKeyOptions"
+      />
     </el-form-item>
 
     <el-form-item label="规则类型" prop="ruleType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.ruleType"
         placeholder="请选择规则类型"
-        clearable
-      >
-        <el-option
-          v-for="item in ruleTypeOptions"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+        :options="ruleTypeOptions"
+      />
     </el-form-item>
 
     <el-form-item label="金额数值" prop="ruleValue">

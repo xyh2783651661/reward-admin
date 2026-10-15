@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { ref } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
@@ -61,20 +62,13 @@ defineExpose({ getRef });
       <el-input v-model="newFormInline.email" placeholder="请输入邮箱" />
     </el-form-item>
     <el-form-item label="角色">
-      <el-select
+      <ReSelect
         v-model="newFormInline.roleIds"
         multiple
-        clearable
         class="w-full"
         placeholder="请选择角色"
-      >
-        <el-option
-          v-for="r in roleOptions"
-          :key="r.id"
-          :label="r.roleName"
-          :value="r.id"
-        />
-      </el-select>
+        :options="roleOptions"
+      />
     </el-form-item>
     <el-form-item label="状态">
       <el-switch

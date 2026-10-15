@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect } from "@/components/ReSelect";
 import { computed, ref } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
@@ -57,36 +58,22 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="配置分组" prop="configGroup">
-      <el-select
+      <ReSelect
         v-model="newFormInline.configGroup"
         filterable
         allow-create
         default-first-option
-        clearable
         placeholder="请选择或输入配置分组"
-      >
-        <el-option
-          v-for="item in formOptions.groups"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+        :options="formOptions.groups"
+      />
     </el-form-item>
 
     <el-form-item label="值类型" prop="valueType">
-      <el-select
+      <ReSelect
         v-model="newFormInline.valueType"
-        clearable
         placeholder="请选择值类型"
-      >
-        <el-option
-          v-for="item in formOptions.valueTypes"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
+        :options="formOptions.valueTypes"
+      />
     </el-form-item>
 
     <el-form-item label="配置值" prop="configValue">

@@ -2,7 +2,7 @@
 import { message } from "@/utils/message";
 import { getMailSendRecordsList } from "@/api/system";
 import { getMailSendRecordOptions, getMailSendRecordDetail } from "@/api/mail";
-import type { OptionsResponse } from "@/components/DictSelect/types";
+import type { OptionsResponse } from "@/components/ReSelect/types";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw, computed } from "vue";

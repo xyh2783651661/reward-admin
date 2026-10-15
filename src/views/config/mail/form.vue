@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ReSelect, type SelectOption } from "@/components/ReSelect";
 import { ref } from "vue";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
@@ -24,6 +25,18 @@ function getRef() {
 }
 
 defineExpose({ getRef });
+
+const typeOptions: SelectOption[] = [
+  { label: "NOTIFY", value: "NOTIFY" },
+  { label: "SYSTEM", value: "SYSTEM" },
+  { label: "ALARM", value: "ALARM" }
+];
+
+const priorityOptions: SelectOption[] = [
+  { label: "0", value: "0" },
+  { label: "1", value: "1" },
+  { label: "2", value: "2" }
+];
 </script>
 
 <template>
@@ -57,20 +70,18 @@ defineExpose({ getRef });
         inactive-text="已禁用"
         class="ml-2"
         inline-prompt
-        style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+        style="
+
+--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
       />
     </el-form-item>
 
     <el-form-item label="类型" prop="type">
-      <el-select
+      <ReSelect
         v-model="newFormInline.type"
-        clearable
         placeholder="请选择类型"
-      >
-        <el-option key="NOTIFY" label="NOTIFY" value="NOTIFY" />
-        <el-option key="SYSTEM" label="SYSTEM" value="SYSTEM" />
-        <el-option key="ALARM" label="ALARM" value="ALARM" />
-      </el-select>
+        :options="typeOptions"
+      />
     </el-form-item>
 
     <el-form-item label="组别" prop="groupCode">
@@ -82,15 +93,11 @@ defineExpose({ getRef });
     </el-form-item>
 
     <el-form-item label="优先级" prop="priority">
-      <el-select
+      <ReSelect
         v-model="newFormInline.priority"
-        clearable
         placeholder="请选择优先级"
-      >
-        <el-option key="0" label="0" value="0" />
-        <el-option key="1" label="1" value="1" />
-        <el-option key="2" label="2" value="2" />
-      </el-select>
+        :options="priorityOptions"
+      />
     </el-form-item>
 
     <el-form-item label="备注">
