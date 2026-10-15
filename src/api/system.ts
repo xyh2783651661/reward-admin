@@ -123,6 +123,11 @@ export {
 } from "./ai";
 
 export {
+  getContentFetchRecordPage,
+  getContentFetchRecordOptions
+} from "./content-fetch-record";
+
+export {
   getSysNoticePage,
   getSysNoticeDetail,
   addSysNotice,
