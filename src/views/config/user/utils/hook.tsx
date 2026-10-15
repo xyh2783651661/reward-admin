@@ -325,7 +325,7 @@ export function useRewardUser() {
           ids
         }
       },
-      width: "480px",
+      width: "560px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

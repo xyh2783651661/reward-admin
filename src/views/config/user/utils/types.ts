@@ -14,7 +14,10 @@ interface FormProps {
 
 interface RoleOption {
   id: number | string;
-  name: string;
+  /** 兼容旧字段；角色接口实际返回 roleName */
+  name?: string;
+  roleName?: string;
+  roleCode?: string;
   [key: string]: unknown;
 }
 
