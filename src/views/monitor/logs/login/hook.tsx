@@ -96,6 +96,12 @@ export function useMailLog() {
       minWidth: 100
     },
     {
+      label: "邮件类型",
+      prop: "type",
+      minWidth: 140,
+      formatter: ({ type }) => type || "-"
+    },
+    {
       label: "状态",
       prop: "status",
       minWidth: 100,
