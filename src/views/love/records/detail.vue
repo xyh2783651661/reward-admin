@@ -6,6 +6,13 @@ import {
   getMediaThumbnailUrl
 } from "@/api/love";
 import { ReImageViewer } from "@/components/ReImageViewer";
+import {
+  DetailFields,
+  DetailHeader,
+  DetailPage,
+  DetailSection,
+  type DetailFieldItem
+} from "@/components/ReDetail";
 import dayjs from "dayjs";
 
 interface Props {
@@ -53,7 +60,6 @@ const dialogVisible = computed({
   set: val => emit("update:visible", val)
 });
 
-// 心情映射
 const moodMap: Record<string, { label: string; color: string }> = {
   heart: { label: "开心", color: "#ff6b6b" },
   smile: { label: "微笑", color: "#ffa726" },
@@ -63,12 +69,29 @@ const moodMap: Record<string, { label: string; color: string }> = {
   neutral: { label: "平静", color: "#78909c" }
 };
 
-// 获取心情信息
-function getMoodInfo(mood: string) {
-  return moodMap[mood] || { label: mood || "-", color: "#909399" };
-}
+const mood = computed(() => {
+  const key = detail.value?.mood;
+  return moodMap[key ?? ""] ?? { label: key || "-", color: "#909399" };
+});
 
-// 加载详情数据
+const formatTime = (value?: string | null) =>
+  value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : undefined;
+
+const infoFields = computed<DetailFieldItem[]>(() => {
+  const record = detail.value;
+  return [
+    { label: "记录日期", value: record?.recordDate },
+    { label: "地点", value: record?.location?.name },
+    { label: "详细地址", value: record?.location?.address, full: true },
+    { label: "创建时间", value: formatTime(record?.createdAt) },
+    { label: "更新时间", value: formatTime(record?.updatedAt) }
+  ];
+});
+
+const previewList = computed(
+  () => detail.value?.media?.map(m => getMediaViewUrl(m.id)) ?? []
+);
+
 async function loadDetail() {
   if (!props.id) return;
 
@@ -84,7 +107,6 @@ async function loadDetail() {
   }
 }
 
-// 监听visible变化，打开时加载数据
 watch(
   () => props.visible,
   val => {
@@ -94,7 +116,6 @@ watch(
   }
 );
 
-// 监听id变化
 watch(
   () => props.id,
   () => {
@@ -114,77 +135,51 @@ function handleClose() {
   <el-dialog
     v-model="dialogVisible"
     title="恋爱记录详情"
-    width="680px"
+    width="720px"
     :close-on-click-modal="false"
     @close="handleClose"
   >
-    <div v-loading="loading" class="detail-container">
-      <template v-if="detail">
-        <!-- 基本信息 -->
-        <div class="detail-section">
-          <h4 class="section-title">基本信息</h4>
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="ID">{{
-              detail.id
-            }}</el-descriptions-item>
-            <el-descriptions-item label="日期">{{
-              detail.recordDate || "-"
-            }}</el-descriptions-item>
-            <el-descriptions-item label="心情">
-              <el-tag
-                :color="getMoodInfo(detail.mood).color"
-                effect="dark"
-                round
-                size="small"
-              >
-                {{ getMoodInfo(detail.mood).label }}
-              </el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="地点">
-              {{ detail.location?.name || "-" }}
-            </el-descriptions-item>
-            <el-descriptions-item label="创建时间" :span="2">
-              {{
-                detail.createdAt
-                  ? dayjs(detail.createdAt).format("YYYY-MM-DD HH:mm:ss")
-                  : "-"
-              }}
-            </el-descriptions-item>
-            <el-descriptions-item label="更新时间" :span="2">
-              {{
-                detail.updatedAt
-                  ? dayjs(detail.updatedAt).format("YYYY-MM-DD HH:mm:ss")
-                  : "-"
-              }}
-            </el-descriptions-item>
-          </el-descriptions>
-        </div>
+    <div v-loading="loading" class="love-detail">
+      <DetailPage v-if="detail">
+        <DetailHeader :title="detail.recordDate || '恋爱记录'">
+          <template #tags>
+            <el-tag :color="mood.color" effect="dark" round size="small">
+              {{ mood.label }}
+            </el-tag>
+          </template>
+          <template #subtitle>ID：{{ detail.id }}</template>
+        </DetailHeader>
 
-        <!-- 内容 -->
-        <div class="detail-section">
-          <h4 class="section-title">内容</h4>
-          <div class="content-text">{{ detail.text || "暂无内容" }}</div>
-        </div>
+        <DetailSection title="记录内容">
+          <p class="love-detail__text">{{ detail.text || "暂无内容" }}</p>
+        </DetailSection>
 
-        <!-- 媒体图片 -->
-        <div v-if="detail.media?.length" class="detail-section">
-          <h4 class="section-title">图片 ({{ detail.media.length }})</h4>
-          <div class="media-grid">
-            <div v-for="item in detail.media" :key="item.id" class="media-item">
+        <DetailSection
+          title="图片"
+          :description="
+            detail.media?.length ? `${detail.media.length} 张` : undefined
+          "
+        >
+          <div v-if="detail.media?.length" class="love-detail__media">
+            <div
+              v-for="item in detail.media"
+              :key="item.id"
+              class="love-detail__thumb"
+            >
               <ReImageViewer
                 :src="getMediaThumbnailUrl(item.id)"
-                :preview-src-list="detail.media.map(m => getMediaViewUrl(m.id))"
+                :preview-src-list="previewList"
                 fit="cover"
               />
             </div>
           </div>
-        </div>
+          <el-empty v-else description="暂无图片" :image-size="60" />
+        </DetailSection>
 
-        <div v-else class="detail-section">
-          <h4 class="section-title">图片</h4>
-          <el-empty description="暂无图片" :image-size="60" />
-        </div>
-      </template>
+        <DetailSection title="基本信息">
+          <DetailFields :items="infoFields" :min-column-width="200" />
+        </DetailSection>
+      </DetailPage>
     </div>
 
     <template #footer>
@@ -193,54 +188,28 @@ function handleClose() {
   </el-dialog>
 </template>
 
-<style lang="scss" scoped>
-.detail-container {
+<style scoped>
+.love-detail {
   min-height: 200px;
 }
 
-.detail-section {
-  margin-bottom: 24px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  .section-title {
-    padding-left: 10px;
-    margin: 0 0 12px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-    border-left: 3px solid var(--el-color-primary);
-  }
-}
-
-.content-text {
-  padding: 16px;
+.love-detail__text {
+  margin: 0;
   line-height: 1.8;
   color: var(--el-text-color-regular);
   word-break: break-word;
   white-space: pre-wrap;
-  background: var(--el-fill-color-lighter);
-  border-radius: 8px;
 }
 
-.media-grid {
+.love-detail__media {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 12px;
+}
 
-  .media-item {
-    width: 100%;
-    height: 150px;
-    overflow: hidden;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: transform 0.3s;
-
-    &:hover {
-      transform: scale(1.05);
-    }
-  }
+.love-detail__thumb {
+  height: 120px;
+  overflow: hidden;
+  border-radius: 8px;
 }
 </style>
