@@ -210,7 +210,7 @@ export const resetUserPassword = (data: { id: number; password: string }) => {
 export const getUserOptions = () => {
   return http.request<ApiResult<Record<string, any[]>>>(
     "get",
-    "/admin/users/options"
+    "/api/admin/users/options"
   );
 };
 
@@ -218,6 +218,6 @@ export const getUserOptions = () => {
 export const getRoleOptions = () => {
   return http.request<ApiResult<Record<string, any[]>>>(
     "get",
-    "/admin/roles/options"
+    "/api/admin/roles/options"
   );
 };
