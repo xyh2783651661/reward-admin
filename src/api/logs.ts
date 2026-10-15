@@ -5,10 +5,6 @@ export const getOnlineLogsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/online-logs", { data });
 };
 
-export const getLoginLogsList = (data?: object) => {
-  return http.request<ApiPageResult>("post", "/login-logs", { data });
-};
-
 export const getOperationLogsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/task-logs/page", { data });
 };

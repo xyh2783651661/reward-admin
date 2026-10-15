@@ -99,7 +99,6 @@ export {
 
 export {
   getOnlineLogsList,
-  getLoginLogsList,
   getOperationLogsList,
   getSystemLogsList,
   getAccessLogsList,
