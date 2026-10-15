@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import ReCol from "@/components/ReCol";
+import { computed, ref } from "vue";
+import { AssignOptionList, AssignPanel } from "@/components/ReAssign";
 import type { RoleFormProps } from "./utils/types";
 
 const props = withDefaults(defineProps<RoleFormProps>(), {
@@ -12,36 +12,29 @@ const props = withDefaults(defineProps<RoleFormProps>(), {
 });
 
 const newFormInline = ref(props.formInline);
+
+const options = computed(() =>
+  (newFormInline.value.roleOptions ?? []).map(item => ({
+    id: item.id,
+    label: String(item.roleName ?? item.name ?? item.id),
+    description: item.roleCode ? String(item.roleCode) : undefined
+  }))
+);
 </script>
 
 <template>
-  <el-form :model="newFormInline">
-    <el-row :gutter="30">
-      <re-col>
-        <el-form-item label="用户昵称" prop="nickName">
-          <el-input v-model="newFormInline.nickName" disabled />
-        </el-form-item>
-      </re-col>
-      <re-col>
-        <el-form-item label="角色列表" prop="ids">
-          <el-select
-            v-model="newFormInline.ids"
-            placeholder="请选择"
-            class="w-full"
-            clearable
-            multiple
-          >
-            <el-option
-              v-for="(item, index) in newFormInline.roleOptions"
-              :key="index"
-              :value="item.id"
-              :label="item.name"
-            >
-              {{ item.name }}
-            </el-option>
-          </el-select>
-        </el-form-item>
-      </re-col>
-    </el-row>
-  </el-form>
+  <AssignPanel
+    subject-label="用户"
+    :subject-name="newFormInline.nickName"
+    target-label="角色"
+    :selected-count="newFormInline.ids.length"
+    :total-count="options.length"
+  >
+    <AssignOptionList
+      v-model="newFormInline.ids"
+      :options="options"
+      search-placeholder="搜索角色名称或编码"
+      empty-text="暂无可分配的角色"
+    />
+  </AssignPanel>
 </template>

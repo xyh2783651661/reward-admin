@@ -2,6 +2,7 @@ import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import ReMenuTree from "@/components/ReMenuTree/index.vue";
+import { AssignPanel } from "@/components/ReAssign";
 import { deviceDetection } from "@pureadmin/utils";
 import type { PaginationProps } from "@pureadmin/table";
 import {
@@ -196,14 +197,25 @@ export function useRole() {
         closeOnClickModal: false,
         sureBtnLoading: true,
         contentRenderer: () =>
-          h(ReMenuTree, {
-            data: menuTree.value,
-            modelValue: checkedIds.value,
-            maxHeight: "460px",
-            "onUpdate:modelValue": (value: number[]) => {
-              checkedIds.value = value;
-            }
-          }),
+          h(
+            AssignPanel,
+            {
+              subjectLabel: "角色",
+              subjectName: row.roleName,
+              subjectMeta: row.roleCode,
+              targetLabel: "菜单权限",
+              selectedCount: checkedIds.value.length
+            },
+            () =>
+              h(ReMenuTree, {
+                data: menuTree.value,
+                modelValue: checkedIds.value,
+                maxHeight: "420px",
+                "onUpdate:modelValue": (value: number[]) => {
+                  checkedIds.value = value;
+                }
+              })
+          ),
         beforeSure: async (done, { closeLoading }) => {
           try {
             const result = await assignRoleMenus({
