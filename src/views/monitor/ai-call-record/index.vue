@@ -6,6 +6,7 @@ import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import View from "~icons/ep/view";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({
   name: "AiCallRecord"
@@ -22,6 +23,8 @@ const {
   searchFields,
   onSearch,
   onDetail,
+  exportExcel,
+  exportLoading,
   handleSizeChange,
   handleCurrentChange
 } = useAiCallRecord(tableRef);
@@ -54,6 +57,17 @@ onMounted(() => {
     />
 
     <PureTableBar title="AI 调用记录" :columns="columns" @refresh="onSearch">
+      <template #buttons>
+        <el-button
+          v-perms="'monitor:aiCallRecord:export'"
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
+        </el-button>
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           ref="tableRef"

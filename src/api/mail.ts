@@ -47,6 +47,14 @@ export const getMailSendRecordsList = <T = Record<string, any>>(
   });
 };
 
+/** 导出邮件发送记录（筛选条件与列表一致） */
+export const exportMailSendRecords = (data?: object) => {
+  return http.request<Blob>("post", "/api/mail-send-records/export-excel", {
+    data,
+    responseType: "blob"
+  });
+};
+
 // Mail Send Record Options (status/type/mqStatus/priority)
 export const getMailSendRecordOptions = () => {
   return http.request<ApiResult<OptionsResponse>>(

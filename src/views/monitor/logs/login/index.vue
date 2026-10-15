@@ -5,6 +5,7 @@ import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import AntDesignMailOutlined from "~icons/ant-design/mail-outlined";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({
   name: "MailLog"
@@ -19,6 +20,8 @@ const {
   searchFields,
   onSearch,
   resetForm,
+  exportExcel,
+  exportLoading,
   handleSizeChange,
   handleCurrentChange,
   onDetail
@@ -41,6 +44,17 @@ function handleSearch() {
     />
 
     <PureTableBar title="邮件发送记录" :columns="columns" @refresh="onSearch">
+      <template #buttons>
+        <el-button
+          v-perms="'monitor:mailLog:export'"
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
+        </el-button>
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           row-key="id"

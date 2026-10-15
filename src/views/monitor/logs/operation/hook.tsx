@@ -1,10 +1,12 @@
 ﻿import dayjs from "dayjs";
 import {
   getOperationLogsList,
+  exportOperationLogs,
   getTaskLogsFilterOptions,
   getTaskLogDetail
 } from "@/api/system";
 import { getTaskLogOptions } from "@/api/logs";
+import { useDownload } from "@/hooks/useDownload";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
@@ -27,6 +29,7 @@ export function useOperationLog(_tableRef?: Ref) {
   const optionsLoading = ref(false);
   const successOptions = ref<{ value: boolean; label: string }[]>([]);
   const { tagStyle } = usePublicHooks();
+  const { loading: exportLoading, runExport } = useDownload();
 
   const filterOptions = ref({
     taskNames: [] as string[],
@@ -140,6 +143,22 @@ export function useOperationLog(_tableRef?: Ref) {
     }
   }
 
+  /**
+   * 导出当前筛选条件下的任务日志。
+   *
+   * 去掉分页参数：后端按「筛选条件 + 行数上限」导出，
+   * 带上 current/size 只会导出当前这一页。
+   */
+  function exportExcel() {
+    const payload = { ...toRaw(form) };
+    delete payload.current;
+    delete payload.size;
+    return runExport(
+      () => exportOperationLogs(payload),
+      () => `任务日志_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`
+    );
+  }
+
   function handleSizeChange(val: number) {
     form.size = val;
     form.current = 1;
@@ -250,6 +269,8 @@ export function useOperationLog(_tableRef?: Ref) {
     searchFields,
     onSearch,
     resetForm,
+    exportExcel,
+    exportLoading,
     handleSizeChange,
     handleCurrentChange,
     onDetail

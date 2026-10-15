@@ -3,8 +3,10 @@ import { reactive, ref, toRaw, onMounted, computed } from "vue";
 import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
 import type { SearchField } from "@/components/ReSearchBar/types";
+import { useDownload } from "@/hooks/useDownload";
 import {
   getContentFetchRecordPage,
+  exportContentFetchRecords,
   getContentFetchRecordOptions
 } from "@/api/system";
 import type {
@@ -71,6 +73,7 @@ export function useContentFetchRecord() {
 
   const dataList = ref<ContentFetchRecordPageItem[]>([]);
   const loading = ref(true);
+  const { loading: exportLoading, runExport } = useDownload();
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -164,6 +167,22 @@ export function useContentFetchRecord() {
       formatter: ({ createdTime }) => formatTime(createdTime)
     }
   ];
+
+  /**
+   * 导出当前筛选条件下的抓取流水。
+   *
+   * 复用 buildRequest 后删掉分页参数：后端按「筛选条件 + 行数上限」导出，
+   * 带上 current/size 只会导出当前这一页。
+   */
+  function exportExcel() {
+    const payload = buildRequest(toRaw(form));
+    delete payload.current;
+    delete payload.size;
+    return runExport(
+      () => exportContentFetchRecords(payload),
+      () => `内容源抓取流水_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`
+    );
+  }
 
   function handleSizeChange(val: number) {
     form.size = val;
@@ -268,6 +287,8 @@ export function useContentFetchRecord() {
     sourceKeyOptions,
     searchFields,
     onSearch,
+    exportExcel,
+    exportLoading,
     handleSizeChange,
     handleCurrentChange
   };

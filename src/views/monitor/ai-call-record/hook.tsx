@@ -4,9 +4,11 @@ import { addDialog } from "@/components/ReDialog";
 import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
 import type { SearchField } from "@/components/ReSearchBar/types";
+import { useDownload } from "@/hooks/useDownload";
 import {
   getAiCallRecordDetail,
   getAiCallRecordPage,
+  exportAiCallRecords,
   getAiCallRecordOptions
 } from "@/api/system";
 import Detail from "./detail.vue";
@@ -85,6 +87,7 @@ export function useAiCallRecord(_tableRef?: Ref) {
 
   const dataList = ref<AiCallRecordPageItem[]>([]);
   const loading = ref(true);
+  const { loading: exportLoading, runExport } = useDownload();
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -241,6 +244,22 @@ export function useAiCallRecord(_tableRef?: Ref) {
     }
   ];
 
+  /**
+   * 导出当前筛选条件下的 AI 调用记录。
+   *
+   * 复用 buildRequest 后删掉分页参数：后端按「筛选条件 + 行数上限」导出，
+   * 带上 current/size 只会导出当前这一页。
+   */
+  function exportExcel() {
+    const payload = buildRequest(toRaw(form));
+    delete payload.current;
+    delete payload.size;
+    return runExport(
+      () => exportAiCallRecords(payload),
+      () => `AI调用记录_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`
+    );
+  }
+
   function handleSizeChange(val: number) {
     form.size = val;
     form.current = 1;
@@ -390,6 +409,8 @@ export function useAiCallRecord(_tableRef?: Ref) {
     onSearch,
     onDetail,
     resetForm,
+    exportExcel,
+    exportLoading,
     handleSizeChange,
     handleCurrentChange
   };

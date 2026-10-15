@@ -63,6 +63,7 @@ export {
   getMailRecipientUserList,
   updateMailRecipientUser,
   getMailSendRecordsList,
+  exportMailSendRecords,
   getMailRecipientOptions,
   getMailSendTaskList,
   addMailSendTask,
@@ -102,6 +103,7 @@ export {
 export {
   getOnlineLogsList,
   getOperationLogsList,
+  exportOperationLogs,
   getSystemLogsList,
   getAccessLogsList,
   getAccessLogDetail,
@@ -119,11 +121,13 @@ export {
 export {
   getAiCallRecordPage,
   getAiCallRecordDetail,
+  exportAiCallRecords,
   getAiCallRecordOptions
 } from "./ai";
 
 export {
   getContentFetchRecordPage,
+  exportContentFetchRecords,
   getContentFetchRecordOptions
 } from "./content-fetch-record";
 

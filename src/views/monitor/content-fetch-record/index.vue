@@ -3,6 +3,9 @@ import { onMounted } from "vue";
 import { useContentFetchRecord } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import ReSearchBar from "@/components/ReSearchBar/index.vue";
+import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({
   name: "ContentFetchRecord"
@@ -16,6 +19,8 @@ const {
   pagination,
   searchFields,
   onSearch,
+  exportExcel,
+  exportLoading,
   handleSizeChange,
   handleCurrentChange
 } = useContentFetchRecord();
@@ -48,6 +53,17 @@ onMounted(() => {
     />
 
     <PureTableBar title="内容源抓取流水" :columns="columns" @refresh="onSearch">
+      <template #buttons>
+        <el-button
+          v-perms="'monitor:contentFetch:export'"
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
+        </el-button>
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           row-key="id"

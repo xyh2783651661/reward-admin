@@ -9,6 +9,14 @@ export const getOperationLogsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/task-logs/page", { data });
 };
 
+/** 导出任务日志（筛选条件与列表一致） */
+export const exportOperationLogs = (data?: object) => {
+  return http.request<Blob>("post", "/api/task-logs/export-excel", {
+    data,
+    responseType: "blob"
+  });
+};
+
 export const getSystemLogsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/access-logs/page", { data });
 };

@@ -6,6 +6,7 @@ import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
 import AntDesignExceptionOutlined from "~icons/ant-design/exception-outlined";
+import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({
   name: "OperationLog"
@@ -22,6 +23,8 @@ const {
   searchFields,
   onSearch,
   resetForm,
+  exportExcel,
+  exportLoading,
   handleSizeChange,
   handleCurrentChange,
   onDetail
@@ -45,6 +48,17 @@ function handleSearch() {
     />
 
     <PureTableBar title="任务执行日志" :columns="columns" @refresh="onSearch">
+      <template #buttons>
+        <el-button
+          v-perms="'monitor:operationLog:export'"
+          type="primary"
+          :loading="exportLoading"
+          :icon="useRenderIcon(HugeiconsDownload01)"
+          @click="exportExcel"
+        >
+          导出
+        </el-button>
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           ref="tableRef"

@@ -1,6 +1,7 @@
 ﻿import dayjs from "dayjs";
 import { message } from "@/utils/message";
-import { getMailSendRecordsList } from "@/api/system";
+import { useDownload } from "@/hooks/useDownload";
+import { getMailSendRecordsList, exportMailSendRecords } from "@/api/system";
 import { getMailSendRecordOptions, getMailSendRecordDetail } from "@/api/mail";
 import type { OptionsResponse } from "@/components/ReSelect/types";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
@@ -37,6 +38,7 @@ export function useMailLog() {
     providerOptions: []
   });
   const { tagStyle } = usePublicHooks();
+  const { loading: exportLoading, runExport } = useDownload();
 
   const priorityLabel: Record<number, string> = {
     1: "高",
@@ -204,6 +206,22 @@ export function useMailLog() {
     }
   }
 
+  /**
+   * 导出当前筛选条件下的邮件发送记录。
+   *
+   * 去掉分页参数：后端按「筛选条件 + 行数上限」导出，
+   * 带上 current/size 反而只会导出当前这一页。
+   */
+  function exportExcel() {
+    const payload = { ...toRaw(form) };
+    delete payload.current;
+    delete payload.size;
+    return runExport(
+      () => exportMailSendRecords(payload),
+      () => `邮件发送记录_${dayjs().format("YYYY-MM-DD_HH-mm-ss")}.xlsx`
+    );
+  }
+
   function handleSizeChange(val: number) {
     console.log(`${val} items per page`);
     form.size = val;
@@ -331,6 +349,8 @@ export function useMailLog() {
     searchFields,
     onSearch,
     resetForm,
+    exportExcel,
+    exportLoading,
     handleSizeChange,
     handleCurrentChange,
     onDetail

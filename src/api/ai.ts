@@ -13,6 +13,14 @@ export const getAiCallRecordDetail = <T = Record<string, any>>(
   return http.request<ApiResult<T>>("get", `/api/ai/aiCallRecord/${id}`);
 };
 
+/** 导出 AI 调用记录（筛选条件与列表一致） */
+export const exportAiCallRecords = (data?: object) => {
+  return http.request<Blob>("post", "/api/ai/aiCallRecord/export-excel", {
+    data,
+    responseType: "blob"
+  });
+};
+
 /** AI 调用记录筛选选项（状态等） */
 export const getAiCallRecordOptions = () => {
   return http.request<ApiResult<Record<string, any[]>>>(

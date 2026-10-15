@@ -18,6 +18,15 @@ export const getContentFetchRecordPage = <T = Record<string, any>>(
   );
 };
 
+/** 导出抓取流水（筛选条件与列表一致） */
+export const exportContentFetchRecords = (data?: object) => {
+  return http.request<Blob>(
+    "post",
+    "/api/daily-content-fetch-records/export-excel",
+    { data, responseType: "blob" }
+  );
+};
+
 /** 筛选选项：statusOptions（固定三态）、sourceKeyOptions（取自已注册信源） */
 export const getContentFetchRecordOptions = () => {
   return http.request<ApiResult<Record<string, any[]>>>(
