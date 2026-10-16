@@ -39,6 +39,42 @@ function getCostType(value?: number) {
   return "danger";
 }
 
+/** 供应商未回带模型名（常见于失败调用或早期记录）时，实际模型单元格显示占位符 */
+function normalizeModel(value?: string | null) {
+  return `${value ?? ""}`.trim();
+}
+
+/**
+ * 渲染「供应商实际返回的模型」。
+ *
+ * 与请求模型不一致时标黄并给出提示：供应商做了别名解析、版本重定向或静默降级，
+ * 意味着计费口径 / 模型能力 / 输出风格都可能与配置预期不同。
+ * 供应商未回带（失败调用、或不回传 model 的兼容层）时显示「-」，区别于空值。
+ */
+function renderActualModel(row: AiCallRecordPageItem) {
+  const actual = normalizeModel(row.actualModel);
+  if (!actual) return <span>-</span>;
+
+  const requested = normalizeModel(row.remoteModel);
+  const drifted =
+    !!requested && actual.toLowerCase() !== requested.toLowerCase();
+
+  return (
+    <el-tooltip
+      content={
+        drifted
+          ? `与请求模型「${requested}」不一致：供应商做了别名解析或降级`
+          : "与请求模型一致"
+      }
+      placement="top"
+    >
+      <el-tag size="small" type={drifted ? "warning" : "info"} effect="plain">
+        {actual}
+      </el-tag>
+    </el-tooltip>
+  );
+}
+
 function buildRequest(form: Record<string, any>): AiCallRecordPageReq {
   const payload: AiCallRecordPageReq = {
     current: Number(form.current || 1),
@@ -52,7 +88,8 @@ function buildRequest(form: Record<string, any>): AiCallRecordPageReq {
     "templateName",
     "status",
     "operator",
-    "traceId"
+    "traceId",
+    "actualModel"
   ];
 
   mappings.forEach(key => {
@@ -80,6 +117,7 @@ export function useAiCallRecord(_tableRef?: Ref) {
     status: "",
     operator: "",
     traceId: "",
+    actualModel: "",
     requestTime: [] as string[],
     current: 1,
     size: 10
@@ -180,10 +218,18 @@ export function useAiCallRecord(_tableRef?: Ref) {
         totalTokens != null ? `${totalTokens}` : "-"
     },
     {
-      label: "实际模型",
+      label: "请求模型",
       prop: "remoteModel",
       minWidth: 160,
       formatter: ({ remoteModel }) => remoteModel || "-"
+    },
+    {
+      // 供应商自报的实际服务模型。与请求模型不一致说明供应商做了别名解析或
+      // 静默降级——计费口径与模型能力都可能与预期不同，列表里必须能一眼看出。
+      label: "实际模型",
+      prop: "actualModel",
+      minWidth: 200,
+      cellRenderer: ({ row }) => renderActualModel(row)
     },
     {
       label: "结束原因",
@@ -328,7 +374,7 @@ export function useAiCallRecord(_tableRef?: Ref) {
     }
   }
 
-  // 搜索区字段配置：9 项筛选项（含 datetimerange）
+  // 搜索区字段配置：10 项筛选项（含 datetimerange）
   const searchFields = computed<SearchField[]>(() => [
     {
       prop: "id",
@@ -384,6 +430,12 @@ export function useAiCallRecord(_tableRef?: Ref) {
       type: "input",
       placeholder: "请输入 TraceId",
       width: "lg"
+    },
+    {
+      prop: "actualModel",
+      label: "实际模型",
+      type: "input",
+      placeholder: "按供应商实际返回的模型筛选"
     },
     {
       prop: "requestTime",

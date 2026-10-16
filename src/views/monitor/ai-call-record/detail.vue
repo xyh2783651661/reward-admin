@@ -161,6 +161,7 @@ const detailRecord = computed<AiCallRecordDetail>(() => {
     operator: String(props.record?.operator ?? ""),
     traceId: String(props.record?.traceId ?? ""),
     remoteModel: normalizeContent(props.record?.remoteModel),
+    actualModel: normalizeContent(props.record?.actualModel),
     streamMode: Number(props.record?.streamMode ?? 0),
     maxTokens: Number(props.record?.maxTokens ?? 0),
     retryCount: Number(props.record?.retryCount ?? 0),
@@ -173,6 +174,24 @@ const detailRecord = computed<AiCallRecordDetail>(() => {
 });
 
 const hasError = computed(() => !!detailRecord.value.errorMessage.trim());
+
+/**
+ * 请求模型与供应商实际返回的模型是否不一致。
+ *
+ * 不一致意味着供应商做了别名解析、版本重定向或静默降级，
+ * 计费口径与模型能力都可能与配置预期不同，详情页需要显式提示。
+ */
+const hasModelDrift = computed(() => {
+  const requested = detailRecord.value.remoteModel.trim().toLowerCase();
+  const actual = detailRecord.value.actualModel.trim().toLowerCase();
+  return !!requested && !!actual && requested !== actual;
+});
+
+const modelDriftHint = computed(() =>
+  hasModelDrift.value
+    ? `与请求模型「${detailRecord.value.remoteModel}」不一致：供应商做了别名解析或降级`
+    : "与请求模型一致"
+);
 
 const headerTitle = computed(
   () => detailRecord.value.templateName || "AI 调用详情"
@@ -199,8 +218,15 @@ const callFields = computed<DetailFieldItem[]>(() => {
   const item = detailRecord.value;
 
   return [
-    { label: "调用模型", value: item.provider },
-    { label: "实际模型", value: item.remoteModel },
+    { label: "调用供应商", value: item.provider },
+    { label: "请求模型", value: item.remoteModel, mono: true, copy: true },
+    // 实际模型走 #actualModel 插槽渲染：与请求模型不一致时需要 tag + tooltip 提示，
+    // DetailFieldItem 的字段配置不支持 hint，故单独渲染
+    {
+      key: "actualModel",
+      label: "实际模型",
+      value: item.actualModel || undefined
+    },
     { label: "调用模式", value: item.streamMode === 1 ? "流式" : "同步" },
     { label: "结束原因", value: item.finishReason },
     { label: "max_tokens", value: item.maxTokens || undefined },
@@ -393,7 +419,24 @@ watch(
 
       <template #aside>
         <DetailSection title="调用参数">
-          <DetailFields :items="callFields" :min-column-width="150" />
+          <DetailFields :items="callFields" :min-column-width="150">
+            <template #actualModel="{ item }">
+              <el-tooltip
+                v-if="item.value"
+                :content="modelDriftHint"
+                placement="top"
+              >
+                <el-tag
+                  size="small"
+                  :type="hasModelDrift ? 'warning' : 'info'"
+                  effect="plain"
+                >
+                  {{ item.value }}
+                </el-tag>
+              </el-tooltip>
+              <span v-else>-</span>
+            </template>
+          </DetailFields>
         </DetailSection>
         <DetailSection title="业务与追踪">
           <DetailFields :items="traceFields" :min-column-width="150" />

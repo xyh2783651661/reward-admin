@@ -17,6 +17,8 @@ interface AiCallRecordPageReq {
   status?: AiCallRecordStatus | "";
   operator?: string;
   traceId?: string;
+  /** 按「供应商实际返回的模型」筛选（模糊匹配） */
+  actualModel?: string;
   requestTime?: [string, string] | string[];
 }
 
@@ -40,8 +42,10 @@ interface AiCallRecordPageItem {
   totalTokens?: number;
   /** 结束原因，如 stop / length / content_filter（后端新字段） */
   finishReason?: string;
-  /** 实际调用的远程模型 ID（后端新字段） */
+  /** 请求侧模型 ID：我们让供应商用哪个模型 */
   remoteModel?: string;
+  /** 供应商自报的「本次实际服务的模型」，可能与 remoteModel 不同 */
+  actualModel?: string;
   /** 调用模式：0=同步，1=流式（后端新字段） */
   streamMode?: number;
   /** 配置的 max_tokens 上限（后端新字段） */
@@ -82,8 +86,10 @@ interface AiCallRecordDetail {
   errorMessage: string;
   operator: string;
   traceId: string;
-  /** 实际调用的远程模型 ID（后端新字段） */
+  /** 请求侧模型 ID：我们让供应商用哪个模型 */
   remoteModel?: string;
+  /** 供应商自报的「本次实际服务的模型」，可能与 remoteModel 不同 */
+  actualModel?: string;
   /** 调用模式：0=同步，1=流式（后端新字段） */
   streamMode?: number;
   /** 配置的 max_tokens 上限（后端新字段） */
