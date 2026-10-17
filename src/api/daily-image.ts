@@ -63,6 +63,16 @@ export const getDailyImagePage = <T = DailyImage>(params?: object) => {
   });
 };
 
+/** 按业务日期分页查询图片（发布内容包「换一批图」抽屉用，一次取回当日全部图） */
+export const getDailyImageByDate = <T = DailyImage>(
+  date?: string,
+  size = 50
+) => {
+  return http.request<ApiPageResult<T>>("get", "/api/daily-images/by-date", {
+    params: { date, size }
+  });
+};
+
 /** 图片筛选选项（来源等） */
 export const getDailyImageOptions = () => {
   return http.request<ApiResult<Record<string, any[]>>>(
