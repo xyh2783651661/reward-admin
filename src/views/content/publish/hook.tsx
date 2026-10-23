@@ -11,6 +11,7 @@ import {
   confirmPublishPackage,
   downloadPublishPackage,
   getPublishPackageExport,
+  getPublishTask,
   publishTaskStreamUrl
 } from "@/api/publish-package";
 import type {
@@ -291,26 +292,42 @@ export function usePublishPackage() {
    * 且进度无从得知；改为订阅 SSE 后进度实时回来，结束自动刷新详情。
    */
   const taskState = ref<PublishTaskState | null>(null);
-  let stopStream: (() => void) | null = null;
+  let stopWatchers: (() => void) | null = null;
 
   function stopWatch() {
-    stopStream?.();
-    stopStream = null;
+    stopWatchers?.();
+    stopWatchers = null;
   }
 
-  /** 页面卸载时必须断开，否则 SSE 连接会留在后台一直轮询。 */
+  /** 页面卸载时必须断开，否则 SSE 连接与轮询会留在后台。 */
   onScopeDispose(stopWatch);
+
+  const isTerminal = (status?: string) =>
+    status === "SUCCESS" || status === "FAILED";
+
+  /** SSE 静默超过该时长（毫秒）即视为不可信，改用轮询补位 */
+  const SSE_STALE_MS = 4000;
+  /** 轮询连续失败达到该次数才放弃，避免网络瞬断就报错 */
+  const MAX_POLL_FAILURES = 5;
 
   /**
    * 订阅任务进度直到终结。
    *
-   * @returns 终态快照；连接异常时为 null
+   * SSE 为主通道，轮询 getPublishTask 为兜底：
+   * 连接被拒、被代理缓冲而收不到事件、或流提前断开时，进度仍能推进，
+   * 不会出现「任务早跑完了，界面却一直卡在 0%」。
+   *
+   * @returns 终态快照；彻底拿不到进度时为 null
    */
   function watchTask(taskId: string): Promise<PublishTaskState | null> {
     stopWatch();
     return new Promise(resolve => {
       let settled = false;
-      // 终态可能从 onMessage 或 onDone 两个入口到达，只允许生效一次
+      let lastEventAt = Date.now();
+      let pollFailures = 0;
+      let polling = false;
+
+      // 终态可能从多个入口到达，只允许生效一次
       const settle = (state: PublishTaskState | null) => {
         if (settled) return;
         settled = true;
@@ -318,22 +335,57 @@ export function usePublishPackage() {
         resolve(state);
       };
 
-      stopStream = subscribeSse<PublishTaskState>(
+      const apply = (state: PublishTaskState) => {
+        lastEventAt = Date.now();
+        taskState.value = state;
+        if (isTerminal(state.status)) settle(state);
+      };
+
+      const stopStream = subscribeSse<PublishTaskState>(
         publishTaskStreamUrl(taskId),
         {
-          onMessage: data => {
-            taskState.value = data;
-            if (data.status === "SUCCESS" || data.status === "FAILED") {
-              settle(data);
-            }
-          },
+          onMessage: apply,
           onError: err => {
-            message(`进度订阅中断：${err.message}`, { type: "warning" });
-            settle(null);
+            console.warn("[publish] SSE 订阅失败，改用轮询：", err.message);
+            lastEventAt = 0;
           },
-          onDone: () => settle(taskState.value)
+          // 流结束却没收到终态，立刻让轮询接手确认
+          onDone: () => {
+            lastEventAt = 0;
+          }
         }
       );
+
+      const pollTimer = setInterval(async () => {
+        if (settled || polling) return;
+        if (Date.now() - lastEventAt < SSE_STALE_MS) return;
+        polling = true;
+        try {
+          const { data } = await getPublishTask(taskId);
+          if (data) {
+            pollFailures = 0;
+            apply(data);
+          } else {
+            pollFailures++;
+          }
+        } catch {
+          pollFailures++;
+        } finally {
+          polling = false;
+          lastEventAt = Date.now();
+        }
+        if (!settled && pollFailures >= MAX_POLL_FAILURES) {
+          message("无法获取任务进度，请稍后刷新页面查看结果", {
+            type: "warning"
+          });
+          settle(null);
+        }
+      }, 1500);
+
+      stopWatchers = () => {
+        stopStream();
+        clearInterval(pollTimer);
+      };
     });
   }
 

@@ -11,6 +11,7 @@ import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { message } from "@/utils/message";
 import { PureTableBar } from "@/components/RePureTableBar";
 import ReSearchBar from "@/components/ReSearchBar/index.vue";
+import TaskProgressDialog from "./components/TaskProgressDialog.vue";
 import { preparePublishPackage } from "@/api/publish-package";
 
 import View from "~icons/ep/view";
@@ -147,14 +148,6 @@ function taskPlatformTagType(status: string | null): TagType {
     skipped: "info"
   };
   return status ? (map[status] ?? "info") : "info";
-}
-
-/** 进度条配色：失败标红、成功标绿，进行中保持默认蓝。 */
-function taskProgressStatus(): "success" | "exception" | undefined {
-  const status = taskState.value?.status;
-  if (status === "FAILED") return "exception";
-  if (status === "SUCCESS") return "success";
-  return undefined;
 }
 
 function packageStatusType(status?: string): TagType {
@@ -402,19 +395,6 @@ onMounted(async () => {
               {{ SELECT_MODE_LABELS[detail?.selectMode] || "-" }}
             </el-tag>
             <span v-if="detail?.theme" class="theme">{{ detail.theme }}</span>
-          </div>
-          <!--
-            生成 / 选图进行中的实时进度。
-            这两类任务都要调 LLM，是分钟级耗时，没有进度提示界面看起来像卡死，
-            且用户无法判断是慢还是已经挂了。
-          -->
-          <div v-if="taskState" class="task-progress">
-            <el-progress
-              :percentage="taskState.percent ?? 0"
-              :status="taskProgressStatus()"
-              :stroke-width="6"
-            />
-            <div class="task-message">{{ taskState.message }}</div>
           </div>
           <div class="detail-actions">
             <el-button
@@ -800,6 +780,13 @@ onMounted(async () => {
         </el-button>
       </template>
     </el-dialog>
+
+    <!--
+      生成 / 选图进行中的实时进度。
+      这两类任务都要调 LLM，是分钟级耗时；独立弹窗保证在列表页（准备内容包）
+      与详情页（生成文案、换图）都能看到进度，而不是只在详情头部才有。
+    -->
+    <TaskProgressDialog :state="taskState" />
   </div>
 </template>
 
@@ -1057,17 +1044,6 @@ onMounted(async () => {
 
   .count {
     font-size: 13px;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-/* 异步任务进度条：生成/选图期间显示，避免在分钟级等待中看起来像卡死 */
-.task-progress {
-  margin-bottom: 12px;
-
-  .task-message {
-    margin-top: 6px;
-    font-size: 12px;
     color: var(--el-text-color-secondary);
   }
 }
