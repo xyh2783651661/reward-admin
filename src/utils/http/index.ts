@@ -12,19 +12,12 @@ import type {
 import { stringify } from "qs";
 import { getToken, formatToken, removeToken } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
-import { generateSignature } from "@/utils/http/sign";
-
-const appId = "wep-client";
-const clientType = "web";
-const clientVersion = __APP_INFO__?.pkg?.version ?? "1.0";
-
-function getDeviceType() {
-  if (typeof window === "undefined") return "PC";
-  const width = window.innerWidth;
-  if (width < 768) return "MOBILE";
-  if (width < 1200) return "TABLET";
-  return "PC";
-}
+import {
+  APP_ID as appId,
+  CLIENT_TYPE as clientType,
+  CLIENT_VERSION as clientVersion,
+  buildSignedHeaders
+} from "@/utils/http/headers";
 
 // 相关配置请参考：www.axios-js.com/zh-cn/docs/#axios-request-config-1
 const defaultConfig: AxiosRequestConfig = {
@@ -78,15 +71,7 @@ class PureHttp {
     PureHttp.axiosInstance.interceptors.request.use(
       async (config: PureHttpRequestConfig): Promise<any> => {
         /** ===== 签名相关（重点） ===== */
-        const timestamp = Date.now();
-        const signature = generateSignature(appId, timestamp);
-
-        config.headers["X-App-Id"] = appId;
-        config.headers["X-Timestamp"] = timestamp;
-        config.headers["X-Signature"] = signature;
-        config.headers["X-Device-Type"] = getDeviceType();
-        config.headers["X-Client-Type"] = clientType;
-        config.headers["X-Client-Version"] = clientVersion;
+        Object.assign(config.headers, buildSignedHeaders());
         /** ============================ */
 
         // 优先判断post/get等方法是否传入回调，否则执行初始化设置等回调
