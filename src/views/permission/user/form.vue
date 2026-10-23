@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ReSelect } from "@/components/ReSelect";
-import { ref } from "vue";
+import { ReSelect, type SelectOption } from "@/components/ReSelect";
+import { computed, ref } from "vue";
 import { formRules } from "./utils/rule";
 import type { FormProps } from "./utils/types";
 
@@ -21,7 +21,12 @@ const props = withDefaults(defineProps<FormProps>(), {
 
 const ruleFormRef = ref();
 const newFormInline = ref(props.formInline);
-const roleOptions = ref(props.roleOptions);
+const roleOptions = computed<SelectOption[]>(() =>
+  (props.roleOptions ?? []).map(role => ({
+    value: role.id,
+    label: role.roleName
+  }))
+);
 
 function getRef() {
   return ruleFormRef.value;

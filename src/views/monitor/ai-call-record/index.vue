@@ -23,6 +23,7 @@ const {
   searchFields,
   onSearch,
   onDetail,
+  resetForm,
   exportExcel,
   exportLoading,
   handleSizeChange,
@@ -31,13 +32,6 @@ const {
 
 function handleSearch() {
   form.current = 1;
-  onSearch();
-}
-
-function handleReset() {
-  // ReSearchBar 内部已调用 formRef.resetFields()，此处只需复位页码并刷新
-  form.current = 1;
-  form.size = 10;
   onSearch();
 }
 
@@ -53,7 +47,7 @@ onMounted(() => {
       :fields="searchFields"
       :loading="loading"
       @search="handleSearch"
-      @reset="handleReset"
+      @reset="resetForm"
     />
 
     <PureTableBar title="AI 调用记录" :columns="columns" @refresh="onSearch">
@@ -78,6 +72,7 @@ onMounted(() => {
           showOverflowTooltip
           :adaptiveConfig="{ offsetBottom: 108 }"
           :loading="loading"
+          :size="size"
           :data="dataList"
           :columns="dynamicColumns"
           :pagination="{ ...pagination, size }"

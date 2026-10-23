@@ -36,12 +36,6 @@ function handleSearch() {
   form.current = 1;
   onSearch();
 }
-
-function handleReset() {
-  // ReSearchBar 内部已调用 formRef.resetFields()，此处只需复位页码并刷新
-  form.current = 1;
-  onSearch();
-}
 </script>
 
 <template>
@@ -51,7 +45,7 @@ function handleReset() {
       :fields="searchFields"
       :loading="loading"
       @search="handleSearch"
-      @reset="handleReset"
+      @reset="resetForm"
     />
 
     <!-- 表格 -->

@@ -91,12 +91,12 @@ export function usePublishPackage() {
   const form = reactive({
     status: "",
     current: 1,
-    size: 20
+    size: 10
   });
 
   const pagination = reactive<PaginationProps>({
     total: 0,
-    pageSize: 20,
+    pageSize: 10,
     currentPage: 1,
     background: true
   });
@@ -222,6 +222,14 @@ export function usePublishPackage() {
     onSearch();
   }
 
+  function resetForm(formEl: any) {
+    if (!formEl) return;
+    formEl.resetFields();
+    form.current = 1;
+    form.size = 10;
+    onSearch();
+  }
+
   function handleSizeChange(val: number) {
     form.size = val;
     form.current = 1;
@@ -279,7 +287,7 @@ export function usePublishPackage() {
   /**
    * 当前进行中任务的最新状态。
    *
-   * 选图与文案生成都是分钟级的 LLM 调用。同步等待时界面像卡死，
+   * 选图与文案生成都是分��级的 LLM 调用。同步等待时界面像卡死，
    * 且进度无从得知；改为订阅 SSE 后进度实时回来，结束自动刷新详情。
    */
   const taskState = ref<PublishTaskState | null>(null);
@@ -592,6 +600,7 @@ export function usePublishPackage() {
     pagination,
     onSearch,
     handleStatusChange,
+    resetForm,
     handleSizeChange,
     handleCurrentChange,
     view,
