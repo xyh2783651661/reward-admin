@@ -217,6 +217,14 @@ export function useContentFetchRecord() {
     }
   }
 
+  function resetForm(formEl: any) {
+    if (!formEl) return;
+    formEl.resetFields();
+    form.current = 1;
+    form.size = 10;
+    onSearch();
+  }
+
   async function loadOptions() {
     try {
       const { data } = await getContentFetchRecordOptions();
@@ -287,6 +295,7 @@ export function useContentFetchRecord() {
     sourceKeyOptions,
     searchFields,
     onSearch,
+    resetForm,
     exportExcel,
     exportLoading,
     handleSizeChange,

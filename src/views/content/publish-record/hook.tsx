@@ -58,12 +58,12 @@ export function usePublishRecord() {
     errorType: "",
     packageId: undefined as number | undefined,
     current: 1,
-    size: 20
+    size: 10
   });
 
   const pagination = reactive<PaginationProps>({
     total: 0,
-    pageSize: 20,
+    pageSize: 10,
     currentPage: 1,
     background: true
   });
@@ -171,6 +171,16 @@ export function usePublishRecord() {
 
   function handleSearch() {
     form.current = 1;
+    refreshAll();
+  }
+
+  function resetForm(formEl: any) {
+    if (!formEl) return;
+    formEl.resetFields();
+    // packageId 只来自 URL、没有对应的搜索项，resetFields 清不掉，需手动清除
+    form.packageId = undefined;
+    form.current = 1;
+    form.size = 10;
     refreshAll();
   }
 
@@ -373,6 +383,7 @@ export function usePublishRecord() {
     loadStats,
     refreshAll,
     handleSearch,
+    resetForm,
     handleSizeChange,
     handleCurrentChange,
     openDetail,

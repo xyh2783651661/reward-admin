@@ -34,6 +34,7 @@ const {
   onSearch,
   refreshAll,
   handleSearch,
+  resetForm,
   handleSizeChange,
   handleCurrentChange,
   openDetail,
@@ -46,16 +47,12 @@ function rateColor(failed: number) {
   return failed > 0 ? "var(--el-color-danger)" : "var(--el-text-color-primary)";
 }
 
-const { copied, update } = useCopyToClipboard();
+const { update } = useCopyToClipboard();
 
 function copyDetail() {
   if (!detail.value?.message) return;
   update(String(detail.value.message));
-  // copied 为异步写入，取的一瞬可能还是 false，差别仅在于是否提示，
-  // 因此这里不因它 silence 失败提示反而更准确：直接提示成功即可。
-  if (copied.value) {
-    message("失败原因已复制", { type: "success" });
-  }
+  message("失败原因已复制", { type: "success" });
 }
 
 onMounted(async () => {
@@ -137,6 +134,7 @@ onMounted(async () => {
       :fields="searchFields"
       :loading="loading"
       @search="handleSearch"
+      @reset="resetForm"
     />
 
     <PureTableBar title="发布记录" :columns="columns" @refresh="refreshAll">
