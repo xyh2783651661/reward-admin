@@ -56,6 +56,7 @@ const {
   pagination,
   onSearch,
   handleStatusChange,
+  resetForm,
   handleSizeChange,
   handleCurrentChange,
   view,
@@ -265,13 +266,13 @@ function openCreate() {
 /**
  * 不传 imageIds，由 AI 从当日图片中选举。
  * 想自己挑就先进详情再用「换一批图」勾选——后端按空集合判断，
- * 传空数组同样走 AI 选举，所以这里不提供"不选图"的选项。
+ * 传空数组同样走 AI 选举，��以这里不提供"不选图"的选项。
  */
 async function submitCreate() {
   createSubmitting.value = true;
   try {
     // 接口返回的是异步任务而非内容包：选图是一次真实的 LLM 调用。
-    // 包 ID 要等任务跑完从状态里回读，因此这里订阅进度而不是直接取 data.id。
+    // 包 ID 要等任务跑完从状态里回读，因���这里订阅进度而不是直接取 data.id。
     const { data } = await preparePublishPackage({
       date: createDate.value || undefined
     });
@@ -316,6 +317,7 @@ onMounted(async () => {
         :fields="searchFields"
         :loading="loading"
         @search="handleStatusChange"
+        @reset="resetForm"
       />
 
       <PureTableBar title="发布内容包" :columns="columns" @refresh="onSearch">
