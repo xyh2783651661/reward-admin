@@ -49,9 +49,8 @@ const {
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           row-key="id"
-          align-whole="center"
+          align-whole="left"
           showOverflowTooltip
-          table-layout="auto"
           default-expand-all
           :loading="loading"
           :size="size"

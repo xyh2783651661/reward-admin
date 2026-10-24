@@ -45,11 +45,34 @@ export function useMenu() {
   const dataList = ref<SysMenuVo[]>([]);
 
   const columns: TableColumnList = [
-    { label: "菜单名称", prop: "menuName", minWidth: 160 },
+    {
+      label: "菜单名称",
+      prop: "menuName",
+      minWidth: 240,
+      align: "left",
+      cellRenderer: ({ row }) => (
+        <span class="inline-flex items-center gap-2 align-middle">
+          {row.icon
+            ? h(IconifyIconOnline, {
+                icon: row.icon,
+                width: "16px",
+                height: "16px"
+              })
+            : null}
+          <span class="truncate">{row.menuName}</span>
+          {row.menuType !== 2 && row.showLink === 0 ? (
+            <el-tag size="small" type="info" effect="plain">
+              隐藏
+            </el-tag>
+          ) : null}
+        </span>
+      )
+    },
     {
       label: "类型",
       prop: "menuType",
       width: 80,
+      align: "center",
       cellRenderer: ({ row }) => (
         <el-tag
           type={
@@ -63,27 +86,32 @@ export function useMenu() {
       )
     },
     {
-      label: "图标",
-      prop: "icon",
-      width: 70,
-      align: "center",
-      cellRenderer: ({ row }) =>
-        row.icon
-          ? h(IconifyIconOnline, {
-              icon: row.icon,
-              width: "18px",
-              height: "18px"
-            })
-          : ""
+      label: "路由路径",
+      prop: "path",
+      minWidth: 180,
+      align: "left",
+      formatter: ({ path }) => path || "-"
     },
-    { label: "路由路径", prop: "path", minWidth: 160 },
-    { label: "组件路径", prop: "component", minWidth: 180 },
-    { label: "权限标识", prop: "perms", width: 120 },
-    { label: "排序", prop: "rank", width: 70 },
+    {
+      label: "组件路径",
+      prop: "component",
+      minWidth: 200,
+      align: "left",
+      formatter: ({ component }) => component || "-"
+    },
+    {
+      label: "权限标识",
+      prop: "perms",
+      minWidth: 200,
+      align: "left",
+      formatter: ({ perms }) => perms || "-"
+    },
+    { label: "排序", prop: "rank", width: 70, align: "center" },
     {
       label: "状态",
       prop: "status",
       width: 80,
+      align: "center",
       cellRenderer: ({ row }) => (
         <el-tag type={row.status === 1 ? "success" : "danger"} effect="plain">
           {row.status === 1 ? "启用" : "禁用"}
