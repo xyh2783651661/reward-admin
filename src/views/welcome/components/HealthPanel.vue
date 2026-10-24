@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { WorkbenchHealthLight } from "@/api/workbench";
-import PanelCard from "./PanelCard.vue";
+import PanelCard from "@/components/PanelCard/index.vue";
 
 const props = defineProps<{
   lights: WorkbenchHealthLight[];

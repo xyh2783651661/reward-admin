@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { WorkbenchActivityItem } from "@/api/workbench";
-import PanelCard from "./PanelCard.vue";
+import PanelCard from "@/components/PanelCard/index.vue";
 
 defineProps<{
   activities: WorkbenchActivityItem[];

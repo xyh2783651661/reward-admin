@@ -68,11 +68,10 @@ export interface CacheMetricItem {
   label: string;
   value: string | number;
   icon: string;
-  gradient: string;
+  color: string;
   description: string;
   sub?: string;
-  color?: string;
-  highlight?: boolean;
+  progress?: number;
 }
 
 export type CacheInsightType = "success" | "warning" | "danger" | "info";

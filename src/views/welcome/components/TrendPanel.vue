@@ -13,7 +13,7 @@ import {
 } from "vue";
 import echarts from "@/plugins/echarts";
 import type { WorkbenchTrendData, WorkbenchTrendRange } from "@/api/workbench";
-import PanelCard from "./PanelCard.vue";
+import PanelCard from "@/components/PanelCard/index.vue";
 
 const props = defineProps<{
   data: WorkbenchTrendData;

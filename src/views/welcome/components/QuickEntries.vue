@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { WorkbenchQuickEntry } from "@/api/workbench";
-import PanelCard from "./PanelCard.vue";
+import PanelCard from "@/components/PanelCard/index.vue";
 
 defineProps<{
   entries: WorkbenchQuickEntry[];

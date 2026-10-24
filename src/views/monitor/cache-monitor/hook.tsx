@@ -137,57 +137,50 @@ export function useCacheMonitor() {
     return "#409eff";
   });
 
-  const metricCards = computed<CacheMetricItem[]>(() => [
-    {
-      label: "Key 总数",
-      value: formatNumber(stats.value?.keyCount),
-      icon: "ri:key-2-line",
-      gradient: "linear-gradient(135deg, #667eea, #764ba2)",
-      description: "当前缓存中可检索的键数量"
-    },
-    {
-      label: "请求次数",
-      value: formatNumber(stats.value?.requestCount),
-      icon: "ri:bar-chart-box-line",
-      gradient: "linear-gradient(135deg, #f093fb, #f5576c)",
-      description: "监控周期内累计缓存访问量"
-    },
-    {
-      label: "命中率",
-      value: hitRateDisplay.value,
-      color: hitRateColor.value,
-      highlight: true,
-      icon: "ri:target-line",
-      gradient: "linear-gradient(135deg, #4facfe, #00f2fe)",
-      description: getHitRateHint(stats.value?.hitRate)
-    },
-    {
-      label: "已用内存",
-      value: formatMemory(stats.value?.usedMemory ?? null),
-      sub: stats.value?.maxMemory
-        ? `上限 ${formatMemory(stats.value.maxMemory)}`
-        : "容量未限制",
-      icon: "ri:database-line",
-      gradient: "linear-gradient(135deg, #43e97b, #38f9d7)",
-      description: getMemoryHint()
-    },
-    {
-      label: "命中 / 未命中",
-      value: formatNumber(stats.value?.hitCount),
-      sub: `未命中 ${formatNumber(stats.value?.missCount)}`,
-      icon: "ri:time-line",
-      gradient: "linear-gradient(135deg, #fa709a, #fee140)",
-      description: "命中次数越高，说明缓存策略越有效"
-    },
-    {
-      label: "健康状态",
-      value: statusMeta.value.text,
-      color: health.value?.available ? "#67c23a" : "#f56c6c",
-      icon: "ri:shield-check-line",
-      gradient: "linear-gradient(135deg, #a18cd1, #fbc2eb)",
-      description: statusMeta.value.message
-    }
-  ]);
+  const metricCards = computed<CacheMetricItem[]>(() => {
+    const evictions = stats.value?.evictionCount ?? 0;
+    const hasMemoryLimit =
+      stats.value?.memoryUsageRate != null || !!stats.value?.maxMemory;
+
+    return [
+      {
+        label: "Key 总数",
+        value: formatNumber(stats.value?.keyCount),
+        sub: evictions > 0 ? `累计驱逐 ${formatNumber(evictions)}` : "无驱逐",
+        icon: "ri:key-2-line",
+        color: "var(--el-color-primary)",
+        description: "当前缓存中可检索的键数量"
+      },
+      {
+        label: "请求次数",
+        value: formatNumber(stats.value?.requestCount),
+        sub: `命中 ${formatNumber(stats.value?.hitCount)} / 未命中 ${formatNumber(stats.value?.missCount)}`,
+        icon: "ri:bar-chart-box-line",
+        color: "#7c5cfc",
+        description: "监控周期内累计缓存访问量"
+      },
+      {
+        label: "命中率",
+        value: hitRateDisplay.value,
+        sub: getHitRateHint(stats.value?.hitRate),
+        icon: "ri:target-line",
+        color: hitRateColor.value || "var(--el-color-primary)",
+        progress: stats.value?.hitRate ?? 0,
+        description: "命中次数 / 请求次数"
+      },
+      {
+        label: "已用内存",
+        value: formatMemory(stats.value?.usedMemory ?? null),
+        sub: stats.value?.maxMemory
+          ? `上限 ${formatMemory(stats.value.maxMemory)} · 使用率 ${memoryUsageDisplay.value}`
+          : "容量未限制",
+        icon: "ri:database-line",
+        color: memoryColor.value,
+        progress: hasMemoryLimit ? memoryPercent.value : undefined,
+        description: getMemoryHint()
+      }
+    ];
+  });
 
   const insightCards = computed<CacheInsight[]>(() => {
     const cards: CacheInsight[] = [];
@@ -534,74 +527,106 @@ export function useCacheMonitor() {
   }
 
   /** 更新趋势图配置 */
+  /** ECharts 画在 canvas 上无法解析 var()，需要取出实际颜色值 */
+  function cssVar(name: string, fallback: string) {
+    const value = getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim();
+    return value || fallback;
+  }
+
   function updateTrendChart(data: any[]) {
     if (!trendChart || isUnmounted) return;
 
     const times = data.map(item => item.time);
     const hitRates = data.map(item => item.hitRate);
     const memories = data.map(item =>
-      item.usedMemory ? (item.usedMemory / 1024 / 1024).toFixed(2) : 0
+      item.usedMemory ? Number((item.usedMemory / 1024 / 1024).toFixed(2)) : 0
     );
     const requests = data.map(item => item.requestCount);
+
+    const textColor = cssVar("--el-text-color-secondary", "#909399");
+    const splitColor = cssVar("--el-border-color-lighter", "#ebeef5");
+    const overlayColor = cssVar("--el-bg-color-overlay", "#ffffff");
+    const primaryText = cssVar("--el-text-color-primary", "#303133");
+
+    const hitColor = "#16a34a";
+    const memorySeriesColor = "#2563eb";
+    const requestColor = "#7c5cfc";
+
+    const axisLabel = { color: textColor, fontSize: 11 };
 
     const option: echarts.EChartsOption = {
       tooltip: {
         trigger: "axis",
-        backgroundColor: "var(--el-bg-color-overlay)",
-        borderColor: "var(--el-border-color-lighter)",
-        textStyle: { color: "var(--el-text-color-primary)" },
-        axisPointer: { type: "cross" }
+        backgroundColor: overlayColor,
+        borderColor: splitColor,
+        textStyle: { color: primaryText, fontSize: 12 },
+        axisPointer: { type: "line", lineStyle: { color: splitColor } }
       },
       legend: {
-        data: ["命中率", "内存(MB)", "请求量"],
-        bottom: 0,
-        textStyle: { color: "var(--el-text-color-regular)" }
+        data: ["命中率(%)", "内存(MB)", "请求量"],
+        top: 0,
+        right: 0,
+        icon: "roundRect",
+        itemWidth: 10,
+        itemHeight: 4,
+        textStyle: { color: textColor, fontSize: 12 }
       },
-      grid: {
-        left: 50,
-        right: 50,
-        top: 20,
-        bottom: 40
-      },
+      grid: { left: 8, right: 8, top: 36, bottom: 4, containLabel: true },
       xAxis: {
         type: "category",
         data: times,
-        axisLine: { lineStyle: { color: "var(--el-border-color)" } },
-        axisLabel: { color: "var(--el-text-color-secondary)" }
+        boundaryGap: true,
+        axisLine: { lineStyle: { color: splitColor } },
+        axisTick: { show: false },
+        axisLabel
       },
       yAxis: [
         {
           type: "value",
-          name: "命中率(%)",
           min: 0,
           max: 100,
           axisLine: { show: false },
-          splitLine: {
-            lineStyle: { color: "var(--el-border-color-extra-light)" }
-          },
-          axisLabel: { color: "var(--el-text-color-secondary)" }
+          axisLabel: { ...axisLabel, formatter: "{value}%" },
+          splitLine: { lineStyle: { color: splitColor, type: "dashed" } }
         },
         {
           type: "value",
-          name: "内存(MB)",
           axisLine: { show: false },
           splitLine: { show: false },
-          axisLabel: { color: "var(--el-text-color-secondary)" }
-        }
+          axisLabel: { ...axisLabel, formatter: "{value}M" }
+        },
+        { type: "value", show: false }
       ],
+      graphic: data.length
+        ? undefined
+        : {
+            type: "text",
+            left: "center",
+            top: "middle",
+            style: { text: "暂无趋势数据", fill: textColor, fontSize: 13 }
+          },
       series: [
         {
-          name: "命中率",
+          name: "请求量",
+          type: "bar",
+          yAxisIndex: 2,
+          barMaxWidth: 18,
+          itemStyle: { color: `${requestColor}33`, borderRadius: [3, 3, 0, 0] },
+          data: requests
+        },
+        {
+          name: "命中率(%)",
           type: "line",
           smooth: true,
-          symbol: "circle",
-          symbolSize: 6,
-          lineStyle: { width: 2 },
-          itemStyle: { color: "#67c23a" },
+          showSymbol: false,
+          lineStyle: { width: 2, color: hitColor },
+          itemStyle: { color: hitColor },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "rgba(103, 194, 58, 0.3)" },
-              { offset: 1, color: "rgba(103, 194, 58, 0.05)" }
+              { offset: 0, color: `${hitColor}33` },
+              { offset: 1, color: `${hitColor}00` }
             ])
           },
           data: hitRates
@@ -611,30 +636,10 @@ export function useCacheMonitor() {
           type: "line",
           smooth: true,
           yAxisIndex: 1,
-          symbol: "circle",
-          symbolSize: 6,
-          lineStyle: { width: 2 },
-          itemStyle: { color: "#409eff" },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "rgba(64, 158, 255, 0.3)" },
-              { offset: 1, color: "rgba(64, 158, 255, 0.05)" }
-            ])
-          },
+          showSymbol: false,
+          lineStyle: { width: 2, color: memorySeriesColor },
+          itemStyle: { color: memorySeriesColor },
           data: memories
-        },
-        {
-          name: "请求量",
-          type: "bar",
-          barWidth: 20,
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: "#f093fb" },
-              { offset: 1, color: "#f5576c" }
-            ]),
-            borderRadius: [4, 4, 0, 0]
-          },
-          data: requests
         }
       ]
     };
