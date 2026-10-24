@@ -12,11 +12,14 @@ import HugeiconsDownload01 from "~icons/hugeicons/download-01";
 
 defineOptions({ name: "SysMenu" });
 
+const tableRef = ref();
+
 const {
   loading,
   exportLoading,
   columns,
   dataList,
+  expandedKeys,
   onSearch,
   exportExcel,
   openDialog,
@@ -26,7 +29,12 @@ const {
 
 <template>
   <div class="main">
-    <PureTableBar title="菜单管理" :columns="columns" @refresh="onSearch">
+    <PureTableBar
+      title="菜单管理"
+      :columns="columns"
+      :tableRef="tableRef?.getTableRef()"
+      @refresh="onSearch"
+    >
       <template #buttons>
         <el-button
           v-perms="'permission:menu:add'"
@@ -48,10 +56,16 @@ const {
       </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
+          ref="tableRef"
           row-key="id"
           align-whole="left"
           showOverflowTooltip
-          default-expand-all
+          class="menu-tree-table"
+          :indent="28"
+          :expand-row-keys="expandedKeys"
+          :row-class-name="
+            ({ row }) => (row.menuType === 2 ? 'menu-button-row' : '')
+          "
           :loading="loading"
           :size="size"
           adaptive
@@ -103,3 +117,17 @@ const {
     </PureTableBar>
   </div>
 </template>
+
+<style scoped>
+:deep(.menu-tree-table .el-table__expand-icon) {
+  margin-right: 6px;
+}
+
+:deep(.menu-tree-table .el-table__placeholder) {
+  width: 20px;
+}
+
+:deep(.menu-tree-table .menu-button-row > td) {
+  background: var(--el-fill-color-lighter);
+}
+</style>
