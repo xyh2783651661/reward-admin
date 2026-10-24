@@ -13,10 +13,25 @@ import {
   type SysMenuReq,
   type MenuType
 } from "@/api/rbac";
-import { h, ref } from "vue";
+import { computed, h, ref } from "vue";
 import { IconifyIconOnline } from "@/components/ReIcon";
 
 const menuTypeText = (t: MenuType) => ({ 0: "目录", 1: "菜单", 2: "按钮" })[t];
+
+const fallbackIcon: Record<MenuType, string> = {
+  0: "ep:folder",
+  1: "ep:document",
+  2: "ep:pointer"
+};
+
+/** 默认只展开目录，菜单下的按钮权限保持折叠，避免列表被按钮行淹没 */
+function collectDirectoryIds(nodes: SysMenuVo[], ids: number[] = []) {
+  for (const node of nodes) {
+    if (node.menuType === 0) ids.push(node.id);
+    if (node.children?.length) collectDirectoryIds(node.children, ids);
+  }
+  return ids;
+}
 
 function cloneDefaultForm(): SysMenuReq {
   return {
@@ -43,13 +58,57 @@ export function useMenu() {
   const formRef = ref();
   const loading = ref(true);
   const dataList = ref<SysMenuVo[]>([]);
+  const expandedKeys = computed(() => collectDirectoryIds(dataList.value));
 
   const columns: TableColumnList = [
-    { label: "菜单名称", prop: "menuName", minWidth: 160 },
+    {
+      label: "菜单名称",
+      prop: "menuName",
+      minWidth: 280,
+      align: "left",
+      headerAlign: "left",
+      cellRenderer: ({ row }) => {
+        const isDir = row.menuType === 0;
+        const isButton = row.menuType === 2;
+        const childCount = row.children?.length ?? 0;
+        return (
+          <span class="inline-flex max-w-full items-center gap-2 align-middle">
+            {h(IconifyIconOnline, {
+              icon: row.icon || fallbackIcon[row.menuType as MenuType],
+              width: "16px",
+              height: "16px",
+              class: isButton ? "opacity-50" : isDir ? "text-primary" : ""
+            })}
+            <span
+              class={[
+                "truncate",
+                isDir ? "font-semibold" : "",
+                isButton
+                  ? "text-[13px] text-[var(--el-text-color-secondary)]"
+                  : ""
+              ]}
+            >
+              {row.menuName}
+            </span>
+            {isDir && childCount > 0 ? (
+              <span class="shrink-0 rounded-full bg-[var(--el-fill-color)] px-1.5 text-xs leading-5 text-[var(--el-text-color-secondary)]">
+                {childCount}
+              </span>
+            ) : null}
+            {!isButton && row.showLink === 0 ? (
+              <el-tag size="small" type="info" effect="plain">
+                隐藏
+              </el-tag>
+            ) : null}
+          </span>
+        );
+      }
+    },
     {
       label: "类型",
       prop: "menuType",
       width: 80,
+      align: "center",
       cellRenderer: ({ row }) => (
         <el-tag
           type={
@@ -63,27 +122,32 @@ export function useMenu() {
       )
     },
     {
-      label: "图标",
-      prop: "icon",
-      width: 70,
-      align: "center",
-      cellRenderer: ({ row }) =>
-        row.icon
-          ? h(IconifyIconOnline, {
-              icon: row.icon,
-              width: "18px",
-              height: "18px"
-            })
-          : ""
+      label: "路由路径",
+      prop: "path",
+      minWidth: 180,
+      align: "left",
+      formatter: ({ path }) => path || "-"
     },
-    { label: "路由路径", prop: "path", minWidth: 160 },
-    { label: "组件路径", prop: "component", minWidth: 180 },
-    { label: "权限标识", prop: "perms", width: 120 },
-    { label: "排序", prop: "rank", width: 70 },
+    {
+      label: "组件路径",
+      prop: "component",
+      minWidth: 200,
+      align: "left",
+      formatter: ({ component }) => component || "-"
+    },
+    {
+      label: "权限标识",
+      prop: "perms",
+      minWidth: 200,
+      align: "left",
+      formatter: ({ perms }) => perms || "-"
+    },
+    { label: "排序", prop: "rank", width: 70, align: "center" },
     {
       label: "状态",
       prop: "status",
       width: 80,
+      align: "center",
       cellRenderer: ({ row }) => (
         <el-tag type={row.status === 1 ? "success" : "danger"} effect="plain">
           {row.status === 1 ? "启用" : "禁用"}
@@ -231,6 +295,7 @@ export function useMenu() {
     exportLoading,
     columns,
     dataList,
+    expandedKeys,
     onSearch,
     exportExcel,
     openDialog,

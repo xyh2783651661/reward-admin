@@ -1,4 +1,4 @@
-﻿import dayjs from "dayjs";
+import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { getErrorMessage } from "@/utils/error";
@@ -164,6 +164,13 @@ export function useSystemConfig() {
       minWidth: 260
     },
     {
+      label: "配置说明",
+      prop: "description",
+      minWidth: 240,
+      showOverflowTooltip: true,
+      formatter: ({ description }) => description || "-"
+    },
+    {
       label: "配置值",
       prop: "configValue",
       minWidth: 260,
@@ -232,14 +239,6 @@ export function useSystemConfig() {
           )}
         </el-tag>
       )
-    },
-    {
-      label: "说明",
-      prop: "description",
-      minWidth: 220,
-      hide: true,
-      showOverflowTooltip: true,
-      formatter: ({ description }) => description || "-"
     },
     {
       label: "更新时间",
