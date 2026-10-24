@@ -5,7 +5,6 @@ import { getTaskLogDetailActionText } from "./status";
 import { PureTableBar } from "@/components/RePureTableBar";
 import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import LogStats from "./components/LogStats.vue";
 
 import AntDesignExceptionOutlined from "~icons/ant-design/exception-outlined";
 import HugeiconsDownload01 from "~icons/hugeicons/download-01";
@@ -19,8 +18,6 @@ const tableRef = ref();
 const {
   form,
   loading,
-  stats,
-  statsLoading,
   columns,
   dataList,
   pagination,
@@ -43,8 +40,6 @@ function handleSearch() {
 
 <template>
   <div class="main">
-    <LogStats :stats="stats" :loading="statsLoading" />
-
     <ReSearchBar
       v-model="form"
       :fields="searchFields"

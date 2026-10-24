@@ -2,10 +2,9 @@ import { ref, reactive, computed } from "vue";
 import { useRoute } from "vue-router";
 import {
   getPublishRecordPage,
-  getPublishRecordDetail,
-  getPublishRecordStats
+  getPublishRecordDetail
 } from "@/api/publish-record";
-import type { PublishRecord, PublishRecordStats } from "@/api/publish-record";
+import type { PublishRecord } from "@/api/publish-record";
 import type { PublishPlatform } from "@/api/publish-package";
 import { getPublishPlatformList as fetchPlatforms } from "@/api/publish-package";
 import type { PaginationProps, TableColumns } from "@pureadmin/table";
@@ -67,10 +66,6 @@ export function usePublishRecord() {
     currentPage: 1,
     background: true
   });
-
-  // ========== 概览统计 ==========
-  const statsLoading = ref(false);
-  const stats = ref<PublishRecordStats | null>(null);
 
   // ========== 详情抽屉 ==========
   const detailVisible = ref(false);
@@ -142,31 +137,8 @@ export function usePublishRecord() {
     }
   }
 
-  /**
-   * 加载概览。
-   *
-   * 与列表分开请求且互不阻塞：概览是全区间统计，列表是当前页，
-   * 任一个失败都不该让另一个也跟着白屏。
-   */
-  async function loadStats() {
-    statsLoading.value = true;
-    try {
-      const [startDate, endDate] = form.dateRange ?? [];
-      const params: Record<string, unknown> = {};
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (form.platformCode) params.platformCode = form.platformCode;
-      const { data } = await getPublishRecordStats(params);
-      stats.value = data ?? null;
-    } catch {
-      stats.value = null;
-    } finally {
-      statsLoading.value = false;
-    }
-  }
-
   async function refreshAll() {
-    await Promise.all([onSearch(), loadStats()]);
+    await onSearch();
   }
 
   function handleSearch() {
@@ -372,15 +344,12 @@ export function usePublishRecord() {
     searchFields,
     form,
     pagination,
-    stats,
-    statsLoading,
     detail,
     detailVisible,
     detailLoading,
     loadPlatforms,
     applyRouteQuery,
     onSearch,
-    loadStats,
     refreshAll,
     handleSearch,
     resetForm,

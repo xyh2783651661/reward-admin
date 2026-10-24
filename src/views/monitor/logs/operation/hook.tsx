@@ -3,10 +3,9 @@ import {
   getOperationLogsList,
   exportOperationLogs,
   getTaskLogsFilterOptions,
-  getTaskLogDetail,
-  getTaskLogStats
+  getTaskLogDetail
 } from "@/api/system";
-import type { TaskLogListItem, TaskLogPageReq, TaskLogStats } from "@/api/logs";
+import type { TaskLogListItem, TaskLogPageReq } from "@/api/logs";
 import { useDownload } from "@/hooks/useDownload";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
@@ -169,8 +168,6 @@ export function useOperationLog(_tableRef?: Ref) {
   const dataList = ref<TaskLogListItem[]>([]);
   const loading = ref(true);
   const optionsLoading = ref(false);
-  const stats = ref<TaskLogStats | null>(null);
-  const statsLoading = ref(false);
   const { loading: exportLoading, runExport } = useDownload();
 
   const filterOptions = ref({
@@ -350,24 +347,9 @@ export function useOperationLog(_tableRef?: Ref) {
     }
   }
 
-  /** 近 7 天状态统计：部分成功独立成项，未执行不再混进失败 */
-  async function loadStats() {
-    statsLoading.value = true;
-    try {
-      const { data } = await getTaskLogStats();
-      stats.value = data ?? null;
-    } catch (error) {
-      console.error("加载任务统计失败", error);
-      stats.value = null;
-    } finally {
-      statsLoading.value = false;
-    }
-  }
-
-  /** 刷新按钮：列表与近 7 天统计一起刷新 */
+  /** 刷新按钮 */
   function refreshAll() {
     onSearch();
-    loadStats();
   }
 
   const resetForm = formEl => {
@@ -430,15 +412,12 @@ export function useOperationLog(_tableRef?: Ref) {
   onMounted(() => {
     onSearch();
     loadFilterOptions();
-    loadStats();
   });
 
   return {
     form,
     loading,
     optionsLoading,
-    stats,
-    statsLoading,
     columns,
     dataList,
     pagination,

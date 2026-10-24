@@ -201,28 +201,6 @@ export function useSysNotice(_tableRef?: Ref) {
     }
   ]);
 
-  const noticeStats = computed(() => {
-    const initialStats = {
-      total: pagination.total,
-      published: 0,
-      draft: 0,
-      withdrawn: 0,
-      urgent: 0
-    };
-
-    return dataList.value.reduce((stats, item) => {
-      const status = toNumber(item.status);
-      const priority = toNumber(item.priority);
-
-      if (status === 1) stats.published += 1;
-      if (status === 0) stats.draft += 1;
-      if (status === 2) stats.withdrawn += 1;
-      if (priority >= 7) stats.urgent += 1;
-
-      return stats;
-    }, initialStats);
-  });
-
   const columns: TableColumnList = [
     {
       label: "公告内容",
@@ -460,7 +438,6 @@ export function useSysNotice(_tableRef?: Ref) {
     columns,
     dataList,
     pagination,
-    noticeStats,
     searchFields,
     onSearch,
     resetForm,
