@@ -5,6 +5,7 @@ import { getTaskLogDetailActionText } from "./status";
 import { PureTableBar } from "@/components/RePureTableBar";
 import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import LogStats from "./components/LogStats.vue";
 
 import AntDesignExceptionOutlined from "~icons/ant-design/exception-outlined";
 import HugeiconsDownload01 from "~icons/hugeicons/download-01";
@@ -18,8 +19,8 @@ const tableRef = ref();
 const {
   form,
   loading,
+  stats,
   statsLoading,
-  statCards,
   columns,
   dataList,
   pagination,
@@ -42,33 +43,7 @@ function handleSearch() {
 
 <template>
   <div class="main">
-    <el-card v-loading="statsLoading" shadow="never" class="mb-4! min-h-[96px]">
-      <div class="flex flex-wrap items-center gap-x-10 gap-y-3">
-        <div v-for="item in statCards" :key="item.key" class="min-w-[84px]">
-          <div class="text-xs text-[var(--el-text-color-secondary)]">
-            {{ item.label }}
-          </div>
-          <div
-            class="text-2xl leading-8 font-medium"
-            :style="{ color: item.color }"
-          >
-            {{ item.value }}
-          </div>
-          <div
-            v-if="item.hint"
-            class="text-xs text-[var(--el-text-color-secondary)]"
-          >
-            {{ item.hint }}
-          </div>
-        </div>
-        <el-text v-if="!statsLoading && !statCards.length" type="info">
-          暂无统计数据
-        </el-text>
-        <el-text type="info" size="small" class="ml-auto">
-          近 7 天 · 全部任务
-        </el-text>
-      </div>
-    </el-card>
+    <LogStats :stats="stats" :loading="statsLoading" />
 
     <ReSearchBar
       v-model="form"
@@ -95,7 +70,7 @@ function handleSearch() {
         <pure-table
           ref="tableRef"
           row-key="id"
-          align-whole="center"
+          align-whole="left"
           showOverflowTooltip
           table-layout="auto"
           :loading="loading"
@@ -133,5 +108,260 @@ function handleSearch() {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
+}
+
+:deep(.log-empty) {
+  color: var(--el-text-color-placeholder);
+}
+
+/* 任务 */
+:deep(.log-task) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+:deep(.log-task__name) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+}
+
+:deep(.log-task__sub) {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.log-task__id) {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+:deep(.log-task__code) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--el-font-family-mono, ui-monospace, monospace);
+  white-space: nowrap;
+}
+
+/* 状态 */
+:deep(.log-status-cell) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+:deep(.log-status-cell__trigger) {
+  padding-left: 2px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.log-status) {
+  --tone: var(--el-color-info);
+
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--tone);
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  border-radius: 999px;
+
+  i {
+    width: 6px;
+    height: 6px;
+    background: var(--tone);
+    border-radius: 50%;
+  }
+
+  &.is-success {
+    --tone: var(--el-color-success);
+  }
+
+  &.is-warning {
+    --tone: var(--el-color-warning);
+  }
+
+  &.is-danger {
+    --tone: var(--el-color-danger);
+  }
+
+  &.is-primary {
+    --tone: var(--el-color-primary);
+  }
+}
+
+/* 迷你进度条（业务结果 / 耗时共用） */
+:deep(.log-bar) {
+  height: 4px;
+  overflow: hidden;
+  background: var(--el-fill-color);
+  border-radius: 999px;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+  }
+
+  .is-success,
+  .is-fast {
+    background: var(--el-color-success);
+  }
+
+  .is-warning,
+  .is-slow {
+    background: var(--el-color-warning);
+  }
+
+  .is-normal {
+    background: var(--el-color-primary);
+  }
+}
+
+/* 业务结果 */
+:deep(.log-counts) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 96px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+:deep(.log-counts__line) {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+
+  b {
+    font-size: 14px;
+    color: var(--el-color-success);
+  }
+
+  span {
+    color: var(--el-text-color-secondary);
+  }
+
+  em {
+    margin-left: auto;
+    font-style: normal;
+    color: var(--el-text-color-secondary);
+  }
+}
+
+:deep(.log-counts__sub) {
+  display: flex;
+  gap: 8px;
+  color: var(--el-text-color-secondary);
+
+  em {
+    font-style: normal;
+  }
+}
+
+:deep(.is-danger) {
+  color: var(--el-color-danger);
+}
+
+/* 步骤 */
+:deep(.log-steps) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+
+  em {
+    margin-left: 6px;
+    font-style: normal;
+  }
+}
+
+:deep(.log-steps__slowest) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+}
+
+/* 耗时 */
+:deep(.log-cost) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 80px;
+}
+
+:deep(.log-cost__text) {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  &.is-fast {
+    color: var(--el-color-success);
+  }
+
+  &.is-normal {
+    color: var(--el-text-color-primary);
+  }
+
+  &.is-slow {
+    color: var(--el-color-warning);
+  }
+}
+
+/* 执行时间 */
+:deep(.log-time) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+:deep(.log-time__end) {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 执行节点 */
+:deep(.log-node) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+:deep(.log-node__host) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.log-node__sub) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
 }
 </style>
