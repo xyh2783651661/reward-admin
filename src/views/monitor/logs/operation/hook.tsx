@@ -20,76 +20,78 @@ import {
   TASK_LOG_STATUS_OPTIONS,
   TASK_LOG_TRIGGER_OPTIONS
 } from "./status";
+import { formatMs } from "./format";
 
-/** 任务名 + 稳定任务码：任务码用于跨环境 / 跨版本定位同一个任务定义 */
-function renderTaskName(row: TaskLogListItem) {
+const EMPTY = <span class="log-empty">-</span>;
+
+/** 任务名 + 记录 ID + 稳定任务码：任务码用于跨环境 / 跨版本定位同一个任务定义 */
+function renderTask(row: TaskLogListItem) {
   return (
-    <div class="flex min-w-0 flex-col leading-tight">
-      <span class="truncate font-medium text-[var(--el-text-color-primary)]">
+    <div class="log-task">
+      <span class="log-task__name" title={row.taskName}>
         {row.taskName || "-"}
       </span>
-      {row.taskCode ? (
-        <span class="truncate text-xs text-[var(--el-text-color-secondary)]">
-          {row.taskCode}
+      <span class="log-task__sub">
+        <span class="log-task__id">#{row.id}</span>
+        {row.taskCode ? (
+          <span class="log-task__code" title={row.taskCode}>
+            {row.taskCode}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
+/** 状态 + 触发方式合并为一列：部分成功 / 超时 / 未获锁等不再折叠成「失败」 */
+function renderStatus(row: TaskLogListItem) {
+  const meta = getTaskLogStatusMeta(row.status, row.success);
+  const trigger = row.triggerType
+    ? getTaskLogTriggerMeta(row.triggerType)
+    : null;
+  return (
+    <div class="log-status-cell">
+      <el-tooltip content={meta.description} placement="top">
+        <span class={["log-status", `is-${meta.tone}`]}>
+          <i />
+          {meta.label}
+        </span>
+      </el-tooltip>
+      {trigger ? (
+        <span class="log-status-cell__trigger" title={trigger.description}>
+          {trigger.label}
         </span>
       ) : null}
     </div>
   );
 }
 
-/** 执行状态：部分成功 / 超时 / 未获锁等不再折叠成「失败」 */
-function renderStatus(row: TaskLogListItem, size?: string) {
-  const meta = getTaskLogStatusMeta(row.status, row.success);
-  return (
-    <el-tooltip content={meta.description} placement="top">
-      <el-tag size={size} type={meta.tag} effect="plain">
-        {meta.label}
-      </el-tag>
-    </el-tooltip>
-  );
-}
-
-/** 触发方式：定时 / 手动 / 重试 / 系统 */
-function renderTrigger(row: TaskLogListItem, size?: string) {
-  if (!row.triggerType) {
-    return <span class="text-[var(--el-text-color-placeholder)]">-</span>;
-  }
-  const meta = getTaskLogTriggerMeta(row.triggerType);
-  return (
-    <el-tooltip content={meta.description} placement="top">
-      <el-tag size={size} type={meta.tag} effect="plain">
-        {meta.label}
-      </el-tag>
-    </el-tooltip>
-  );
-}
-
-/** 业务计数：成功 / 总数，并把失败、跳过单独标色 */
+/** 业务结果：成功 / 总数 + 进度条，失败、跳过单独标色 */
 function renderCounts(row: TaskLogListItem) {
-  if (row.totalCount == null) {
-    return <span class="text-[var(--el-text-color-placeholder)]">-</span>;
-  }
+  if (row.totalCount == null) return EMPTY;
+  const total = row.totalCount;
   const success = row.successCount ?? 0;
   const failed = row.failedCount ?? 0;
   const skipped = row.skippedCount ?? 0;
+  const percent =
+    total > 0 ? Math.min(Math.round((success / total) * 100), 100) : 0;
   return (
-    <div class="flex flex-col gap-0.5 text-xs leading-tight">
-      <span>
-        <span class="font-medium text-[var(--el-color-success)]">
-          {success}
-        </span>
-        <span class="text-[var(--el-text-color-secondary)]">
-          {" "}
-          / {row.totalCount}
-        </span>
-      </span>
+    <div class="log-counts">
+      <div class="log-counts__line">
+        <b>{success}</b>
+        <span>/ {total}</span>
+        <em>{percent}%</em>
+      </div>
+      <div class="log-bar">
+        <span
+          class={failed > 0 ? "is-warning" : "is-success"}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
       {failed > 0 || skipped > 0 ? (
-        <span class="text-[var(--el-text-color-secondary)]">
-          {failed > 0 ? (
-            <span class="text-[var(--el-color-danger)]">失败 {failed}</span>
-          ) : null}
-          {failed > 0 && skipped > 0 ? " · " : null}
-          {skipped > 0 ? `跳过 ${skipped}` : null}
+        <span class="log-counts__sub">
+          {failed > 0 ? <em class="is-danger">失败 {failed}</em> : null}
+          {skipped > 0 ? <em>跳过 {skipped}</em> : null}
         </span>
       ) : null}
     </div>
@@ -99,42 +101,55 @@ function renderCounts(row: TaskLogListItem) {
 /** 步骤统计：失败步骤数直接暴露，避免只看到「有步骤」 */
 function renderSteps(row: TaskLogListItem) {
   const hasStepInfo = (row.stepCount ?? 0) > 0 || row.hasSteps;
-  if (!hasStepInfo) {
-    return <span class="text-[var(--el-text-color-placeholder)]">-</span>;
-  }
+  if (!hasStepInfo) return EMPTY;
   return (
-    <div class="flex flex-col gap-0.5 text-xs leading-tight">
+    <div class="log-steps">
       <span>
         {row.stepCount ? `${row.stepCount} 步` : "有步骤"}
         {row.failedStepCount ? (
-          <span class="ml-1 text-[var(--el-color-danger)]">
-            失败 {row.failedStepCount}
-          </span>
+          <em class="is-danger">失败 {row.failedStepCount}</em>
         ) : null}
       </span>
       {row.slowestStep ? (
-        <span
-          class="truncate text-[var(--el-text-color-secondary)]"
-          title={row.slowestStep}
-        >
+        <span class="log-steps__slowest" title={row.slowestStep}>
           最慢 {row.slowestStep}
+          {row.slowestStepTime != null
+            ? ` · ${formatMs(row.slowestStepTime)}`
+            : ""}
         </span>
       ) : null}
     </div>
   );
 }
 
-/** 执行节点：多实例部署时必须能看出是哪台机器跑的 */
-function renderNode(row: TaskLogListItem) {
-  if (!row.serverHost && !row.serverIp) {
-    return <span class="text-[var(--el-text-color-placeholder)]">-</span>;
+/** 开始 / 结束时间合并：同一天只显示结束的时分秒 */
+function renderTime(row: TaskLogListItem) {
+  if (!row.startTime) return EMPTY;
+  const start = dayjs(row.startTime);
+  const end = row.endTime ? dayjs(row.endTime) : null;
+  let endText = "-";
+  if (end) {
+    endText = end.isSame(start, "day")
+      ? end.format("HH:mm:ss")
+      : end.format("MM-DD HH:mm:ss");
   }
   return (
-    <div class="flex min-w-0 flex-col gap-0.5 text-xs leading-tight">
-      <span class="truncate" title={row.serverHost ?? undefined}>
+    <div class="log-time">
+      <span>{start.format("YYYY-MM-DD HH:mm:ss")}</span>
+      <span class="log-time__end">至 {endText}</span>
+    </div>
+  );
+}
+
+/** 执行节点：多实例部署时必须能看出是哪台机器跑的 */
+function renderNode(row: TaskLogListItem) {
+  if (!row.serverHost && !row.serverIp) return EMPTY;
+  return (
+    <div class="log-node">
+      <span class="log-node__host" title={row.serverHost ?? undefined}>
         {row.serverHost || "-"}
       </span>
-      <span class="truncate text-[var(--el-text-color-secondary)]">
+      <span class="log-node__sub">
         {[row.serverIp, row.environment].filter(Boolean).join(" · ") || "-"}
       </span>
     </div>
@@ -170,83 +185,74 @@ export function useOperationLog(_tableRef?: Ref) {
     background: true
   });
 
+  /** 当前页最大耗时，用于耗时列的相对长度条 */
+  const maxCost = computed(() =>
+    Math.max(1, ...dataList.value.map(row => row.timeCost ?? 0))
+  );
+
+  /** 耗时 + 相对长度条：一眼看出当前页里谁最慢 */
+  function renderCost(row: TaskLogListItem) {
+    if (row.timeCost == null) return EMPTY;
+    const cost = row.timeCost;
+    const level = cost < 5000 ? "fast" : cost < 30000 ? "normal" : "slow";
+    const percent = Math.max(Math.round((cost / maxCost.value) * 100), 3);
+    return (
+      <div class="log-cost">
+        <span class={["log-cost__text", `is-${level}`]}>{formatMs(cost)}</span>
+        <div class="log-bar">
+          <span class={`is-${level}`} style={{ width: `${percent}%` }} />
+        </div>
+      </div>
+    );
+  }
+
   const columns: TableColumnList = [
-    {
-      label: "ID",
-      prop: "id",
-      minWidth: 90
-    },
     {
       label: "任务",
       prop: "taskName",
-      minWidth: 190,
+      minWidth: 220,
       align: "left",
-      cellRenderer: ({ row }) => renderTaskName(row)
+      cellRenderer: ({ row }) => renderTask(row)
     },
     {
-      label: "状态",
+      label: "状态 / 触发",
       prop: "status",
-      minWidth: 110,
-      cellRenderer: ({ row, props }) => renderStatus(row, props.size)
+      minWidth: 120,
+      align: "left",
+      cellRenderer: ({ row }) => renderStatus(row)
     },
     {
-      label: "触发方式",
-      prop: "triggerType",
-      minWidth: 100,
-      cellRenderer: ({ row, props }) => renderTrigger(row, props.size)
-    },
-    {
-      label: "业务计数",
+      label: "业务结果",
       prop: "totalCount",
-      minWidth: 130,
+      minWidth: 140,
+      align: "left",
       cellRenderer: ({ row }) => renderCounts(row)
     },
     {
       label: "步骤",
       prop: "stepCount",
-      minWidth: 120,
+      minWidth: 160,
+      align: "left",
       cellRenderer: ({ row }) => renderSteps(row)
     },
     {
-      label: "执行耗时",
+      label: "耗时",
       prop: "timeCost",
-      minWidth: 110,
-      cellRenderer: ({ row, props }) => {
-        if (row.timeCost == null) {
-          return <span class="text-[var(--el-text-color-placeholder)]">-</span>;
-        }
-        const cost = row.timeCost;
-        return (
-          <el-tag
-            size={props.size}
-            type={
-              cost < 5000 ? "success" : cost < 30000 ? "primary" : "warning"
-            }
-            effect="plain"
-          >
-            {cost < 1000 ? `${cost} ms` : `${(cost / 1000).toFixed(2)} s`}
-          </el-tag>
-        );
-      }
+      minWidth: 120,
+      align: "left",
+      cellRenderer: ({ row }) => renderCost(row)
     },
     {
-      label: "开始时间",
+      label: "执行时间",
       prop: "startTime",
-      minWidth: 170,
-      formatter: row =>
-        row.startTime ? dayjs(row.startTime).format("YYYY-MM-DD HH:mm:ss") : "-"
-    },
-    {
-      label: "结束时间",
-      prop: "endTime",
-      minWidth: 170,
-      formatter: row =>
-        row.endTime ? dayjs(row.endTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+      minWidth: 190,
+      align: "left",
+      cellRenderer: ({ row }) => renderTime(row)
     },
     {
       label: "执行节点",
       prop: "serverHost",
-      minWidth: 180,
+      minWidth: 170,
       align: "left",
       cellRenderer: ({ row }) => renderNode(row)
     },
@@ -254,12 +260,13 @@ export function useOperationLog(_tableRef?: Ref) {
       label: "调用方法",
       prop: "classMethod",
       minWidth: 260,
-      align: "left"
+      align: "left",
+      hide: true
     },
     {
       label: "操作",
       fixed: "right",
-      width: 100,
+      width: 110,
       slot: "operation"
     }
   ];
@@ -269,7 +276,7 @@ export function useOperationLog(_tableRef?: Ref) {
       const { data } = await getTaskLogDetail(row.id);
       const statusMeta = getTaskLogStatusMeta(data.status, data.success);
       addDialog({
-        title: `${data.taskName || "任务"} · ${statusMeta.label}`,
+        title: `任务执行详情 · ${statusMeta.label}`,
         fullscreen: true,
         hideFooter: true,
         contentRenderer: () => Detail,
@@ -357,68 +364,6 @@ export function useOperationLog(_tableRef?: Ref) {
     }
   }
 
-  interface StatCard {
-    key: string;
-    label: string;
-    value: number | string;
-    color?: string;
-    hint?: string;
-  }
-
-  const statCards = computed<StatCard[]>(() => {
-    const s = stats.value;
-    if (!s) return [];
-    const notExecuted =
-      (s.skippedCount ?? 0) + (s.lockedCount ?? 0) + (s.cancelledCount ?? 0);
-    return [
-      {
-        key: "total",
-        label: "近 7 天执行",
-        value: s.totalCount ?? 0
-      },
-      {
-        key: "success",
-        label: "成功",
-        value: s.successCount ?? 0,
-        color: "var(--el-color-success)"
-      },
-      {
-        key: "partial",
-        label: "部分成功",
-        value: s.partialSuccessCount ?? 0,
-        color: "var(--el-color-warning)"
-      },
-      {
-        key: "failure",
-        label: "失败",
-        value: s.failureCount ?? 0,
-        color: "var(--el-color-danger)",
-        hint: `含超时 ${s.timeoutCount ?? 0}`
-      },
-      {
-        key: "notExecuted",
-        label: "未执行",
-        value: notExecuted,
-        color: "var(--el-text-color-secondary)",
-        hint: `跳过 ${s.skippedCount ?? 0} · 未获锁 ${s.lockedCount ?? 0} · 取消 ${s.cancelledCount ?? 0}`
-      },
-      {
-        key: "inProgress",
-        label: "执行中 / 等待",
-        value: (s.runningCount ?? 0) + (s.waitingCount ?? 0),
-        color: "var(--el-color-primary)",
-        hint: `执行中 ${s.runningCount ?? 0} · 等待 ${s.waitingCount ?? 0}`
-      },
-      {
-        key: "rate",
-        label: "执行成功率",
-        value: `${s.executedSuccessRate ?? 0}%`,
-        color: "var(--el-color-primary)",
-        hint: `共执行 ${s.executedCount ?? 0} 次`
-      }
-    ];
-  });
-
   /** 刷新按钮：列表与近 7 天统计一起刷新 */
   function refreshAll() {
     onSearch();
@@ -494,7 +439,6 @@ export function useOperationLog(_tableRef?: Ref) {
     optionsLoading,
     stats,
     statsLoading,
-    statCards,
     columns,
     dataList,
     pagination,
