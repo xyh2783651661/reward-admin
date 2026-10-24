@@ -96,10 +96,19 @@ export const getTaskLogsFilterOptions = () => {
   >("get", "/api/task-logs/filter-options");
 };
 
-/** 获取任务日志选项（成功/失败等） */
+/**
+ * 获取任务日志选项。
+ *
+ * <p>后端目前仍只返回 successOptions（成功/失败二选一）；statusOptions /
+ * triggerTypeOptions 为前向兼容字段，后端补齐后前端可直接使用。</p>
+ */
 export const getTaskLogOptions = () => {
   return http.request<
-    ApiResult<{ successOptions: { value: boolean; label: string }[] }>
+    ApiResult<{
+      successOptions?: { value: boolean; label: string }[];
+      statusOptions?: { value: TaskLogStatus; label: string }[];
+      triggerTypeOptions?: { value: TaskLogTriggerType; label: string }[];
+    }>
   >("get", "/api/task-logs/options");
 };
 
@@ -110,7 +119,87 @@ export const getAccessLogOptions = () => {
   >("get", "/api/access-logs/options");
 };
 
-/** 任务日志详情 */
+/** 定时任务执行状态，与后端 TaskStatus 对齐 */
+export type TaskLogStatus =
+  | "WAITING"
+  | "RUNNING"
+  | "SUCCESS"
+  | "PARTIAL_SUCCESS"
+  | "FAILED"
+  | "TIMEOUT"
+  | "SKIPPED"
+  | "LOCKED"
+  | "CANCELLED";
+
+/** 触发来源，与后端 TriggerType 对齐 */
+export type TaskLogTriggerType = "SCHEDULE" | "MANUAL" | "RETRY" | "SYSTEM";
+
+/** 任务日志分页查询条件（POST /api/task-logs/page） */
+export interface TaskLogPageReq {
+  taskName?: string;
+  classMethod?: string;
+  /** 兼容旧接口的布尔筛选；新页面优先使用 status */
+  success?: boolean;
+  /** 执行状态筛选 */
+  status?: TaskLogStatus | "";
+  /** 触发来源筛选 */
+  triggerType?: TaskLogTriggerType | "";
+  /** [开始时间, 结束时间] */
+  timeRange?: string[];
+  current?: number;
+  size?: number;
+}
+
+/**
+ * 任务日志列表行（后端 lite map，不解析 detail / exception 大字段）。
+ *
+ * <p>状态以 {@link TaskLogStatus} 为准；{@code success} 仅作为历史数据的兜底字段，
+ * 不要再拿它判断「成功/失败」——部分成功在 success 上就是 false。</p>
+ */
+export interface TaskLogListItem {
+  id: number;
+  taskName: string;
+  /** 任务定义编码（稳定身份） */
+  taskCode?: string | null;
+  /** 本次执行唯一 ID */
+  executionId?: string | null;
+  description?: string | null;
+  /** 执行状态（新状态机） */
+  status: TaskLogStatus;
+  /** 触发来源 */
+  triggerType?: TaskLogTriggerType | null;
+  /** 兼容旧看板：仅 SUCCESS 为 true */
+  success: boolean;
+  timeCost?: number | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  classMethod?: string | null;
+  createdTime?: string | null;
+  // 执行环境
+  serverHost?: string | null;
+  serverIp?: string | null;
+  applicationName?: string | null;
+  environment?: string | null;
+  // 业务计数
+  totalCount?: number | null;
+  successCount?: number | null;
+  failedCount?: number | null;
+  skippedCount?: number | null;
+  // 步骤统计
+  stepCount?: number | null;
+  failedStepCount?: number | null;
+  slowestStep?: string | null;
+  slowestStepTime?: number | null;
+  // 锁 / 超时概览
+  lockEnabled?: boolean | null;
+  lockAcquired?: boolean | null;
+  timeout?: boolean | null;
+  /** 是否记录了步骤明细 */
+  hasSteps?: boolean;
+  /** 是否记录了异常信息 */
+  hasException?: boolean;
+}
+
 export interface TaskLogBatchItem {
   id?: string | number | null;
   reason?: string;
@@ -139,33 +228,59 @@ export interface TaskLogStep {
 }
 
 export interface TaskLogException {
-  type: string;
-  message: string;
-  stackTrace: string;
+  type?: string | null;
+  message?: string | null;
+  stackTrace?: string | null;
 }
 
-export interface TaskLogDetail {
-  id: number;
-  taskName: string;
-  description?: string;
-  success: boolean;
-  timeCost?: number;
-  startTime?: string;
-  endTime?: string;
-  classMethod?: string;
-  createdTime?: string;
+/**
+ * 任务日志详情（GET /api/task-logs/{id}）。
+ *
+ * <p>在列表字段基础上补齐执行环境、配置快照、参数（已脱敏）、结果摘要、
+ * 结构化异常、超时与分布式锁信息。</p>
+ */
+export interface TaskLogDetail extends TaskLogListItem {
+  threadName?: string | null;
+  threadId?: number | null;
+  /** 任务配置快照 JSON */
+  configSnapshot?: string | null;
+  /** 任务参数快照 JSON（已脱敏） */
+  paramJson?: string | null;
+  /** 业务结果摘要 JSON */
+  resultSummary?: string | null;
+  // 结构化异常（新列，后端已优先用它们组装 exception）
+  exceptionClass?: string | null;
+  exceptionMessage?: string | null;
+  exceptionStackTrace?: string | null;
+  timeoutMinutes?: number | null;
+  lockKey?: string | null;
+  lockAcquireTime?: string | null;
+  lockReleaseTime?: string | null;
+  parentExecutionId?: string | null;
+  retryCount?: number | null;
   steps: TaskLogStep[];
-  exception?: TaskLogException;
+  /** 兼容旧看板的结构化异常（type/message/stackTrace） */
+  exception?: TaskLogException | null;
 }
 
+/**
+ * 任务统计概览（GET /task-logs/stats，近 7 天）。
+ *
+ * <p>后端已按新状态机拆分：failureCount 只含 FAILED + TIMEOUT，
+ * PARTIAL_SUCCESS 单列，SKIPPED/LOCKED/CANCELLED 归入未执行。</p>
+ */
 export interface TaskLogStatsItem {
   taskName: string;
   totalCount: number;
   successCount: number;
+  failureCount: number;
+  partialSuccessCount: number;
   successRate: number;
   avgTimeCost: number;
   lastTimeCost?: number;
   lastSuccess?: string;
+  lastStatus?: TaskLogStatus;
+  lastStatusLabel?: string;
   lastCreatedTime?: string;
 }
 
@@ -174,14 +289,35 @@ export interface TaskLogTrendPoint {
   total: number;
   success: number;
   failure: number;
+  partialSuccess: number;
+  timeout: number;
+  skipped: number;
+  locked: number;
+  cancelled: number;
+  running: number;
+  waiting: number;
   avgTimeCost: number;
 }
 
 export interface TaskLogStats {
   totalCount: number;
+  /** 干净成功 */
   successCount: number;
+  /** FAILED + TIMEOUT */
   failureCount: number;
+  partialSuccessCount: number;
+  timeoutCount: number;
+  skippedCount: number;
+  lockedCount: number;
+  cancelledCount: number;
+  runningCount: number;
+  waitingCount: number;
+  /** 真正执行过的次数（不含等待 / 跳过 / 未获锁 / 取消） */
+  executedCount: number;
+  /** 干净成功率 = successCount / totalCount */
   successRate: number;
+  /** 执行成功率 = successCount / executedCount */
+  executedSuccessRate: number;
   avgTimeCost: number;
   maxTimeCost: number;
   taskStats: TaskLogStatsItem[];

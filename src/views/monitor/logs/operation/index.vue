@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useOperationLog as useRole } from "./hook";
+import { getTaskLogDetailActionText } from "./status";
 import { PureTableBar } from "@/components/RePureTableBar";
 import ReSearchBar from "@/components/ReSearchBar/index.vue";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -17,11 +18,14 @@ const tableRef = ref();
 const {
   form,
   loading,
+  statsLoading,
+  statCards,
   columns,
   dataList,
   pagination,
   searchFields,
   onSearch,
+  refreshAll,
   resetForm,
   exportExcel,
   exportLoading,
@@ -38,6 +42,34 @@ function handleSearch() {
 
 <template>
   <div class="main">
+    <el-card v-loading="statsLoading" shadow="never" class="mb-4! min-h-[96px]">
+      <div class="flex flex-wrap items-center gap-x-10 gap-y-3">
+        <div v-for="item in statCards" :key="item.key" class="min-w-[84px]">
+          <div class="text-xs text-[var(--el-text-color-secondary)]">
+            {{ item.label }}
+          </div>
+          <div
+            class="text-2xl leading-8 font-medium"
+            :style="{ color: item.color }"
+          >
+            {{ item.value }}
+          </div>
+          <div
+            v-if="item.hint"
+            class="text-xs text-[var(--el-text-color-secondary)]"
+          >
+            {{ item.hint }}
+          </div>
+        </div>
+        <el-text v-if="!statsLoading && !statCards.length" type="info">
+          暂无统计数据
+        </el-text>
+        <el-text type="info" size="small" class="ml-auto">
+          近 7 天 · 全部任务
+        </el-text>
+      </div>
+    </el-card>
+
     <ReSearchBar
       v-model="form"
       :fields="searchFields"
@@ -47,7 +79,7 @@ function handleSearch() {
       @reset="resetForm"
     />
 
-    <PureTableBar title="任务执行日志" :columns="columns" @refresh="onSearch">
+    <PureTableBar title="任务执行日志" :columns="columns" @refresh="refreshAll">
       <template #buttons>
         <el-button
           v-perms="'monitor:operationLog:export'"
@@ -82,7 +114,6 @@ function handleSearch() {
         >
           <template #operation="{ row }">
             <el-button
-              v-if="!row.success || row.hasSteps || row.hasException"
               class="reset-margin outline-hidden!"
               link
               type="primary"
@@ -90,7 +121,7 @@ function handleSearch() {
               :icon="useRenderIcon(AntDesignExceptionOutlined)"
               @click="onDetail(row)"
             >
-              {{ row.success ? "执行详情" : "异常详情" }}
+              {{ getTaskLogDetailActionText(row.status, row.success) }}
             </el-button>
           </template>
         </pure-table>

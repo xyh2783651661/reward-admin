@@ -3,7 +3,13 @@ import { computed, nextTick, ref, watch } from "vue";
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import ReJsonField from "@/components/ReJsonField/index.vue";
-import type { TaskLogDetail, TaskLogStep, TaskLogBatchItem } from "@/api/logs";
+import type {
+  TaskLogDetail,
+  TaskLogStep,
+  TaskLogBatchItem,
+  TaskLogException
+} from "@/api/logs";
+import { getTaskLogStatusMeta, getTaskLogTriggerMeta } from "./status";
 
 const props = defineProps<{
   detail: TaskLogDetail;
@@ -13,8 +19,114 @@ const props = defineProps<{
 
 const steps = computed<TaskLogStep[]>(() => props.detail?.steps ?? []);
 const totalTime = computed(() => props.detail?.timeCost ?? 0);
-const exception = computed(() => props.detail?.exception);
 const failedSteps = computed(() => steps.value.filter(s => !s.success));
+
+/** 状态以 status 为准，历史行才回退到 success */
+const statusCode = computed(
+  () => props.detail?.status || (props.detail?.success ? "SUCCESS" : "FAILED")
+);
+const statusMeta = computed(() =>
+  getTaskLogStatusMeta(statusCode.value, props.detail?.success)
+);
+const triggerMeta = computed(() =>
+  getTaskLogTriggerMeta(props.detail?.triggerType)
+);
+const stepCount = computed(() => props.detail?.stepCount ?? steps.value.length);
+const failedStepCount = computed(
+  () => props.detail?.failedStepCount ?? failedSteps.value.length
+);
+
+/**
+ * 异常信息：优先后端组装好的 exception，缺失时用新列兜底。
+ * 后端已优先读 exceptionClass/Message/StackTrace，这里再兜一层是为了
+ * 兼容只返回新列、没有 exception 对象的旧接口版本。
+ */
+const exception = computed<TaskLogException | null>(() => {
+  const detail = props.detail;
+  if (!detail) return null;
+  const legacy = detail.exception;
+  if (legacy && (legacy.type || legacy.message || legacy.stackTrace)) {
+    return legacy;
+  }
+  if (
+    detail.exceptionClass ||
+    detail.exceptionMessage ||
+    detail.exceptionStackTrace
+  ) {
+    return {
+      type: detail.exceptionClass,
+      message: detail.exceptionMessage,
+      stackTrace: detail.exceptionStackTrace
+    };
+  }
+  return null;
+});
+
+/** 状态说明横幅：部分成功 / 超时 / 未执行等不能只靠一个颜色表达 */
+const statusNotice = computed<{
+  type: "success" | "warning" | "info" | "error";
+  title: string;
+  description: string;
+} | null>(() => {
+  const detail = props.detail;
+  switch (statusCode.value) {
+    case "PARTIAL_SUCCESS":
+      return {
+        type: "warning",
+        title: "部分成功",
+        description: failedStepCount.value
+          ? `任务未抛异常，但有 ${failedStepCount.value} 个步骤失败或业务降级，业务产物可能不完整；请检查失败步骤与业务结果。`
+          : "任务未抛异常，但业务结果被标记为部分成功 / 降级，请检查业务结果与步骤明细。"
+      };
+    case "FAILED":
+      return {
+        type: "error",
+        title: "执行失败",
+        description: "任务因业务或系统异常失败，请查看异常信息与失败步骤。"
+      };
+    case "TIMEOUT":
+      return {
+        type: "error",
+        title: "执行超时",
+        description: detail?.timeoutMinutes
+          ? `任务执行超过 ${detail.timeoutMinutes} 分钟被强制中断，本次结果可能不完整。`
+          : "任务执行超过配置时限被强制中断，本次结果可能不完整。"
+      };
+    case "LOCKED":
+      return {
+        type: "warning",
+        title: "本次未执行",
+        description:
+          "分布式锁被其他实例占用，本次没有真正执行；如需补跑请使用「定时任务补偿」。"
+      };
+    case "SKIPPED":
+      return {
+        type: "info",
+        title: "本次已跳过",
+        description: "业务条件不满足，任务主动跳过，不代表执行异常。"
+      };
+    case "CANCELLED":
+      return {
+        type: "info",
+        title: "本次已取消",
+        description: "任务被主动取消，未产生完整执行结果。"
+      };
+    case "RUNNING":
+      return {
+        type: "info",
+        title: "执行中",
+        description: "任务正在执行，当前记录可能尚未写入最终结果。"
+      };
+    case "WAITING":
+      return {
+        type: "info",
+        title: "等待执行",
+        description: "任务已进入队列，尚未开始执行。"
+      };
+    default:
+      return null;
+  }
+});
 
 /** 瀑布图基准：步骤耗时之和与总耗时取大者，保证条形不越界 */
 const timelineTotal = computed(() => {
@@ -61,6 +173,96 @@ const batchSummary = computed(() => {
     skipped,
     rate: total > 0 ? Math.round((success / total) * 100) : 0
   };
+});
+
+/**
+ * 任务级业务结果：优先使用后端落库的 total/success/failed/skipped 列；
+ * 历史数据没有这些列时退回按步骤汇总的 batchSummary。
+ */
+const hasTaskBusinessCounts = computed(() => {
+  const detail = props.detail;
+  return Boolean(
+    detail &&
+    (detail.totalCount != null ||
+      detail.successCount != null ||
+      detail.failedCount != null ||
+      detail.skippedCount != null)
+  );
+});
+
+const businessSummary = computed(() => {
+  const detail = props.detail;
+  if (!detail) return null;
+  if (!hasTaskBusinessCounts.value) return batchSummary.value;
+  const total = detail.totalCount ?? 0;
+  const success = detail.successCount ?? 0;
+  const failed = detail.failedCount ?? 0;
+  const skipped = detail.skippedCount ?? 0;
+  return {
+    total,
+    success,
+    failed,
+    skipped,
+    rate: total > 0 ? Math.round((success / total) * 100) : 0
+  };
+});
+
+/** 执行载荷：结果摘要 / 脱敏参数 / 配置快照，三者有值才展示 */
+const payloadTabs = computed(() => {
+  const detail = props.detail;
+  const tabs: { name: string; label: string; value: string }[] = [];
+  if (detail?.resultSummary) {
+    tabs.push({
+      name: "result",
+      label: "结果摘要",
+      value: detail.resultSummary
+    });
+  }
+  if (detail?.paramJson) {
+    tabs.push({ name: "params", label: "任务参数", value: detail.paramJson });
+  }
+  if (detail?.configSnapshot) {
+    tabs.push({
+      name: "config",
+      label: "配置快照",
+      value: detail.configSnapshot
+    });
+  }
+  return tabs;
+});
+const payloadTab = ref("");
+watch(
+  payloadTabs,
+  tabs => {
+    if (!tabs.length) {
+      payloadTab.value = "";
+      return;
+    }
+    if (!tabs.some(tab => tab.name === payloadTab.value)) {
+      payloadTab.value = tabs[0].name;
+    }
+  },
+  { immediate: true }
+);
+
+/** 没有步骤时的空态文案要能解释「为什么没有步骤」 */
+const emptyStepsText = computed(() => {
+  switch (statusCode.value) {
+    case "LOCKED":
+      return "本次未执行：分布式锁被其他实例占用";
+    case "SKIPPED":
+      return "本次未执行：业务条件不满足，任务主动跳过";
+    case "CANCELLED":
+      return "本次执行已取消，没有步骤明细";
+    case "TIMEOUT":
+      return "任务超时中断，没有记录到完整步骤";
+    case "WAITING":
+      return "任务尚未开始执行";
+    case "RUNNING":
+      return "任务执行中，步骤明细可能稍后写入";
+    default:
+      return "暂无执行详情";
+  }
 });
 
 /* ==================== 瀑布布局 ==================== */
@@ -357,16 +559,40 @@ const activeStepHasExtra = computed(() => {
     <!-- ========== 概要带 ========== -->
     <header class="summary">
       <div class="summary__main">
-        <span
-          class="status-pill"
-          :class="detail?.success ? 'is-success' : 'is-fail'"
-        >
-          <i class="status-pill__dot" />
-          {{ detail?.success ? "执行成功" : "执行失败" }}
-        </span>
+        <el-tooltip :content="statusMeta.description" placement="top">
+          <span
+            class="status-pill"
+            :class="`is-${statusMeta.tone}`"
+            :title="statusMeta.description"
+          >
+            <i class="status-pill__dot" />
+            {{ statusMeta.label }}
+          </span>
+        </el-tooltip>
         <div class="summary__title">
           <h2>{{ detail?.taskName || "未命名任务" }}</h2>
           <p v-if="detail?.description">{{ detail.description }}</p>
+          <div class="summary__tags">
+            <el-tag
+              v-if="detail?.triggerType"
+              size="small"
+              :type="triggerMeta.tag"
+              effect="plain"
+            >
+              {{ triggerMeta.label }}
+            </el-tag>
+            <el-tag
+              v-if="detail?.environment"
+              size="small"
+              type="info"
+              effect="plain"
+            >
+              {{ detail.environment }}
+            </el-tag>
+            <span v-if="detail?.executionId" class="summary__execution-id">
+              {{ detail.executionId }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -403,24 +629,34 @@ const activeStepHasExtra = computed(() => {
       </dl>
     </header>
 
+    <el-alert
+      v-if="statusNotice"
+      class="status-notice"
+      :type="statusNotice.type"
+      :title="statusNotice.title"
+      :description="statusNotice.description"
+      :closable="false"
+      show-icon
+    />
+
     <!-- ========== 指标条 ========== -->
     <section class="metrics" aria-label="执行指标概览">
       <div class="metric">
         <span class="metric__label">步骤总数</span>
-        <span class="metric__value">{{ steps.length }}</span>
+        <span class="metric__value">{{ stepCount }}</span>
       </div>
 
       <button
         type="button"
         class="metric metric--action"
-        :class="{ 'is-danger': failedSteps.length > 0 }"
-        :disabled="failedSteps.length === 0"
+        :class="{ 'is-danger': failedStepCount > 0 }"
+        :disabled="failedStepCount === 0"
         @click="onlyFailed = true"
       >
         <span class="metric__label">失败步骤</span>
-        <span class="metric__value">{{ failedSteps.length }}</span>
+        <span class="metric__value">{{ failedStepCount }}</span>
         <span class="metric__hint">
-          {{ failedSteps.length > 0 ? "点击只看失败" : "全部步骤成功" }}
+          {{ failedStepCount > 0 ? "点击只看失败" : "全部步骤成功" }}
         </span>
       </button>
 
@@ -444,21 +680,21 @@ const activeStepHasExtra = computed(() => {
         <span class="metric__value metric__value--sm">
           {{ formatMs(avgCost) }}
         </span>
-        <span class="metric__hint">共 {{ steps.length }} 步</span>
+        <span class="metric__hint">共 {{ stepCount }} 步</span>
       </div>
 
-      <div v-if="batchSummary" class="metric">
-        <span class="metric__label">批处理成功率</span>
+      <div v-if="businessSummary" class="metric">
+        <span class="metric__label">业务成功率</span>
         <span class="metric__value metric__value--sm">
-          {{ batchSummary.rate }}%
+          {{ businessSummary.rate }}%
         </span>
         <span class="metric__hint">
-          {{ batchSummary.success }}/{{ batchSummary.total }}
-          <template v-if="batchSummary.failed">
-            · 失败 {{ batchSummary.failed }}
+          {{ businessSummary.success }}/{{ businessSummary.total }}
+          <template v-if="businessSummary.failed">
+            · 失败 {{ businessSummary.failed }}
           </template>
-          <template v-if="batchSummary.skipped">
-            · 跳过 {{ batchSummary.skipped }}
+          <template v-if="businessSummary.skipped">
+            · 跳过 {{ businessSummary.skipped }}
           </template>
         </span>
       </div>
@@ -475,6 +711,226 @@ const activeStepHasExtra = computed(() => {
         </span>
         <span class="metric__hint">点击查看堆栈</span>
       </button>
+    </section>
+
+    <!-- ========== 执行上下文 ========== -->
+    <section class="detail-section" aria-label="执行上下文">
+      <div class="detail-section__head">
+        <h4 class="detail-section__title">执行上下文</h4>
+        <span class="detail-section__hint"> 用于定位执行实例、节点与环境 </span>
+      </div>
+      <el-descriptions :column="3" border size="small">
+        <el-descriptions-item label="任务编码">
+          <span class="mono">{{ detail?.taskCode || "-" }}</span>
+          <el-button
+            v-if="detail?.taskCode"
+            link
+            type="primary"
+            size="small"
+            @click="copyText(detail.taskCode, '任务编码')"
+          >
+            复制
+          </el-button>
+        </el-descriptions-item>
+        <el-descriptions-item label="执行 ID">
+          <span class="mono">{{ detail?.executionId || "-" }}</span>
+          <el-button
+            v-if="detail?.executionId"
+            link
+            type="primary"
+            size="small"
+            @click="copyText(detail.executionId, '执行 ID')"
+          >
+            复制
+          </el-button>
+        </el-descriptions-item>
+        <el-descriptions-item label="触发方式">
+          <el-tag
+            v-if="detail?.triggerType"
+            size="small"
+            :type="triggerMeta.tag"
+            effect="plain"
+          >
+            {{ triggerMeta.label }}
+          </el-tag>
+          <span v-else>-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="运行环境">
+          {{ detail?.environment || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="应用名">
+          {{ detail?.applicationName || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="执行节点">
+          {{ detail?.serverHost || "-" }}
+          <span v-if="detail?.serverIp" class="muted">
+            · {{ detail.serverIp }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="执行线程">
+          {{ detail?.threadName || "-" }}
+          <span v-if="detail?.threadId" class="muted">
+            (#{{ detail.threadId }})
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">
+          {{ formatTime(detail?.createdTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="重试次数">
+          {{ detail?.retryCount ?? 0 }}
+          <span v-if="detail?.parentExecutionId" class="muted">
+            · 父执行 {{ detail.parentExecutionId }}
+          </span>
+        </el-descriptions-item>
+      </el-descriptions>
+    </section>
+
+    <!-- ========== 超时与锁 ========== -->
+    <section
+      v-if="
+        detail?.lockEnabled || detail?.timeout || detail?.timeoutMinutes != null
+      "
+      class="detail-section"
+      aria-label="超时与分布式锁"
+    >
+      <div class="detail-section__head">
+        <h4 class="detail-section__title">超时与分布式锁</h4>
+        <span class="detail-section__hint"
+          >影响「为什么没执行 / 为什么中断」</span
+        >
+      </div>
+      <el-descriptions :column="3" border size="small">
+        <el-descriptions-item label="超时配置">
+          {{
+            detail?.timeoutMinutes ? `${detail.timeoutMinutes} 分钟` : "未启用"
+          }}
+        </el-descriptions-item>
+        <el-descriptions-item label="是否超时">
+          <el-tag
+            size="small"
+            :type="detail?.timeout ? 'danger' : 'success'"
+            effect="plain"
+          >
+            {{ detail?.timeout ? "是" : "否" }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="分布式锁">
+          {{ detail?.lockEnabled ? "已启用" : "未启用" }}
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail?.lockEnabled" label="锁 Key">
+          <span class="mono">{{ detail?.lockKey || "-" }}</span>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail?.lockEnabled" label="是否抢到锁">
+          <el-tag
+            size="small"
+            :type="detail?.lockAcquired ? 'success' : 'warning'"
+            effect="plain"
+          >
+            {{ detail?.lockAcquired ? "已获得" : "未获得" }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail?.lockEnabled" label="抢锁 / 释放">
+          {{ formatTime(detail?.lockAcquireTime) }} /
+          {{ formatTime(detail?.lockReleaseTime) }}
+        </el-descriptions-item>
+      </el-descriptions>
+    </section>
+
+    <!-- ========== 业务结果 ========== -->
+    <section
+      v-if="businessSummary"
+      class="detail-section"
+      aria-label="业务结果"
+    >
+      <div class="detail-section__head">
+        <h4 class="detail-section__title">业务结果</h4>
+        <span class="detail-section__hint">
+          {{
+            hasTaskBusinessCounts
+              ? "任务级计数（来自结果摘要）"
+              : "按步骤批处理汇总"
+          }}
+        </span>
+      </div>
+      <div class="batch-grid result-grid">
+        <div class="batch-cell">
+          <span class="batch-cell__label">总数</span>
+          <span class="batch-cell__value">{{ businessSummary.total }}</span>
+        </div>
+        <div class="batch-cell">
+          <span class="batch-cell__label">成功</span>
+          <span class="batch-cell__value is-success">
+            {{ businessSummary.success }}
+          </span>
+        </div>
+        <div class="batch-cell">
+          <span class="batch-cell__label">失败</span>
+          <span
+            class="batch-cell__value"
+            :class="{ 'is-fail': businessSummary.failed > 0 }"
+          >
+            {{ businessSummary.failed }}
+          </span>
+        </div>
+        <div class="batch-cell">
+          <span class="batch-cell__label">跳过</span>
+          <span class="batch-cell__value is-muted">
+            {{ businessSummary.skipped }}
+          </span>
+        </div>
+        <div class="batch-cell">
+          <span class="batch-cell__label">成功率</span>
+          <span class="batch-cell__value is-primary">
+            {{ businessSummary.rate }}%
+          </span>
+        </div>
+      </div>
+      <el-progress
+        :percentage="businessSummary.rate"
+        :stroke-width="6"
+        :show-text="false"
+        :color="businessSummary.failed > 0 ? '#e6a23c' : '#67c23a'"
+      />
+    </section>
+
+    <!-- ========== 配置 / 参数 / 结果摘要 ========== -->
+    <section
+      v-if="payloadTabs.length > 0"
+      class="detail-section"
+      aria-label="配置与结果"
+    >
+      <div class="detail-section__head">
+        <h4 class="detail-section__title">配置与结果</h4>
+        <span class="detail-section__hint"> 参数已脱敏；JSON 可展开查看 </span>
+      </div>
+      <el-tabs v-model="payloadTab">
+        <el-tab-pane
+          v-for="tab in payloadTabs"
+          :key="tab.name"
+          :label="tab.label"
+          :name="tab.name"
+        >
+          <div class="payload-block">
+            <div class="payload-block__bar">
+              <span>{{ tab.label }}</span>
+              <el-button
+                link
+                type="primary"
+                size="small"
+                @click="copyText(tab.value, tab.label)"
+              >
+                复制
+              </el-button>
+            </div>
+            <ReJsonField
+              :model-value="tab.value"
+              readonly
+              :deep="2"
+              max-height="260px"
+            />
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </section>
 
     <!-- ========== 主体：瀑布列表 + 步骤详情 ========== -->
@@ -819,7 +1275,7 @@ const activeStepHasExtra = computed(() => {
 
     <el-empty
       v-if="steps.length === 0 && !exception"
-      description="暂无执行详情"
+      :description="emptyStepsText"
     />
   </div>
 </template>
@@ -905,9 +1361,24 @@ const activeStepHasExtra = computed(() => {
     background: var(--el-color-success-light-9);
   }
 
-  &.is-fail {
+  &.is-warning {
+    color: var(--el-color-warning);
+    background: var(--el-color-warning-light-9);
+  }
+
+  &.is-danger {
     color: var(--el-color-danger);
     background: var(--el-color-danger-light-9);
+  }
+
+  &.is-primary {
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+  }
+
+  &.is-info {
+    color: var(--el-color-info);
+    background: var(--el-color-info-light-9);
   }
 }
 
@@ -935,6 +1406,23 @@ const activeStepHasExtra = computed(() => {
     line-height: 1.5;
     color: var(--el-text-color-secondary);
   }
+}
+
+.summary__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.summary__execution-id {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--el-font-family-mono, monospace);
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
 }
 
 .summary__facts {
@@ -984,6 +1472,67 @@ const activeStepHasExtra = computed(() => {
     color: var(--el-color-primary);
     white-space: nowrap;
   }
+}
+
+.status-notice {
+  margin: 0;
+}
+
+/* ========== 上下文 / 业务结果 / 载荷 ========== */
+.detail-section {
+  padding: 12px 16px;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+}
+
+.detail-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.detail-section__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.detail-section__hint {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+}
+
+.mono {
+  font-family: var(--el-font-family-mono, monospace);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.muted {
+  color: var(--el-text-color-secondary);
+}
+
+.result-grid {
+  margin-bottom: 10px;
+}
+
+.payload-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payload-block__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 /* ========== 指标条 ========== */
