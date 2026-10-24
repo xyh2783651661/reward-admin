@@ -1,4 +1,4 @@
-﻿import { computed, h, onMounted, reactive, ref } from "vue";
+import { computed, h, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
 import {
@@ -39,13 +39,6 @@ export function useTaskCompensation() {
         (t.description ?? "").toLowerCase().includes(kw)
     );
   });
-
-  /** 顶部概览，由列表自身聚合，不额外请求 stats 接口 */
-  const stats = computed(() => ({
-    total: taskList.value.length,
-    compensable: taskList.value.filter(t => t.compensable).length,
-    withDeps: taskList.value.filter(t => t.dependsOn?.length > 0).length
-  }));
 
   const columns: TableColumnList = [
     {
@@ -241,7 +234,6 @@ export function useTaskCompensation() {
     keyword,
     taskList,
     filteredList,
-    stats,
     columns,
     onSearch,
     openTriggerDialog

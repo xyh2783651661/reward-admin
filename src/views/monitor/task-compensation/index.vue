@@ -13,47 +13,12 @@ defineOptions({
 
 const tableRef = ref();
 
-const {
-  loading,
-  keyword,
-  filteredList,
-  stats,
-  columns,
-  onSearch,
-  openTriggerDialog
-} = useTaskCompensation();
+const { loading, keyword, filteredList, columns, onSearch, openTriggerDialog } =
+  useTaskCompensation();
 </script>
 
 <template>
   <div class="main">
-    <el-card shadow="never" class="mb-4!">
-      <div class="flex flex-wrap items-center gap-x-10 gap-y-3">
-        <div>
-          <div class="text-xs text-[var(--el-text-color-secondary)]">
-            可补偿任务
-          </div>
-          <div class="text-2xl leading-8 font-medium">{{ stats.total }}</div>
-        </div>
-        <div>
-          <div class="text-xs text-[var(--el-text-color-secondary)]">
-            允许手动触发
-          </div>
-          <div class="text-2xl leading-8 font-medium">
-            {{ stats.compensable }}
-          </div>
-        </div>
-        <div>
-          <div class="text-xs text-[var(--el-text-color-secondary)]">
-            含前置依赖
-          </div>
-          <div class="text-2xl leading-8 font-medium">{{ stats.withDeps }}</div>
-        </div>
-        <el-text type="info" size="small" class="ml-auto">
-          任务码由后端 @TaskGuard 注解驱动，新增任务无需改动前端
-        </el-text>
-      </div>
-    </el-card>
-
     <PureTableBar title="定时任务补偿" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-input
