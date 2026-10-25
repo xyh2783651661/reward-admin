@@ -44,6 +44,7 @@ ID、编号、JSON、代码统一使用 `font-family: var(--ra-font-mono)`。
 - 列表页：`ReSearchBar`（搜索区）+ `PureTableBar`（工具栏 + 列设置）+ `pure-table`，分页使用 `RA_PAGINATION`，数据由 `useCrudTable` 或页面 hook 管理。
 - 搜索字段宽度统一用 `SearchField.width`（`sm / md / lg`），不要在页面内覆盖 EP 宽度。
 - 状态开关统一 `ReStatusSwitch`，确认 / 失败回滚由组件处理。
+- 只读的二值状态统一 `ReStatusTag`：`preset="enable"`（启用 / 禁用）或 `preset="result"`（成功 / 失败），正向为 success 色，反向为 danger 色，文字始终可见，不只靠颜色区分。多值业务状态仍用各模块的 meta 映射 + `el-tag`。
 - 卡片统一 `PanelCard`。
 
 ## 6. 状态反馈

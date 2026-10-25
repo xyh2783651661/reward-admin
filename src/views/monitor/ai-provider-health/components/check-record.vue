@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
 import { ReSelect } from "@/components/ReSelect";
 import { onMounted, ref, computed } from "vue";
 import {
@@ -245,13 +246,11 @@ onMounted(() => {
             }}
           </el-descriptions-item>
           <el-descriptions-item label="结果">
-            <el-tag
+            <ReStatusTag
+              :active="drawerItem.status === 'SUCCESS'"
+              preset="result"
               size="small"
-              :type="drawerItem.status === 'SUCCESS' ? 'success' : 'danger'"
-              effect="plain"
-            >
-              {{ drawerItem.status === "SUCCESS" ? "成功" : "失败" }}
-            </el-tag>
+            />
           </el-descriptions-item>
           <el-descriptions-item label="故障原因">
             {{

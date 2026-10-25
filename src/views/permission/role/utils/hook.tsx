@@ -1,3 +1,4 @@
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
 import { getErrorMessage } from "@/utils/error";
 import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
@@ -52,11 +53,7 @@ export function useRole() {
       label: "状态",
       prop: "status",
       width: 90,
-      cellRenderer: ({ row }) => (
-        <el-tag type={row.status === 1 ? "success" : "danger"} effect="plain">
-          {row.status === 1 ? "启用" : "禁用"}
-        </el-tag>
-      )
+      cellRenderer: ({ row }) => <ReStatusTag active={row.status === 1} />
     },
     { label: "备注", prop: "remark", minWidth: 160 },
     { label: "创建时间", prop: "createdTime", minWidth: 160 },
