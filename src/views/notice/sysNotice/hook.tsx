@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import editForm from "./form.vue";
 import { message } from "@/utils/message";
@@ -330,7 +331,7 @@ export function useSysNotice(_tableRef?: Ref) {
           status: row?.status ?? 0
         }
       },
-      width: "720px",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       sureBtnLoading: true,
       fullscreen: deviceDetection(),

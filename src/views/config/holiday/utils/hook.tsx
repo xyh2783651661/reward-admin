@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
@@ -488,7 +489,7 @@ export function useHolidayConfig() {
         formInline: currentRow,
         formOptions: formOptions.value
       },
-      width: "680px",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

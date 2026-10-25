@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -125,7 +126,7 @@ export function useRole() {
       props: {
         formInline
       },
-      width: "680px",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -190,7 +191,7 @@ export function useRole() {
 
       addDialog({
         title: `分配菜单权限（${row.roleName}）`,
-        width: "900px",
+        width: RA_DIALOG_WIDTH.lg,
         draggable: true,
         fullscreen: deviceDetection(),
         fullscreenIcon: true,

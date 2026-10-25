@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -219,7 +220,7 @@ export function useMenu() {
         formInline,
         menuTree: dataList.value
       },
-      width: "720px",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

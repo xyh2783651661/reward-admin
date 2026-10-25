@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import Detail from "./detail.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -85,7 +86,7 @@ export function useCache(tableRef: Ref) {
     getCacheValue(row.key).then(res => {
       addDialog({
         title: `缓存值 — ${row.key}`,
-        width: "50%",
+        width: RA_DIALOG_WIDTH.lg,
         hideFooter: true,
         contentRenderer: () => Detail,
         props: { data: res.data, cacheKey: row.key }

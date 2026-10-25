@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import { computed, h, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
@@ -152,7 +153,7 @@ export function useTaskCompensation() {
 
     addDialog({
       title: `触发补偿 · ${task.name}`,
-      width: "600px",
+      width: RA_DIALOG_WIDTH.sm,
       props: { task, payload },
       // 用 h 而非组件引用，才能把 update 事件挂上：子组件 emit 回变更，这里合并进 payload
       contentRenderer: () =>

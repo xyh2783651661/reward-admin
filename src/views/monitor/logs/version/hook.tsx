@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import {
   getRewardApkVersionsList,
@@ -191,7 +192,7 @@ export function useVersionLog(_tableRef?: Ref) {
     const formRef = ref();
     addDialog({
       title: "版本发布策略",
-      width: "520px",
+      width: RA_DIALOG_WIDTH.sm,
       contentRenderer: () =>
         h(ReleaseForm, {
           ref: formRef,
