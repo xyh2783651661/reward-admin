@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
@@ -226,7 +227,7 @@ export function useGeoProviderCheckRecord(
         await getGeoProviderDropdownOptions<GeoProviderDropdownOptions>();
       Object.assign(dropdownOptions, data);
     } catch (error) {
-      console.error("加载下拉选项失败", error);
+      message(getErrorMessage(error, "加载下拉选项失败"), { type: "error" });
     }
   }
 

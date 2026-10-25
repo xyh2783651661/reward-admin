@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import { computed, reactive, ref, onMounted } from "vue";
 import { message } from "@/utils/message";
 import {
@@ -148,7 +149,7 @@ export function useGeoProviderStatus() {
         await getGeoProviderStatsOverview<GeoProviderStatsOverview>();
       Object.assign(statsOverview, data);
     } catch (error) {
-      console.error("加载统计概览失败", error);
+      message(getErrorMessage(error, "加载统计概览失败"), { type: "error" });
     }
   }
 
@@ -158,7 +159,7 @@ export function useGeoProviderStatus() {
         await getGeoProviderDropdownOptions<GeoProviderDropdownOptions>();
       Object.assign(dropdownOptions, data);
     } catch (error) {
-      console.error("加载下拉字典失败", error);
+      message(getErrorMessage(error, "加载下拉字典失败"), { type: "error" });
     }
   }
 

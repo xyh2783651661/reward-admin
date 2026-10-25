@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
@@ -157,7 +158,7 @@ export function useMorningGreeting() {
   const { open } = useCrudDialog<FormItemProps>({
     title: "早安问候配置",
     formComponent: editForm,
-    width: "680px",
+    width: RA_DIALOG_WIDTH.md,
     defaultForm: row => ({
       id: row?.id ?? "",
       targetUserId: row?.targetUserId ?? "",

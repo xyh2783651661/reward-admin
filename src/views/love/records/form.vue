@@ -238,7 +238,7 @@ defineExpose({ getRef });
   height: 100px;
   overflow: hidden;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 
   &:hover {
     .media-preview-overlay {
@@ -275,7 +275,7 @@ defineExpose({ getRef });
   height: 100%;
   cursor: pointer;
   border: 1px dashed var(--el-border-color);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
   transition: border-color 0.3s;
 
   &:hover {
@@ -283,20 +283,20 @@ defineExpose({ getRef });
   }
 
   .upload-icon {
-    font-size: 28px;
+    font-size: var(--ra-font-display);
     color: var(--el-text-color-placeholder);
   }
 
   .upload-text {
     margin-top: 8px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-placeholder);
   }
 }
 
 .upload-tip {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 </style>

@@ -113,7 +113,7 @@ async function preview() {
 
   const win = window.open("", "_blank");
   if (!win) {
-    // 原实现直接 return，弹窗被拦截时用户完全无感知
+    // 原实现直接 return，弹窗被拦截时用户完��无感知
     message("浏览器拦截了预览窗口，请允许本站弹窗后重试", { type: "warning" });
     return;
   }
@@ -309,7 +309,7 @@ async function preview() {
   .mail-task-form-section {
     padding: 16px;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 12px;
+    border-radius: var(--ra-radius-lg);
 
     & + .mail-task-form-section {
       margin-top: 14px;
@@ -325,13 +325,13 @@ async function preview() {
     margin-bottom: 14px;
 
     span {
-      font-size: 15px;
+      font-size: var(--ra-font-md);
       font-weight: 600;
       color: var(--el-text-color-primary);
     }
 
     small {
-      font-size: 12px;
+      font-size: var(--ra-font-xs);
       color: var(--el-text-color-secondary);
     }
   }
@@ -369,7 +369,7 @@ async function preview() {
   }
 
   .recipient-field__placeholder {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-placeholder);
   }
 
@@ -382,7 +382,7 @@ async function preview() {
 
   .recipient-field__meta {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 

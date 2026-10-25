@@ -58,7 +58,7 @@ defineProps<{
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
   border-left: 3px solid var(--el-color-primary);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .assign-panel__subject-main {
@@ -70,12 +70,12 @@ defineProps<{
 }
 
 .assign-panel__eyebrow {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
 .assign-panel__name {
-  font-size: 16px;
+  font-size: var(--ra-font-md);
   font-weight: 600;
   color: var(--el-text-color-primary);
   word-break: break-all;
@@ -83,7 +83,7 @@ defineProps<{
 
 .assign-panel__meta {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -95,18 +95,18 @@ defineProps<{
 }
 
 .assign-panel__count-label {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
 .assign-panel__count-value {
-  font-size: 20px;
+  font-size: var(--ra-font-xl);
   line-height: 1.3;
   color: var(--el-color-primary);
 }
 
 .assign-panel__count-value small {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 400;
   color: var(--el-text-color-secondary);
 }

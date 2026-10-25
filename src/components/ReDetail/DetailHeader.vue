@@ -38,7 +38,7 @@ defineProps<{
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
   border-left: 3px solid var(--el-color-primary);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .detail-header__main {
@@ -56,7 +56,7 @@ defineProps<{
 .detail-header__title {
   max-width: 100%;
   margin: 0;
-  font-size: 18px;
+  font-size: var(--ra-font-lg);
   font-weight: 600;
   line-height: 1.4;
   color: var(--el-text-color-primary);
@@ -72,7 +72,7 @@ defineProps<{
 
 .detail-header__subtitle {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.6;
   color: var(--el-text-color-secondary);
   word-break: break-all;

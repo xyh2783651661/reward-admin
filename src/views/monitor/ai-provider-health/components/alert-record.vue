@@ -377,7 +377,7 @@ onMounted(() => {
 }
 
 .detail-nav__pos {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -387,7 +387,7 @@ onMounted(() => {
   align-items: center;
   padding: 10px 12px;
   margin-bottom: 12px;
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 
   &.is-open {
     background: var(--el-color-danger-light-9);
@@ -401,7 +401,7 @@ onMounted(() => {
 }
 
 .alert-banner__status {
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -422,7 +422,7 @@ onMounted(() => {
 
   h4 {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     font-weight: 600;
     color: var(--el-text-color-primary);
   }
@@ -430,7 +430,7 @@ onMounted(() => {
 
 .detail-section__text {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.6;
   color: var(--el-text-color-primary);
   word-break: break-all;
@@ -441,12 +441,12 @@ onMounted(() => {
   padding: 10px 12px;
   margin: 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.7;
   color: var(--el-text-color-primary);
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 </style>

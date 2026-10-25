@@ -62,7 +62,7 @@ defineEmits<{ navigate: [path?: string] }>();
   cursor: pointer;
   background: var(--el-fill-color-extra-light);
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
   transition:
     background 0.2s,
     border-color 0.2s;
@@ -84,8 +84,8 @@ defineEmits<{ navigate: [path?: string] }>();
   place-items: center;
   width: 38px;
   height: 38px;
-  font-size: 19px;
-  border-radius: 10px;
+  font-size: var(--ra-font-lg);
+  border-radius: var(--ra-radius-lg);
 }
 
 .entry__text {
@@ -94,7 +94,7 @@ defineEmits<{ navigate: [path?: string] }>();
   min-width: 0;
 
   strong {
-    font-size: 14px;
+    font-size: var(--ra-font-base);
     font-weight: 600;
     color: var(--el-text-color-primary);
   }
@@ -102,7 +102,7 @@ defineEmits<{ navigate: [path?: string] }>();
   small {
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
     white-space: nowrap;
   }

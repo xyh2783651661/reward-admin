@@ -50,16 +50,16 @@ const isEmpty = (value: DetailSummaryItem["value"]) =>
   padding: 14px 16px;
   background: var(--el-fill-color-blank);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .detail-summary__label {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
 .detail-summary__value {
-  font-size: 18px;
+  font-size: var(--ra-font-lg);
   font-weight: 600;
   line-height: 1.3;
   color: var(--el-text-color-primary);
@@ -76,7 +76,7 @@ const isEmpty = (value: DetailSummaryItem["value"]) =>
 }
 
 .detail-summary__hint {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-placeholder);
 }
 </style>

@@ -39,7 +39,7 @@ defineProps<{ items: CacheInsight[] }>();
   padding: 12px 16px;
   background: color-mix(in srgb, var(--tone) 8%, var(--el-bg-color-overlay));
   border: 1px solid color-mix(in srgb, var(--tone) 25%, transparent);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
 
   &.is-success {
     --tone: var(--el-color-success);
@@ -57,7 +57,7 @@ defineProps<{ items: CacheInsight[] }>();
 .cache-insight__icon {
   flex: 0 0 auto;
   margin-top: 1px;
-  font-size: 18px;
+  font-size: var(--ra-font-lg);
   color: var(--tone);
 }
 
@@ -66,12 +66,12 @@ defineProps<{ items: CacheInsight[] }>();
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.5;
   color: var(--el-text-color-secondary);
 
   strong {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-primary);
   }
 }

@@ -1,3 +1,6 @@
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
+import { getErrorMessage } from "@/utils/error";
+import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
 import pwdForm from "../pwd-form.vue";
 import { message } from "@/utils/message";
@@ -77,11 +80,7 @@ export function useUser() {
       label: "状态",
       prop: "status",
       width: 90,
-      cellRenderer: ({ row }) => (
-        <el-tag type={row.status === 1 ? "success" : "danger"} effect="plain">
-          {row.status === 1 ? "启用" : "禁用"}
-        </el-tag>
-      )
+      cellRenderer: ({ row }) => <ReStatusTag active={row.status === 1} />
     },
     { label: "备注", prop: "remark", minWidth: 120 },
     { label: "创建时间", prop: "createdTime", minWidth: 160 },
@@ -175,7 +174,7 @@ export function useUser() {
         formInline,
         roleOptions: roleOptions.value
       },
-      width: "720px",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -232,7 +231,7 @@ export function useUser() {
     addDialog({
       title: `重置密码（${row.username}）`,
       props: {},
-      width: "480px",
+      width: RA_DIALOG_WIDTH.sm,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -313,7 +312,7 @@ export function useUser() {
       const { data } = await getUserOptions();
       statusOptions.value = data?.statusOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载用户状态选项失败"), { type: "error" });
     }
   }
 

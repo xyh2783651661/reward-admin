@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
@@ -292,7 +293,7 @@ export function usePublishPlatform() {
   const { open } = useCrudDialog<PublishPlatformFormData>({
     title: "发布平台",
     formComponent: PlatformForm,
-    width: "680px",
+    width: RA_DIALOG_WIDTH.md,
     defaultForm: row => normalizeForm(row),
     // 平台代码有唯一索引，先在页面上拦一次，避免把数据库异常直接抛给运营
     buildPayload: data => {

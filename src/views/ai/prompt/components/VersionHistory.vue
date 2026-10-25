@@ -167,10 +167,10 @@ onMounted(load);
   margin: 0;
   overflow: auto;
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   white-space: pre-wrap;
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .mb-3 {

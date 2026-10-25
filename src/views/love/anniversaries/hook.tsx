@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "./form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -120,7 +121,7 @@ export function useAnniversaries(_tableRef?: Ref) {
           status: row?.status ?? 1
         }
       },
-      width: "45%",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

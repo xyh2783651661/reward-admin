@@ -15,3 +15,18 @@ export const RA_PAGINATION: Pick<
   layout: "total, sizes, prev, pager, next, jumper",
   background: true
 };
+
+/**
+ * 项目级统一弹窗宽度。
+ *
+ * - sm：确认类 / 少量字段（重置密码、发布策略、分配角色、触发补偿）
+ * - md：标准新增 / 编辑表单（绝大多数 CRUD 弹窗）
+ * - lg：复杂表单、树形分配、富内容查看（菜单权限、版本历史、缓存值、含媒体的记录）
+ *
+ * 小屏下各弹窗仍通过 `fullscreen: deviceDetection()` 自动全屏。
+ */
+export const RA_DIALOG_WIDTH = {
+  sm: "520px",
+  md: "680px",
+  lg: "960px"
+} as const;

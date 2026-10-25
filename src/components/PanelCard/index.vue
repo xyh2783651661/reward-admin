@@ -64,7 +64,7 @@ defineEmits<{ retry: [] }>();
   min-width: 0;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .panel-card__header {
@@ -77,7 +77,7 @@ defineEmits<{ retry: [] }>();
 
 .panel-card__title h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--ra-font-md);
   font-weight: 600;
   line-height: 1.4;
   color: var(--el-text-color-primary);
@@ -85,7 +85,7 @@ defineEmits<{ retry: [] }>();
 
 .panel-card__title p {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -109,12 +109,12 @@ defineEmits<{ retry: [] }>();
   align-items: center;
   justify-content: center;
   min-height: 120px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 
   > svg,
   > .iconify {
-    font-size: 28px;
+    font-size: var(--ra-font-display);
     opacity: 0.7;
   }
 

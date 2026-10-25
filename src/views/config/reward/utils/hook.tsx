@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
@@ -168,7 +169,7 @@ export function useRewardConfig() {
   const { open } = useCrudDialog<FormItemProps>({
     title: "配置",
     formComponent: editForm,
-    width: "680px",
+    width: RA_DIALOG_WIDTH.md,
     defaultForm: row => ({
       id: row?.id ?? "",
       rewardKey: row?.rewardKey ?? "",

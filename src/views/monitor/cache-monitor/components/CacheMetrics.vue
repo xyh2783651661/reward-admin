@@ -60,7 +60,7 @@ defineProps<{ cards: CacheMetricItem[] }>();
   padding: 18px 20px;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .cache-metric__head {
@@ -70,7 +70,7 @@ defineProps<{ cards: CacheMetricItem[] }>();
 }
 
 .cache-metric__label {
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 }
 
@@ -79,13 +79,13 @@ defineProps<{ cards: CacheMetricItem[] }>();
   place-items: center;
   width: 32px;
   height: 32px;
-  font-size: 18px;
-  border-radius: 10px;
+  font-size: var(--ra-font-lg);
+  border-radius: var(--ra-radius-lg);
 }
 
 .cache-metric__value {
   margin-top: 6px;
-  font-size: 28px;
+  font-size: var(--ra-font-display);
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
   color: var(--el-text-color-primary);
@@ -97,7 +97,7 @@ defineProps<{ cards: CacheMetricItem[] }>();
   margin-top: 12px;
   overflow: hidden;
   background: var(--el-fill-color);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   span {
     display: block;
@@ -111,7 +111,7 @@ defineProps<{ cards: CacheMetricItem[] }>();
   margin: 10px 0 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }

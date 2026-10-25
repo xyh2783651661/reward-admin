@@ -66,7 +66,7 @@ defineExpose({ reveal });
     var(--el-bg-color-overlay)
   );
   border: 1px solid color-mix(in srgb, var(--el-color-danger) 28%, transparent);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .exception-card__head {
@@ -77,7 +77,7 @@ defineExpose({ reveal });
 
   h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--ra-font-md);
     font-weight: 600;
   }
 
@@ -87,10 +87,10 @@ defineExpose({ reveal });
     overflow: hidden;
     text-overflow: ellipsis;
     font-family: var(--el-font-family-mono, ui-monospace, monospace);
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     white-space: nowrap;
     background: color-mix(in srgb, var(--el-color-danger) 12%, transparent);
-    border-radius: 6px;
+    border-radius: var(--ra-radius-md);
   }
 }
 
@@ -100,7 +100,7 @@ defineExpose({ reveal });
 
 .exception-card__message {
   margin: 8px 0 0;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   line-height: 1.7;
   color: var(--el-text-color-primary);
   word-break: break-word;
@@ -111,7 +111,7 @@ defineExpose({ reveal });
   align-items: center;
   justify-content: space-between;
   margin-top: 12px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -121,11 +121,11 @@ defineExpose({ reveal });
   margin: 6px 0 0;
   overflow: auto;
   font-family: var(--el-font-family-mono, ui-monospace, monospace);
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-text-color-regular);
   white-space: pre;
   background: var(--el-fill-color-light);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 </style>

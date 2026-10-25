@@ -84,7 +84,7 @@ const statusIcon = computed(() => {
       var(--el-bg-color-overlay) 70%
     );
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 16px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .hero__main {
@@ -97,16 +97,16 @@ const statusIcon = computed(() => {
   gap: 10px;
   align-items: center;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   color: var(--el-text-color-regular);
 }
 
 .hero__date {
   padding: 2px 8px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 }
 
 .hero__title {
@@ -121,7 +121,7 @@ const statusIcon = computed(() => {
 .hero__desc {
   max-width: 640px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
@@ -139,10 +139,10 @@ const statusIcon = computed(() => {
     gap: 8px;
     align-items: baseline;
     padding: 5px 12px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     background: var(--el-bg-color-overlay);
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 999px;
+    border-radius: var(--ra-radius-pill);
   }
 
   span {
@@ -150,7 +150,7 @@ const statusIcon = computed(() => {
   }
 
   strong {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-primary);
   }
 
@@ -183,22 +183,22 @@ const statusIcon = computed(() => {
   padding: 12px 16px;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
 
   > svg,
   > .iconify {
-    font-size: 30px;
+    font-size: var(--ra-font-display);
     color: var(--el-color-success);
   }
 
   strong {
     display: block;
-    font-size: 15px;
+    font-size: var(--ra-font-md);
     color: var(--el-text-color-primary);
   }
 
   span {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 

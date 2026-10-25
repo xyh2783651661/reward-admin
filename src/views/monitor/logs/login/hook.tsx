@@ -1,4 +1,5 @@
-﻿import dayjs from "dayjs";
+import { getErrorMessage } from "@/utils/error";
+import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { useDownload } from "@/hooks/useDownload";
 import { getMailSendRecordsList, exportMailSendRecords } from "@/api/system";
@@ -327,7 +328,7 @@ export function useMailLog() {
         Object.assign(options, data);
       }
     } catch (e) {
-      console.error("加载邮件状态选项失败", e);
+      message(getErrorMessage(e, "加载邮件状态选项失败"), { type: "error" });
     } finally {
       optionsLoading.value = false;
     }

@@ -817,12 +817,12 @@ onMounted(async () => {
   align-items: center;
 
   .date {
-    font-size: 16px;
+    font-size: var(--ra-font-md);
     font-weight: 500;
   }
 
   .theme {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-secondary);
   }
 }
@@ -854,7 +854,7 @@ onMounted(async () => {
 
 .col-title {
   margin-bottom: 12px;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   font-weight: 500;
   color: var(--el-text-color-primary);
 }
@@ -871,7 +871,7 @@ onMounted(async () => {
   z-index: 2;
   width: 20px;
   height: 20px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 500;
   line-height: 20px;
   color: #fff;
@@ -884,12 +884,12 @@ onMounted(async () => {
   width: 100%;
   height: 160px;
   background: var(--el-fill-color-light);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .image-meta {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 
   .name {
@@ -912,7 +912,7 @@ onMounted(async () => {
 .pane {
   .hint {
     margin-bottom: 14px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-tertiary);
   }
 
@@ -922,7 +922,7 @@ onMounted(async () => {
 
   .field-label {
     margin-bottom: 6px;
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-regular);
   }
 }
@@ -930,19 +930,19 @@ onMounted(async () => {
 .credit-line {
   padding: 8px 10px;
   margin-bottom: 14px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-color-success);
   background: var(--el-color-success-light-9);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .credit-missing {
   padding: 8px 10px;
   margin-bottom: 14px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-tertiary);
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .pane-actions {
@@ -956,7 +956,7 @@ onMounted(async () => {
   padding: 10px 12px;
   margin-bottom: 14px;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .result-head {
@@ -967,7 +967,7 @@ onMounted(async () => {
 }
 
 .result-time {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -977,19 +977,19 @@ onMounted(async () => {
   margin-top: 8px;
   overflow: auto;
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-color-danger);
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-color-danger-light-9);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .result-link {
   display: block;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   word-break: break-all;
 }
 
@@ -1006,7 +1006,7 @@ onMounted(async () => {
 .picker-item {
   cursor: pointer;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
   transition: border-color 0.15s;
 
   &.selected {
@@ -1018,12 +1018,12 @@ onMounted(async () => {
   width: 100%;
   height: 120px;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .picker-meta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
 }
 
 .picker-name {
@@ -1037,7 +1037,7 @@ onMounted(async () => {
   gap: 6px;
   align-items: center;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   color: var(--el-text-color-tertiary);
 
   .warn {
@@ -1051,7 +1051,7 @@ onMounted(async () => {
   justify-content: space-between;
 
   .count {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-secondary);
   }
 }
