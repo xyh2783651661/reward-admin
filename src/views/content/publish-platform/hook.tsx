@@ -1,8 +1,8 @@
-import { computed, h, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessageBox } from "element-plus";
-import { deviceDetection, useCopyToClipboard } from "@pureadmin/utils";
-import { addDialog } from "@/components/ReDialog";
+import { useCopyToClipboard } from "@pureadmin/utils";
+import { useCrudDialog } from "@/hooks/useCrudDialog";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { hasPerms } from "@/utils/auth";
 import { getErrorMessage } from "@/utils/error";
@@ -76,7 +76,6 @@ export function usePublishPlatform() {
 
   const loading = ref(false);
   const dataList = ref<PublishPlatform[]>([]);
-  const formRef = ref();
   const toggling = ref<Record<number, boolean>>({});
 
   const form = reactive({
@@ -100,54 +99,6 @@ export function usePublishPlatform() {
       );
     });
   });
-
-  const stats = computed(() => {
-    const total = dataList.value.length;
-    const enabled = dataList.value.filter(item => item.enabled === 1).length;
-    const image = dataList.value.filter(
-      item => item.assetType === "image"
-    ).length;
-    const video = dataList.value.filter(
-      item => item.assetType === "video"
-    ).length;
-    return {
-      total,
-      enabled,
-      disabled: total - enabled,
-      image,
-      video
-    };
-  });
-
-  const statItems = computed(() => [
-    {
-      key: "total",
-      label: "平台总数",
-      value: stats.value.total
-    },
-    {
-      key: "enabled",
-      label: "启用",
-      value: stats.value.enabled,
-      color: "var(--el-color-success)"
-    },
-    {
-      key: "disabled",
-      label: "停用",
-      value: stats.value.disabled,
-      color: stats.value.disabled > 0 ? "var(--el-color-warning)" : undefined
-    },
-    {
-      key: "image",
-      label: "图文平台",
-      value: stats.value.image
-    },
-    {
-      key: "video",
-      label: "视频平台",
-      value: stats.value.video
-    }
-  ]);
 
   const columns: TableColumnList = [
     {
@@ -335,103 +286,77 @@ export function usePublishPlatform() {
     }
   }
 
-  function openDialog(row?: PublishPlatform) {
-    const isEdit = Boolean(row?.id);
-    const current = normalizeForm(row);
+  /** 新增成功后用于提示去配置提示词的平台信息 */
+  let registered: { name: string; code: string; msg?: string } | null = null;
 
-    addDialog({
-      title: isEdit ? `编辑发布平台 · ${row.name}` : "新增发布平台",
-      width: "760px",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      sureBtnLoading: true,
-      props: {
-        formInline: current,
-        isEdit
-      },
-      contentRenderer: () =>
-        h(PlatformForm, {
-          ref: formRef,
-          formInline: current,
-          isEdit
-        }),
-      beforeSure: async (done, { closeLoading, options }) => {
-        const valid = await formRef.value?.validate();
-        if (!valid) {
-          closeLoading?.();
-          return;
-        }
-
-        const data = options.props.formInline as PublishPlatformFormData;
-        if (isEdit && data.id == null) {
-          closeLoading?.();
-          message("平台 ID 缺失，无法更新", { type: "error" });
-          return;
-        }
-
-        const payload = {
-          code: data.code.trim(),
-          name: data.name.trim(),
-          assetType: data.assetType,
-          titleMax: data.titleMax,
-          contentMin: data.contentMin,
-          contentMax: data.contentMax,
-          tagMin: data.tagMin,
-          tagMax: data.tagMax,
-          toneHint: data.toneHint?.trim() || "",
-          enabled: data.enabled ?? 1,
-          sortOrder: data.sortOrder ?? 0,
-          remark: data.remark?.trim() || ""
-        };
-
-        // 平台代码有唯一索引，先在页面上拦一次，避免把数据库异常直接抛给运营
-        const duplicated = dataList.value.some(
-          item => item.code === payload.code && item.id !== data.id
-        );
-        if (duplicated) {
-          closeLoading?.();
-          message(`平台代码「${payload.code}」已存在`, { type: "warning" });
-          return;
-        }
-
-        try {
-          const result = isEdit
-            ? await updatePublishPlatform(data.id, payload)
-            : await createPublishPlatform(payload);
-
-          if (result.code !== 200) {
-            throw new Error(result.msg || "保存失败");
-          }
-
-          message(isEdit ? "平台配置已更新" : "平台已注册", {
-            type: "success"
-          });
-          done();
-          await onSearch();
-
-          if (!isEdit) {
-            const tip =
-              result.msg ||
-              `平台「${payload.name}」已注册，请确认提示词 ${promptCodeOf(payload.code)} 已配置。`;
-            ElMessageBox.confirm(
-              `${tip}\n\n是否前往「AI 提示词」检查或补充该平台的文案模板？`,
-              "平台已注册",
-              {
-                confirmButtonText: "去配置提示词",
-                cancelButtonText: "稍后处理",
-                type: "success"
-              }
-            )
-              .then(() => router.push("/ai/prompt/index"))
-              .catch(() => {});
-          }
-        } catch (error) {
-          closeLoading?.();
-          message(getErrorMessage(error, "保存失败"), { type: "error" });
-        }
+  const { open } = useCrudDialog<PublishPlatformFormData>({
+    title: "发布平台",
+    formComponent: PlatformForm,
+    width: "680px",
+    defaultForm: row => normalizeForm(row),
+    // 平台代码有唯一索引，先在页面上拦一次，避免把数据库异常直接抛给运营
+    buildPayload: data => {
+      const payload: PublishPlatformFormData = {
+        id: data.id,
+        code: data.code.trim(),
+        name: data.name.trim(),
+        assetType: data.assetType,
+        titleMax: data.titleMax,
+        contentMin: data.contentMin,
+        contentMax: data.contentMax,
+        tagMin: data.tagMin,
+        tagMax: data.tagMax,
+        toneHint: data.toneHint?.trim() || "",
+        enabled: data.enabled ?? 1,
+        sortOrder: data.sortOrder ?? 0,
+        remark: data.remark?.trim() || ""
+      };
+      const duplicated = dataList.value.some(
+        item => item.code === payload.code && item.id !== payload.id
+      );
+      if (duplicated) {
+        throw new Error(`平台代码「${payload.code}」已存在`);
       }
+      return payload;
+    },
+    submitApi: async (payload, mode) => {
+      const { id, ...body } = payload;
+      if (mode === "修改") {
+        if (id == null) throw new Error("平台 ID 缺失，无法更新");
+        return updatePublishPlatform(id, body);
+      }
+      const result = await createPublishPlatform(body);
+      if (result.code === 200) {
+        registered = { name: body.name, code: body.code, msg: result.msg };
+      }
+      return result;
+    }
+  });
+
+  function promptAfterRegister() {
+    if (!registered) return;
+    const { name, code, msg } = registered;
+    registered = null;
+    const tip =
+      msg ||
+      `平台「${name}」已注册，请确认提示词 ${promptCodeOf(code)} 已配置。`;
+    ElMessageBox.confirm(
+      `${tip}\n\n是否前往「AI 提示词」检查或补充该平台的文案模板？`,
+      "平台已注册",
+      {
+        confirmButtonText: "去配置提示词",
+        cancelButtonText: "稍后处理",
+        type: "success"
+      }
+    )
+      .then(() => router.push("/ai/prompt/index"))
+      .catch(() => {});
+  }
+
+  function openDialog(row?: PublishPlatform) {
+    void open(row?.id ? "修改" : "新增", row, async () => {
+      await onSearch();
+      promptAfterRegister();
     });
   }
 
@@ -443,8 +368,6 @@ export function usePublishPlatform() {
     loading,
     dataList,
     filteredList,
-    stats,
-    statItems,
     form,
     searchFields,
     columns,
