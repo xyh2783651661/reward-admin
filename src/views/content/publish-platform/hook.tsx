@@ -101,54 +101,6 @@ export function usePublishPlatform() {
     });
   });
 
-  const stats = computed(() => {
-    const total = dataList.value.length;
-    const enabled = dataList.value.filter(item => item.enabled === 1).length;
-    const image = dataList.value.filter(
-      item => item.assetType === "image"
-    ).length;
-    const video = dataList.value.filter(
-      item => item.assetType === "video"
-    ).length;
-    return {
-      total,
-      enabled,
-      disabled: total - enabled,
-      image,
-      video
-    };
-  });
-
-  const statItems = computed(() => [
-    {
-      key: "total",
-      label: "平台总数",
-      value: stats.value.total
-    },
-    {
-      key: "enabled",
-      label: "启用",
-      value: stats.value.enabled,
-      color: "var(--el-color-success)"
-    },
-    {
-      key: "disabled",
-      label: "停用",
-      value: stats.value.disabled,
-      color: stats.value.disabled > 0 ? "var(--el-color-warning)" : undefined
-    },
-    {
-      key: "image",
-      label: "图文平台",
-      value: stats.value.image
-    },
-    {
-      key: "video",
-      label: "视频平台",
-      value: stats.value.video
-    }
-  ]);
-
   const columns: TableColumnList = [
     {
       label: "平台",
@@ -443,8 +395,6 @@ export function usePublishPlatform() {
     loading,
     dataList,
     filteredList,
-    stats,
-    statItems,
     form,
     searchFields,
     columns,
