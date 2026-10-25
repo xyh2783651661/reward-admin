@@ -87,7 +87,7 @@ function buildPreviewDocument() {
   <title>邮件预览</title>
   <style>
     body { max-width: 680px; margin: 20px auto; padding: 0 16px; font-family: Arial, "Microsoft YaHei", sans-serif; line-height: 1.7; color: #333; }
-    .preview-meta { padding: 12px 14px; margin-bottom: 20px; font-size: var(--ra-font-sm); line-height: 1.9; background: #fafafa; border: 1px solid #eee; border-radius: var(--ra-radius-md); }
+    .preview-meta { padding: 12px 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.9; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
     .preview-meta__label { display: inline-block; width: 52px; color: #999; }
     .preview-empty { color: #999; }
   </style>
@@ -113,7 +113,7 @@ async function preview() {
 
   const win = window.open("", "_blank");
   if (!win) {
-    // 原实现直接 return，弹窗被拦截时用户完全无感知
+    // 原实现直接 return，弹窗被拦截时用户完��无感知
     message("浏览器拦截了预览窗口，请允许本站弹窗后重试", { type: "warning" });
     return;
   }

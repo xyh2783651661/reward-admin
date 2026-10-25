@@ -549,13 +549,13 @@ watch(
 .markdown-body :deep(pre) {
   padding: 14px 16px;
   overflow: auto;
-  background: #0f172a;
+  background: var(--ra-code-bg);
   border-radius: var(--ra-radius-md);
 }
 
 .markdown-body :deep(pre code) {
   padding: 0;
-  color: #e2e8f0;
+  color: var(--ra-code-text);
   background: transparent;
 }
 

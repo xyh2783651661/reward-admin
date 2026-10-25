@@ -128,15 +128,17 @@ export function useVersionLog(_tableRef?: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { data } = await getRewardApkVersionsList(toRaw(form));
-    dataList.value = data.records;
-    pagination.total = data.total;
-    pagination.pageSize = data.size;
-    pagination.currentPage = data.current;
-
-    setTimeout(() => {
+    try {
+      const { data } = await getRewardApkVersionsList(toRaw(form));
+      dataList.value = data.records;
+      pagination.total = data.total;
+      pagination.pageSize = data.size;
+      pagination.currentPage = data.current;
+    } catch (error) {
+      ElMessage.error((error as Error)?.message || "加载版本列表失败");
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   /** 发布为稳定版（全量） */

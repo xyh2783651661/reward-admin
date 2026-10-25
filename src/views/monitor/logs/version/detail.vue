@@ -24,7 +24,7 @@ const wrappedHtml = computed(() => {
       padding: 24px 28px;
       background: #ffffff;
       box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-      border-radius: var(--ra-radius-md);
+      border-radius: 8px;
       font-family: Arial, sans-serif;
       color: #333;
       line-height: 1.6;
@@ -44,7 +44,7 @@ const wrappedHtml = computed(() => {
       margin-top: 20px;
       padding-top: 12px;
       border-top: 1px dashed #ddd;
-      font-size: var(--ra-font-xs);
+      font-size: 12px;
       color: #999;
     }
   </style>
@@ -85,7 +85,8 @@ const wrappedHtml = computed(() => {
 <style scoped>
 .mail-reader {
   padding: 20px;
-  background: #eaecef;
+  background: var(--el-fill-color);
+  border-radius: var(--ra-radius-md);
 }
 
 .mail-iframe {
