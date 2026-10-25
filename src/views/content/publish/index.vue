@@ -23,6 +23,7 @@ import CircleCheck from "~icons/ep/circle-check";
 import DocumentCopy from "~icons/ep/document-copy";
 import Check from "~icons/ep/check";
 import Download from "~icons/ep/download";
+import Setting from "~icons/ep/setting";
 
 defineOptions({
   name: "PublishPackage"
@@ -315,6 +316,13 @@ onMounted(async () => {
 
       <PureTableBar title="发布内容包" :columns="columns" @refresh="onSearch">
         <template #buttons>
+          <el-button
+            v-perms="'publishPackage:index:platform'"
+            :icon="useRenderIcon(Setting)"
+            @click="router.push('/publish/platform')"
+          >
+            平台管理
+          </el-button>
           <el-button
             v-perms="'publishPackage:index:prepare'"
             type="primary"
