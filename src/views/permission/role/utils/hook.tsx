@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
@@ -282,7 +283,7 @@ export function useRole() {
       const { data } = await getRoleOptions();
       statusOptions.value = data?.statusOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载角色状态选项失败"), { type: "error" });
     }
   }
 

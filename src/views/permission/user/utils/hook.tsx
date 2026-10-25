@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
 import pwdForm from "../pwd-form.vue";
@@ -314,7 +315,7 @@ export function useUser() {
       const { data } = await getUserOptions();
       statusOptions.value = data?.statusOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载用户状态选项失败"), { type: "error" });
     }
   }
 

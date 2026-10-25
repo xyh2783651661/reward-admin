@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { message } from "@/utils/message";
+import { getErrorMessage } from "@/utils/error";
 import { ref, watch, computed } from "vue";
 import {
   getLoveRecordDetail,
@@ -100,7 +102,7 @@ async function loadDetail() {
     const { data } = await getLoveRecordDetail<RecordDetail>(props.id);
     detail.value = data;
   } catch (error) {
-    console.error("加载详情失败:", error);
+    message(getErrorMessage(error, "加载恋爱记录详情失败"), { type: "error" });
     detail.value = null;
   } finally {
     loading.value = false;

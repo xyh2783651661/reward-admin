@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import { reactive, ref, toRaw, type Ref, onMounted, computed } from "vue";
 import { addDialog } from "@/components/ReDialog";
@@ -370,7 +371,7 @@ export function useAiCallRecord(_tableRef?: Ref) {
       const { data } = await getAiCallRecordOptions();
       statusOptions.value = data?.statusOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载状态选项失败"), { type: "error" });
     }
   }
 

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import { reactive, ref, computed, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
@@ -230,7 +231,7 @@ export function useCheckRecord(_tableRef?: Ref, initialProvider?: string) {
       const { data } = await getDropdownOptions<DropdownOptions>();
       Object.assign(dropdownOptions, data);
     } catch (error) {
-      console.error("加载下拉选项失败", error);
+      message(getErrorMessage(error, "加载下拉选项失败"), { type: "error" });
     }
   }
 

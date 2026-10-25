@@ -1,4 +1,5 @@
-﻿import dayjs from "dayjs";
+import { getErrorMessage } from "@/utils/error";
+import dayjs from "dayjs";
 import Detail from "./detail.vue";
 import { message } from "@/utils/message";
 import { useDownload } from "@/hooks/useDownload";
@@ -287,7 +288,7 @@ export function useSystemLog(_tableRef: Ref) {
       };
       successOptions.value = successOpts.data?.successOptions ?? [];
     } catch (error) {
-      console.error("加载筛选选项失败", error);
+      message(getErrorMessage(error, "加载筛选选项失败"), { type: "error" });
     } finally {
       optionsLoading.value = false;
     }
