@@ -225,13 +225,13 @@ watch(
 }
 
 :deep(.el-tabs__nav-next) {
-  font-size: 15px;
+  font-size: var(--ra-font-md);
   line-height: 32px;
   box-shadow: -5px 0 5px -6px #ccc;
 }
 
 :deep(.el-tabs__nav-prev) {
-  font-size: 15px;
+  font-size: var(--ra-font-md);
   line-height: 32px;
   box-shadow: 5px 0 5px -6px #ccc;
 }
@@ -242,7 +242,7 @@ watch(
 
 :deep(.el-tabs__item) {
   height: 30px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: normal;
   line-height: 30px;
 }

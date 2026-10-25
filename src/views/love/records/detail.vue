@@ -210,6 +210,6 @@ function handleClose() {
 .love-detail__thumb {
   height: 120px;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 </style>

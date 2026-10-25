@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
 }
 
 .mail-preview__hint {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -326,7 +326,7 @@ onBeforeUnmount(() => {
   min-height: 320px;
   background: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
   box-shadow:
     0 10px 30px rgb(15 23 42 / 8%),
     0 2px 8px rgb(15 23 42 / 6%);

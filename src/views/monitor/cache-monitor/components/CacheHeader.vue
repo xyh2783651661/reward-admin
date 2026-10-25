@@ -72,7 +72,7 @@ defineEmits<{ refresh: [] }>();
 
   h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--ra-font-xl);
     font-weight: 600;
     line-height: 1.3;
     color: var(--el-text-color-primary);
@@ -86,11 +86,11 @@ defineEmits<{ refresh: [] }>();
   gap: 6px;
   align-items: center;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 600;
   color: var(--status-color);
   background: color-mix(in srgb, var(--status-color) 12%, transparent);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   i {
     width: 6px;
@@ -122,7 +122,7 @@ defineEmits<{ refresh: [] }>();
   gap: 4px 18px;
   padding: 0;
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
   list-style: none;
 

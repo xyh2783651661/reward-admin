@@ -228,7 +228,7 @@ const errorFields = computed<DetailFieldItem[]>(() => [
 .mail-attachments__label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 

@@ -141,7 +141,7 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
   border-left: 4px solid var(--tone);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .detail-header__top {
@@ -162,7 +162,7 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 20px;
+    font-size: var(--ra-font-xl);
     font-weight: 600;
     line-height: 1.3;
     color: var(--el-text-color-primary);
@@ -176,11 +176,11 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
   gap: 6px;
   align-items: center;
   padding: 3px 12px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   color: var(--tone);
   background: color-mix(in srgb, var(--tone) 12%, transparent);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   i {
     width: 6px;
@@ -198,7 +198,7 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
 
 .detail-header__desc {
   margin: -6px 0 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 }
 
@@ -209,26 +209,26 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
   margin: 0;
 
   dt {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 
   dd {
     margin: 2px 0 0;
-    font-size: 14px;
+    font-size: var(--ra-font-base);
     font-variant-numeric: tabular-nums;
     color: var(--el-text-color-primary);
     word-break: break-all;
 
     &.is-strong {
-      font-size: 18px;
+      font-size: var(--ra-font-lg);
       font-weight: 600;
     }
   }
 
   .is-muted {
     margin-left: 4px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 }
@@ -241,14 +241,14 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
   margin: 0;
   list-style: none;
   background: var(--el-fill-color-light);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   li {
     display: flex;
     gap: 10px;
     align-items: center;
     min-width: 0;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
   }
 
   span {
@@ -272,17 +272,17 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
   gap: 10px;
   align-items: flex-start;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.6;
   color: var(--el-text-color-regular);
   background: color-mix(in srgb, var(--notice) 10%, transparent);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   > svg,
   > .iconify {
     flex: none;
     margin-top: 3px;
-    font-size: 16px;
+    font-size: var(--ra-font-md);
     color: var(--notice);
   }
 
@@ -294,7 +294,7 @@ const NOTICE_ICONS: Record<TaskLogTone, string> = {
 
 @media (width <= 640px) {
   .detail-header__title h2 {
-    font-size: 17px;
+    font-size: var(--ra-font-lg);
   }
 }
 </style>

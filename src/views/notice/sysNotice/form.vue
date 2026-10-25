@@ -205,7 +205,7 @@ const priorityOptions: SelectOption[] = [
   .notice-form-section {
     padding: 16px;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 12px;
+    border-radius: var(--ra-radius-lg);
 
     & + .notice-form-section {
       margin-top: 14px;
@@ -220,13 +220,13 @@ const priorityOptions: SelectOption[] = [
     margin-bottom: 14px;
 
     span {
-      font-size: 15px;
+      font-size: var(--ra-font-md);
       font-weight: 600;
       color: var(--el-text-color-primary);
     }
 
     small {
-      font-size: 12px;
+      font-size: var(--ra-font-xs);
       color: var(--el-text-color-secondary);
     }
   }
@@ -239,12 +239,12 @@ const priorityOptions: SelectOption[] = [
 
   :deep(.el-checkbox-button__inner) {
     border-left: var(--el-border);
-    border-radius: 8px;
+    border-radius: var(--ra-radius-md);
   }
 
   :deep(.el-checkbox-button:first-child .el-checkbox-button__inner),
   :deep(.el-checkbox-button:last-child .el-checkbox-button__inner) {
-    border-radius: 8px;
+    border-radius: var(--ra-radius-md);
   }
 }
 </style>

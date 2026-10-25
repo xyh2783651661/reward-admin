@@ -104,11 +104,11 @@ const {
     var(--el-fill-color-light)
   );
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
 
   h1 {
     margin: 3px 0 6px;
-    font-size: 22px;
+    font-size: var(--ra-font-2xl);
     color: var(--el-text-color-primary);
   }
 
@@ -119,7 +119,7 @@ const {
 }
 
 .provider-health-hero__eyebrow {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 700;
   color: var(--el-color-primary) !important;
   text-transform: uppercase;
@@ -127,7 +127,7 @@ const {
 }
 
 .provider-context {
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .provider-context-actions {

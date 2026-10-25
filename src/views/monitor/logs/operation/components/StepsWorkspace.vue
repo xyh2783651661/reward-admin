@@ -312,7 +312,7 @@ defineExpose({ focusStep, showFailedOnly });
   padding: 16px;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .toolbar {
@@ -330,7 +330,7 @@ defineExpose({ focusStep, showFailedOnly });
 
 .toolbar__count {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-secondary);
 }
@@ -339,7 +339,7 @@ defineExpose({ focusStep, showFailedOnly });
   display: flex;
   justify-content: space-between;
   padding: 0 12px;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-placeholder);
 }
@@ -359,7 +359,7 @@ defineExpose({ focusStep, showFailedOnly });
   &:focus-visible {
     outline: 2px solid var(--el-color-primary-light-5);
     outline-offset: 2px;
-    border-radius: 10px;
+    border-radius: var(--ra-radius-lg);
   }
 }
 
@@ -374,7 +374,7 @@ defineExpose({ focusStep, showFailedOnly });
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
   transition:
     background 0.15s,
     border-color 0.15s;
@@ -424,7 +424,7 @@ defineExpose({ focusStep, showFailedOnly });
 .step-row__no {
   flex: none;
   min-width: 18px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-placeholder);
 }
@@ -434,7 +434,7 @@ defineExpose({ focusStep, showFailedOnly });
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 500;
   color: var(--el-text-color-primary);
   white-space: nowrap;
@@ -442,7 +442,7 @@ defineExpose({ focusStep, showFailedOnly });
 
 .step-row__cost {
   flex: none;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-secondary);
 }
@@ -452,7 +452,7 @@ defineExpose({ focusStep, showFailedOnly });
   display: block;
   height: 6px;
   background: var(--el-fill-color);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 }
 
 .step-row__bar {
@@ -460,7 +460,7 @@ defineExpose({ focusStep, showFailedOnly });
   top: 0;
   bottom: 0;
   background: var(--el-color-primary-light-3);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   &.is-fail {
     background: var(--el-color-danger);
@@ -474,7 +474,7 @@ defineExpose({ focusStep, showFailedOnly });
 .step-row__sub {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 
@@ -494,7 +494,7 @@ defineExpose({ focusStep, showFailedOnly });
 
 .list-pane__tip {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-placeholder);
 }
 

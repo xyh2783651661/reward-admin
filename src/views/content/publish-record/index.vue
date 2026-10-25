@@ -188,7 +188,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 6px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
 }
 
@@ -198,11 +198,11 @@ onMounted(async () => {
   padding: 10px;
   overflow: auto;
   font-family: var(--el-font-family-monospace, monospace);
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 </style>

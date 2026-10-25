@@ -87,7 +87,7 @@ function buildPreviewDocument() {
   <title>邮件预览</title>
   <style>
     body { max-width: 680px; margin: 20px auto; padding: 0 16px; font-family: Arial, "Microsoft YaHei", sans-serif; line-height: 1.7; color: #333; }
-    .preview-meta { padding: 12px 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.9; background: #fafafa; border: 1px solid #eee; border-radius: 6px; }
+    .preview-meta { padding: 12px 14px; margin-bottom: 20px; font-size: var(--ra-font-sm); line-height: 1.9; background: #fafafa; border: 1px solid #eee; border-radius: var(--ra-radius-md); }
     .preview-meta__label { display: inline-block; width: 52px; color: #999; }
     .preview-empty { color: #999; }
   </style>
@@ -309,7 +309,7 @@ async function preview() {
   .mail-task-form-section {
     padding: 16px;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 12px;
+    border-radius: var(--ra-radius-lg);
 
     & + .mail-task-form-section {
       margin-top: 14px;
@@ -325,13 +325,13 @@ async function preview() {
     margin-bottom: 14px;
 
     span {
-      font-size: 15px;
+      font-size: var(--ra-font-md);
       font-weight: 600;
       color: var(--el-text-color-primary);
     }
 
     small {
-      font-size: 12px;
+      font-size: var(--ra-font-xs);
       color: var(--el-text-color-secondary);
     }
   }
@@ -369,7 +369,7 @@ async function preview() {
   }
 
   .recipient-field__placeholder {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-placeholder);
   }
 
@@ -382,7 +382,7 @@ async function preview() {
 
   .recipient-field__meta {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 

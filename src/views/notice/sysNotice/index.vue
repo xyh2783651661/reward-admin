@@ -170,7 +170,7 @@ function handleSearch() {
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-line-clamp: 2;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 20px;
   color: var(--el-text-color-secondary);
   -webkit-box-orient: vertical;
@@ -183,7 +183,7 @@ function handleSearch() {
   flex-direction: column;
   gap: 5px;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 

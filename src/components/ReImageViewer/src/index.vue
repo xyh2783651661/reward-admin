@@ -74,7 +74,7 @@ function handleClose() {
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   color: var(--el-text-color-placeholder);
   background: var(--el-fill-color-light);
 }

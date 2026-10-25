@@ -1147,7 +1147,7 @@ function uploadStatusLabel(status: string) {
   cursor: pointer;
   background: var(--el-fill-color-lighter);
   border: 2px dashed var(--el-border-color);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
   transition:
     border-color 0.2s,
     background 0.2s;
@@ -1169,13 +1169,13 @@ function uploadStatusLabel(status: string) {
 }
 
 .upload-dropzone__title {
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
 .upload-dropzone__hint {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -1189,7 +1189,7 @@ function uploadStatusLabel(status: string) {
 
 .upload-dialog-progress {
   margin-right: 12px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 }
 
@@ -1204,7 +1204,7 @@ function uploadStatusLabel(status: string) {
   margin-bottom: 12px;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .toolbar__left {
@@ -1246,7 +1246,7 @@ function uploadStatusLabel(status: string) {
   margin-bottom: 12px;
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-7);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
   box-shadow: 0 6px 20px rgb(15 23 42 / 10%);
 }
 
@@ -1259,7 +1259,7 @@ function uploadStatusLabel(status: string) {
 
 .batch-bar__count {
   margin: 0 6px 0 8px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   color: var(--el-color-primary);
 }
@@ -1286,7 +1286,7 @@ function uploadStatusLabel(status: string) {
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .skeleton-card__img {
@@ -1315,14 +1315,14 @@ function uploadStatusLabel(status: string) {
 }
 
 .empty-state__title {
-  font-size: 15px;
+  font-size: var(--ra-font-md);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
 .empty-state__hint {
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 }
 
@@ -1333,7 +1333,7 @@ function uploadStatusLabel(status: string) {
   cursor: pointer;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
@@ -1383,7 +1383,7 @@ function uploadStatusLabel(status: string) {
   cursor: pointer;
   background: rgb(255 255 255 / 90%);
   border: 1.5px solid var(--el-border-color);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
   opacity: 0.55;
   transition:
     opacity 0.15s ease,
@@ -1423,7 +1423,7 @@ function uploadStatusLabel(status: string) {
   cursor: zoom-in;
   background: rgb(255 255 255 / 90%);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
   opacity: 0;
   transition:
     opacity 0.15s ease,
@@ -1460,10 +1460,10 @@ function uploadStatusLabel(status: string) {
   bottom: 6px;
   left: 6px;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   color: #fff;
   background: rgb(0 0 0 / 55%);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .image-card__footer {
@@ -1486,7 +1486,7 @@ function uploadStatusLabel(status: string) {
   flex-wrap: wrap;
   gap: 2px 6px;
   min-width: 0;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -1500,7 +1500,7 @@ function uploadStatusLabel(status: string) {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 500;
   color: var(--el-text-color-primary);
   white-space: nowrap;
@@ -1508,7 +1508,7 @@ function uploadStatusLabel(status: string) {
 
 .image-card__size {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -1533,7 +1533,7 @@ function uploadStatusLabel(status: string) {
   cursor: zoom-in;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   img {
     display: block;
@@ -1562,7 +1562,7 @@ function uploadStatusLabel(status: string) {
   justify-content: center;
   width: 100%;
   padding: 6px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: #fff;
   background: rgb(0 0 0 / 55%);
   opacity: 0;
@@ -1580,7 +1580,7 @@ function uploadStatusLabel(status: string) {
 
 .drawer-body__section-title {
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -1590,9 +1590,9 @@ function uploadStatusLabel(status: string) {
   grid-template-columns: 72px 1fr;
   gap: 8px 12px;
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   background: var(--el-fill-color-extra-light);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 
   dt {
     color: var(--el-text-color-secondary);
@@ -1611,7 +1611,7 @@ function uploadStatusLabel(status: string) {
   border-bottom: none;
 
   :deep(.el-collapse-item__header) {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     font-weight: 600;
     background: transparent;
   }
@@ -1634,7 +1634,7 @@ function uploadStatusLabel(status: string) {
 
 .drawer-body__mono {
   font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   overflow-wrap: anywhere;
 }
 
@@ -1648,7 +1648,7 @@ function uploadStatusLabel(status: string) {
   width: 16px;
   height: 16px;
   border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .drawer-body__copy {
@@ -1676,9 +1676,9 @@ function uploadStatusLabel(status: string) {
   padding: 8px;
   margin: 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 /* 视觉描述 */
@@ -1697,23 +1697,23 @@ function uploadStatusLabel(status: string) {
 .drawer-body__vision-card {
   padding: 10px 12px;
   background: var(--el-fill-color-extra-light);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .drawer-body__vision-lang {
   display: inline-block;
   padding: 1px 8px;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   font-weight: 600;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .drawer-body__vision-text {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.6;
   color: var(--el-text-color-primary);
 }
@@ -1721,7 +1721,7 @@ function uploadStatusLabel(status: string) {
 .drawer-body__vision-meta {
   display: flex;
   gap: 12px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -1730,14 +1730,14 @@ function uploadStatusLabel(status: string) {
   gap: 6px;
   align-items: flex-start;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-color-danger);
   background: var(--el-color-danger-light-9);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .drawer-body__vision-time {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -1763,7 +1763,7 @@ function uploadStatusLabel(status: string) {
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
   box-shadow: 0 12px 36px rgb(15 23 42 / 18%);
 }
 
@@ -1776,7 +1776,7 @@ function uploadStatusLabel(status: string) {
 }
 
 .upload-panel__title {
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
@@ -1820,14 +1820,14 @@ function uploadStatusLabel(status: string) {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-primary);
   white-space: nowrap;
 }
 
 .upload-panel__state {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   color: var(--el-text-color-secondary);
 
   &.is-success {

@@ -93,7 +93,7 @@ const trendIcon: Record<SummaryTrend, string> = {
   text-align: left;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
   transition:
     border-color 0.2s,
     box-shadow 0.2s,
@@ -121,8 +121,8 @@ const trendIcon: Record<SummaryTrend, string> = {
   place-items: center;
   width: 44px;
   height: 44px;
-  font-size: 22px;
-  border-radius: 12px;
+  font-size: var(--ra-font-2xl);
+  border-radius: var(--ra-radius-lg);
 }
 
 .metric__body {
@@ -133,13 +133,13 @@ const trendIcon: Record<SummaryTrend, string> = {
 }
 
 .metric__label {
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 }
 
 .metric__value {
   margin: 2px 0 8px;
-  font-size: 28px;
+  font-size: var(--ra-font-display);
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
   color: var(--el-text-color-primary);
@@ -151,7 +151,7 @@ const trendIcon: Record<SummaryTrend, string> = {
   gap: 8px;
   align-items: center;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
 }
 
 .metric__delta {
@@ -163,7 +163,7 @@ const trendIcon: Record<SummaryTrend, string> = {
   font-weight: 600;
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   &.is-up {
     color: var(--el-color-success);
@@ -192,10 +192,10 @@ const trendIcon: Record<SummaryTrend, string> = {
   justify-content: center;
   padding: 32px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
   background: var(--el-bg-color-overlay);
   border: 1px dashed var(--el-border-color);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 </style>

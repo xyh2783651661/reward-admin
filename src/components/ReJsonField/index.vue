@@ -441,17 +441,17 @@ const maxHeightStyle = computed(() => {
   margin: 0;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-fill-color-lighter);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .rj-readonly {
   padding: 4px 8px;
   background: var(--el-fill-color-lighter);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .rj-compact-tag {
@@ -462,7 +462,7 @@ const maxHeightStyle = computed(() => {
   overflow: hidden;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   cursor: pointer;
 
   &__extra {
@@ -486,7 +486,7 @@ const maxHeightStyle = computed(() => {
   }
 
   &__hint {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
 
     &--ok {
@@ -506,7 +506,7 @@ const maxHeightStyle = computed(() => {
     padding: 8px 10px;
     background: var(--el-fill-color-lighter);
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: 4px;
+    border-radius: var(--ra-radius-sm);
   }
 
   &__actions {
