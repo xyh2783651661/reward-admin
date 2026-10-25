@@ -24,8 +24,6 @@ const {
   searchFields,
   form,
   pagination,
-  stats,
-  statsLoading,
   detail,
   detailVisible,
   detailLoading,
@@ -41,11 +39,6 @@ const {
   formatDateTime,
   formatDuration
 } = usePublishRecord();
-
-/** 失败率配色：只在真的有失败时才用红色，全成功时保持中性灰。 */
-function rateColor(failed: number) {
-  return failed > 0 ? "var(--el-color-danger)" : "var(--el-text-color-primary)";
-}
 
 const { update } = useCopyToClipboard();
 
@@ -66,68 +59,6 @@ onMounted(async () => {
 
 <template>
   <div class="main">
-    <!-- ==================== 概览 ==================== -->
-    <el-card v-loading="statsLoading" shadow="never" class="stats-card">
-      <div class="stats-row">
-        <div class="stat">
-          <div class="stat-label">尝试总数</div>
-          <div class="stat-value">{{ stats?.total ?? 0 }}</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">成功</div>
-          <div class="stat-value success">{{ stats?.successCount ?? 0 }}</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">失败</div>
-          <div
-            class="stat-value"
-            :style="{ color: rateColor(stats?.failedCount ?? 0) }"
-          >
-            {{ stats?.failedCount ?? 0 }}
-          </div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">成功率</div>
-          <div class="stat-value">{{ stats?.successRate ?? 0 }}%</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">平均耗时</div>
-          <div class="stat-value">
-            {{ formatDuration(stats?.avgDurationMs) }}
-          </div>
-        </div>
-      </div>
-
-      <!-- 按平台拆分：同样是失败，集中在某个平台上通常是账号问题，散落各处更像网络抖动 -->
-      <div v-if="stats?.platformStats?.length" class="breakdown">
-        <span class="breakdown-title">按平台</span>
-        <el-tag
-          v-for="p in stats.platformStats"
-          :key="p.platformCode"
-          size="small"
-          :type="p.failedCount > 0 ? 'danger' : 'success'"
-          effect="plain"
-        >
-          {{ p.platformName || p.platformCode }} {{ p.successCount }}成功 /
-          {{ p.failedCount }}失败
-        </el-tag>
-      </div>
-
-      <!-- 按失败原因归类：cookie 失效要重新登录，超时只需重试，两者处置完全不同 -->
-      <div v-if="stats?.errorTypeStats?.length" class="breakdown">
-        <span class="breakdown-title">失败原因</span>
-        <el-tag
-          v-for="e in stats.errorTypeStats"
-          :key="e.errorType"
-          size="small"
-          type="warning"
-          effect="plain"
-        >
-          {{ e.errorTypeLabel }} × {{ e.count }}
-        </el-tag>
-      </div>
-    </el-card>
-
     <!-- ==================== 列表 ==================== -->
     <ReSearchBar
       v-model="form"
@@ -248,46 +179,6 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
-.stats-card {
-  margin-bottom: 12px;
-}
-
-.stats-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 32px;
-}
-
-.stat-label {
-  margin-bottom: 4px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1.2;
-
-  &.success {
-    color: var(--el-color-success);
-  }
-}
-
-.breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.breakdown-title {
-  margin-right: 4px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
 .reason-block {
   margin-top: 16px;
 }

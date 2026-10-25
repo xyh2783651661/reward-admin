@@ -21,7 +21,6 @@ const {
   columns,
   dataList,
   pagination,
-  noticeStats,
   searchFields,
   onSearch,
   resetForm,
@@ -42,34 +41,6 @@ function handleSearch() {
 
 <template>
   <div class="main notice-page">
-    <section class="notice-hero bg-bg_color">
-      <div class="notice-hero-content">
-        <div class="notice-hero-eyebrow">公告通知模块</div>
-        <h2>面向 Web / App 的统一公告管理</h2>
-        <p>
-          对齐公告管理、用户已读和顶部通知中心接口，集中管理发布、撤回、平台可见性与展示周期。
-        </p>
-      </div>
-      <div class="notice-stat-grid">
-        <div class="notice-stat-card is-total">
-          <span>当前页公告</span>
-          <strong>{{ noticeStats.total }}</strong>
-        </div>
-        <div class="notice-stat-card is-published">
-          <span>已发布</span>
-          <strong>{{ noticeStats.published }}</strong>
-        </div>
-        <div class="notice-stat-card is-draft">
-          <span>草稿</span>
-          <strong>{{ noticeStats.draft }}</strong>
-        </div>
-        <div class="notice-stat-card is-urgent">
-          <span>高优先级</span>
-          <strong>{{ noticeStats.urgent }}</strong>
-        </div>
-      </div>
-    </section>
-
     <ReSearchBar
       v-model="form"
       :fields="searchFields"
@@ -173,87 +144,6 @@ function handleSearch() {
 </template>
 
 <style lang="scss" scoped>
-.notice-page {
-  .notice-hero {
-    display: flex;
-    gap: 24px;
-    align-items: stretch;
-    justify-content: space-between;
-    padding: 22px 24px;
-    margin-bottom: 12px;
-    overflow: hidden;
-    border-radius: 12px;
-  }
-
-  .notice-hero-content {
-    max-width: 620px;
-
-    h2 {
-      margin: 6px 0 8px;
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 32px;
-      color: var(--el-text-color-primary);
-    }
-
-    p {
-      margin: 0;
-      font-size: 13px;
-      line-height: 22px;
-      color: var(--el-text-color-secondary);
-    }
-  }
-
-  .notice-hero-eyebrow {
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 18px;
-    color: var(--el-color-primary);
-  }
-
-  .notice-stat-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(92px, 1fr));
-    gap: 10px;
-    min-width: 430px;
-  }
-
-  .notice-stat-card {
-    padding: 14px;
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: 12px;
-
-    span {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 12px;
-      color: var(--el-text-color-secondary);
-    }
-
-    strong {
-      font-size: 24px;
-      line-height: 30px;
-      color: var(--el-text-color-primary);
-    }
-  }
-
-  .is-total {
-    background: var(--el-color-primary-light-9);
-  }
-
-  .is-published {
-    background: var(--el-color-success-light-9);
-  }
-
-  .is-draft {
-    background: var(--el-color-info-light-9);
-  }
-
-  .is-urgent {
-    background: var(--el-color-warning-light-9);
-  }
-}
-
 :deep(.notice-title-cell) {
   min-width: 0;
   text-align: left;
@@ -311,25 +201,5 @@ function handleSearch() {
 
 :deep(.notice-empty-text) {
   color: var(--el-text-color-placeholder);
-}
-
-@media (width <= 1200px) {
-  .notice-page {
-    .notice-hero {
-      flex-direction: column;
-    }
-
-    .notice-stat-grid {
-      min-width: 0;
-    }
-  }
-}
-
-@media (width <= 768px) {
-  .notice-page {
-    .notice-stat-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
 }
 </style>
