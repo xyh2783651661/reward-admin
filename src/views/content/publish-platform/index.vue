@@ -8,6 +8,7 @@ import AddFill from "~icons/ri/add-circle-line";
 import EditPen from "~icons/ep/edit-pen";
 import Delete from "~icons/ep/delete";
 import DocumentCopy from "~icons/ep/document-copy";
+import Tickets from "~icons/ep/tickets";
 
 defineOptions({
   name: "PublishPlatform"
@@ -23,7 +24,8 @@ const {
   resetForm,
   openDialog,
   handleDelete,
-  copyPromptCode
+  copyPromptCode,
+  viewRecords
 } = usePublishPlatform();
 </script>
 
@@ -87,6 +89,16 @@ const {
               @click="copyPromptCode(row)"
             >
               提示词编码
+            </el-button>
+            <el-button
+              class="reset-margin outline-hidden!"
+              link
+              type="primary"
+              :size="size"
+              :icon="useRenderIcon(Tickets)"
+              @click="viewRecords(row.code)"
+            >
+              发布记录
             </el-button>
             <el-popconfirm
               width="300"

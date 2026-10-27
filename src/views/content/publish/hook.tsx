@@ -1,5 +1,9 @@
 import { ref, reactive, computed, onScopeDispose } from "vue";
+import { useRouter } from "vue-router";
 import { message } from "@/utils/message";
+import { getPublishRecordPage } from "@/api/publish-record";
+import type { PublishRecord } from "@/api/publish-record";
+import { gotoPublishRecords } from "../publish-nav";
 import { ElMessageBox } from "element-plus";
 import {
   getPublishPackagePage,
@@ -83,11 +87,74 @@ function formatDateTime(v?: string | null) {
     .slice(0, 19);
 }
 
+/** 某个「包 × 平台」当前的发布结果：最后一次尝试 + 累计失败次数 */
+type PlatformPublishResult = { latest: PublishRecord; failedCount: number };
+
+/** 已进入发布环节的包状态：这些状态下列表才展示各平台发布结果 */
+const PUBLISHABLE_STATUSES = ["ready", "publishing", "published", "failed"];
+
+function isNewerRecord(a: PublishRecord, b: PublishRecord) {
+  if (a.attemptNo !== b.attemptNo) return a.attemptNo > b.attemptNo;
+  return String(a.finishedAt ?? "") > String(b.finishedAt ?? "");
+}
+
 export function usePublishPackage() {
+  const router = useRouter();
+
   // ========== 列表查询 ==========
   const loading = ref(false);
   const dataList = ref<PublishPackage[]>([]);
   const platformMap = ref<Record<string, PublishPlatform>>({});
+
+  /**
+   * 列表页各包的平台发布结果：packageId → platformCode → 结果。
+   *
+   * 内容包本身只有一个包级状态，表达不了「抖音成功、小红书失败」；
+   * 真实结果在发布记录流水里。这里用当前页日期区间一次性拉回来按包聚合，
+   * 避免列表上看到「已发布」却要逐个点进去才知道哪个平台出了问题。
+   */
+  const publishResults = ref<
+    Record<number, Record<string, PlatformPublishResult>>
+  >({});
+  let resultsRequestId = 0;
+
+  async function loadPublishResults(rows: PublishPackage[]) {
+    const requestId = ++resultsRequestId;
+    const dates = rows
+      .map(r => r.bizDate)
+      .filter(Boolean)
+      .sort();
+    if (!dates.length) {
+      publishResults.value = {};
+      return;
+    }
+    try {
+      const { data } = await getPublishRecordPage({
+        startDate: dates[0],
+        endDate: dates[dates.length - 1],
+        current: 1,
+        size: 200
+      });
+      // 翻页或重复刷新时，丢弃过期响应
+      if (requestId !== resultsRequestId) return;
+      const ids = new Set(rows.map(r => r.id));
+      const map: Record<number, Record<string, PlatformPublishResult>> = {};
+      for (const rec of data?.records ?? []) {
+        if (!rec.packageId || !ids.has(rec.packageId)) continue;
+        const bucket = (map[rec.packageId] ??= {});
+        const entry = bucket[rec.platformCode] ?? {
+          latest: rec,
+          failedCount: 0
+        };
+        if (isNewerRecord(rec, entry.latest)) entry.latest = rec;
+        if (rec.status === "failed") entry.failedCount++;
+        bucket[rec.platformCode] = entry;
+      }
+      publishResults.value = map;
+    } catch {
+      if (requestId === resultsRequestId) publishResults.value = {};
+    }
+  }
 
   const form = reactive({
     status: "",
@@ -177,6 +244,79 @@ export function usePublishPackage() {
       )
     },
     {
+      label: "各平台发布",
+      prop: "publishResults",
+      minWidth: 280,
+      cellRenderer: ({ row }) => {
+        const results = publishResults.value[row.id] ?? {};
+        const hasRecord = Object.keys(results).length > 0;
+        if (!hasRecord && !PUBLISHABLE_STATUSES.includes(row.status)) {
+          return (
+            <span class="text-xs text-[var(--el-text-color-secondary)]">
+              未确认，暂未进入发布
+            </span>
+          );
+        }
+        // 启用平台 + 历史上发布过但后来被停用的平台，都要能看到结果
+        const codes = [
+          ...new Set([
+            ...enabledPlatforms().map(p => p.code),
+            ...Object.keys(results)
+          ])
+        ];
+        return (
+          <div class="flex flex-wrap items-center justify-center gap-1">
+            {codes.map(code => {
+              const name = platformMap.value[code]?.name ?? code;
+              const result = results[code];
+              const status = result?.latest.status;
+              const type =
+                status === "success"
+                  ? "success"
+                  : status === "failed"
+                    ? "danger"
+                    : "info";
+              const text =
+                status === "success"
+                  ? "已发布"
+                  : status === "failed"
+                    ? `失败${result.failedCount > 1 ? ` ×${result.failedCount}` : ""}`
+                    : "待发布";
+              const tip =
+                status === "failed"
+                  ? (result.latest.errorTypeLabel ?? "发布失败") +
+                    "：" +
+                    ((result.latest.message ?? "").trim().split("\n")[0] ||
+                      "未上报原因") +
+                    "（点击查看记录）"
+                  : status === "success"
+                    ? "点击查看发布记录"
+                    : "尚无发布记录";
+              return (
+                <el-tooltip content={tip} placement="top">
+                  <el-tag
+                    size="small"
+                    type={type}
+                    effect="plain"
+                    class={status ? "cursor-pointer" : ""}
+                    onClick={() =>
+                      status &&
+                      gotoPublishRecords(router, {
+                        packageId: row.id,
+                        platformCode: code
+                      })
+                    }
+                  >
+                    {name} {text}
+                  </el-tag>
+                </el-tooltip>
+              );
+            })}
+          </div>
+        );
+      }
+    },
+    {
       label: "确认时间",
       prop: "confirmedTime",
       minWidth: 170,
@@ -186,7 +326,7 @@ export function usePublishPackage() {
         </span>
       )
     },
-    { label: "操作", fixed: "right", width: 200, slot: "operation" }
+    { label: "操作", fixed: "right", width: 280, slot: "operation" }
   ]);
 
   const searchFields = computed<SearchField[]>(() => [
@@ -210,9 +350,12 @@ export function usePublishPackage() {
       pagination.total = data?.total ?? 0;
       pagination.pageSize = data?.size ?? form.size;
       pagination.currentPage = data?.current ?? form.current;
+      // 不阻塞列表渲染：发布结果晚到几百毫秒不影响先看到包本身
+      void loadPublishResults(dataList.value);
     } catch {
       dataList.value = [];
       pagination.total = 0;
+      publishResults.value = {};
     } finally {
       loading.value = false;
     }
@@ -660,6 +803,7 @@ export function usePublishPackage() {
     detailLoading,
     platforms,
     platformMap,
+    publishResults,
     enabledPlatforms,
     loadPlatforms,
     openDetail,
