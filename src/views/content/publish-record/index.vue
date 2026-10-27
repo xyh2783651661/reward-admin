@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, watch } from "vue";
+import { useRoute } from "vue-router";
 import {
   usePublishRecord,
   RECORD_STATUS_LABELS,
@@ -27,6 +28,10 @@ const {
   detail,
   detailVisible,
   detailLoading,
+  packageFilterLabel,
+  clearPackageFilter,
+  openPackage,
+  openPlatform,
   loadPlatforms,
   applyRouteQuery,
   onSearch,
@@ -55,6 +60,18 @@ onMounted(async () => {
   applyRouteQuery();
   await refreshAll();
 });
+
+// 页面被缓存复用时不会重新 mounted，从内容包 / 平台页再次跳入靠 query 变化刷新
+const route = useRoute();
+const pagePath = route.path;
+watch(
+  () => route.query,
+  async () => {
+    if (route.path !== pagePath) return;
+    applyRouteQuery();
+    await refreshAll();
+  }
+);
 </script>
 
 <template>
@@ -67,6 +84,19 @@ onMounted(async () => {
       @search="handleSearch"
       @reset="resetForm"
     />
+
+    <el-alert
+      v-if="form.packageId"
+      type="info"
+      :closable="false"
+      class="package-filter"
+    >
+      <span>当前仅显示内容包</span>
+      <el-tag closable size="small" class="mx-2" @close="clearPackageFilter">
+        {{ packageFilterLabel }}
+      </el-tag>
+      <span>的发布记录</span>
+    </el-alert>
 
     <PureTableBar title="发布记录" :columns="columns" @refresh="refreshAll">
       <template #buttons>
@@ -104,10 +134,24 @@ onMounted(async () => {
               {{ detail.bizDate || "-" }}
             </el-descriptions-item>
             <el-descriptions-item label="内容包">
-              {{ detail.packageTitle || `包 ${detail.packageId ?? "-"}` }}
+              <el-link
+                v-if="detail.packageId"
+                type="primary"
+                :underline="false"
+                @click="openPackage(detail)"
+              >
+                {{ detail.packageTitle || `包 ${detail.packageId}` }}
+              </el-link>
+              <span v-else>-</span>
             </el-descriptions-item>
             <el-descriptions-item label="平台">
-              {{ detail.platformName || detail.platformCode }}
+              <el-link
+                type="primary"
+                :underline="false"
+                @click="openPlatform(detail.platformCode)"
+              >
+                {{ detail.platformName || detail.platformCode }}
+              </el-link>
             </el-descriptions-item>
             <el-descriptions-item label="结果">
               <el-tag
@@ -179,6 +223,10 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
+.package-filter {
+  margin-bottom: 12px;
+}
+
 .reason-block {
   margin-top: 16px;
 }

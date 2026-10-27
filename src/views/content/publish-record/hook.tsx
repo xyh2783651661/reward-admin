@@ -1,5 +1,6 @@
 import { ref, reactive, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { gotoPublishPackage, gotoPublishPlatform } from "../publish-nav";
 import {
   getPublishRecordPage,
   getPublishRecordDetail
@@ -73,6 +74,34 @@ export function usePublishRecord() {
   const detail = ref<PublishRecord | null>(null);
 
   const route = useRoute();
+  const router = useRouter();
+
+  /**
+   * 当前是否被某个内容包限定。
+   *
+   * packageId 只来自 URL、搜索栏里没有对应控件，若不显式展示，
+   * 用户会看到一份「莫名其妙变短了」的列表，且无处可清除。
+   */
+  const packageFilterLabel = computed(() => {
+    if (!form.packageId) return "";
+    const hit = dataList.value.find(r => r.packageId === form.packageId);
+    const name = hit?.packageTitle || hit?.bizDate;
+    return name ? `${name}（#${form.packageId}）` : `#${form.packageId}`;
+  });
+
+  function clearPackageFilter() {
+    form.packageId = undefined;
+    handleSearch();
+  }
+
+  function openPackage(row: PublishRecord) {
+    if (!row.packageId) return;
+    gotoPublishPackage(router, row.packageId, row.platformCode);
+  }
+
+  function openPlatform(platformCode?: string) {
+    gotoPublishPlatform(router, platformCode);
+  }
 
   async function loadPlatforms() {
     try {
@@ -92,12 +121,15 @@ export function usePublishRecord() {
   function applyRouteQuery() {
     const q = route.query;
     const packageId = Number(q.packageId);
-    if (Number.isFinite(packageId) && packageId > 0) {
-      form.packageId = packageId;
-    }
-    if (typeof q.platformCode === "string" && q.platformCode) {
-      form.platformCode = q.platformCode;
-    }
+    // 每次都整体覆盖而不是只叠加：页面被缓存复用时，
+    // 上一次带进来的包 / 平台过滤不能残留到这一次的跳转里
+    form.packageId =
+      Number.isFinite(packageId) && packageId > 0 ? packageId : undefined;
+    form.platformCode =
+      typeof q.platformCode === "string" ? q.platformCode : "";
+    form.status = typeof q.status === "string" ? q.status : "";
+    form.errorType = typeof q.errorType === "string" ? q.errorType : "";
+    form.current = 1;
   }
 
   /**
@@ -228,16 +260,31 @@ export function usePublishRecord() {
       label: "内容包",
       prop: "packageTitle",
       minWidth: 140,
-      cellRenderer: ({ row }) => (
-        <span>{row.packageTitle || `包 ${row.packageId ?? "-"}`}</span>
-      )
+      cellRenderer: ({ row }) =>
+        row.packageId ? (
+          <el-link
+            type="primary"
+            underline={false}
+            onClick={() => openPackage(row)}
+          >
+            {row.packageTitle || `包 ${row.packageId}`}
+          </el-link>
+        ) : (
+          <span>-</span>
+        )
     },
     {
       label: "平台",
       prop: "platformName",
       minWidth: 120,
       cellRenderer: ({ row }) => (
-        <span>{row.platformName || row.platformCode}</span>
+        <el-link
+          type="primary"
+          underline={false}
+          onClick={() => openPlatform(row.platformCode)}
+        >
+          {row.platformName || row.platformCode}
+        </el-link>
       )
     },
     {
@@ -328,11 +375,22 @@ export function usePublishRecord() {
     {
       label: "操作",
       fixed: "right",
-      width: 110,
+      width: 170,
       cellRenderer: ({ row }) => (
-        <el-button link type="primary" onClick={() => openDetail(row.id)}>
-          详情
-        </el-button>
+        <div class="flex items-center justify-center gap-2">
+          <el-button link type="primary" onClick={() => openDetail(row.id)}>
+            详情
+          </el-button>
+          {row.packageId ? (
+            <el-button
+              link
+              type={row.status === "failed" ? "danger" : "primary"}
+              onClick={() => openPackage(row)}
+            >
+              {row.status === "failed" ? "去处理" : "查看内容包"}
+            </el-button>
+          ) : null}
+        </div>
       )
     }
   ]);
@@ -347,6 +405,10 @@ export function usePublishRecord() {
     detail,
     detailVisible,
     detailLoading,
+    packageFilterLabel,
+    clearPackageFilter,
+    openPackage,
+    openPlatform,
     loadPlatforms,
     applyRouteQuery,
     onSearch,

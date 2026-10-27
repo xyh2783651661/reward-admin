@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { gotoPublishPlatform, gotoPublishRecords } from "../publish-nav";
 import {
   usePublishPackage,
   PACKAGE_STATUS_LABELS,
@@ -24,6 +25,7 @@ import DocumentCopy from "~icons/ep/document-copy";
 import Check from "~icons/ep/check";
 import Download from "~icons/ep/download";
 import Setting from "~icons/ep/setting";
+import Tickets from "~icons/ep/tickets";
 
 defineOptions({
   name: "PublishPackage"
@@ -31,6 +33,9 @@ defineOptions({
 
 const tableRef = ref();
 const router = useRouter();
+const route = useRoute();
+/** 页面自身路径：keep-alive 下离开后 route 会变成别的页面，据此忽略 */
+const pagePath = route.path;
 
 /**
  * 跳到发布记录页，看该「包 × 平台」的完整尝试历史。
@@ -40,12 +45,9 @@ const router = useRouter();
  * 免得用户过去还要重新筛一遍。
  */
 function gotoPublishHistory(platformCode: string) {
-  router.push({
-    path: "/publish/record",
-    query: {
-      packageId: String(detail.value?.id ?? ""),
-      platformCode
-    }
+  gotoPublishRecords(router, {
+    packageId: detail.value?.id,
+    platformCode
   });
 }
 
@@ -296,10 +298,36 @@ async function viewDetail(id: number) {
   activeTab.value = detailPlatforms.value[0]?.code ?? "";
 }
 
+/**
+ * 从发布记录页点「内容包」跳过来时，query 带着 packageId / platformCode，
+ * 直接进入该包详情并定位到对应平台 Tab，不用再回列表里翻。
+ */
+async function openFromQuery() {
+  const id = Number(route.query.packageId);
+  if (!Number.isFinite(id) || id <= 0) return;
+  await viewDetail(id);
+  const code = route.query.platformCode;
+  if (
+    typeof code === "string" &&
+    detailPlatforms.value.some(p => p.code === code)
+  ) {
+    activeTab.value = code;
+  }
+}
+
 onMounted(async () => {
   await loadPlatforms();
   await onSearch();
+  await openFromQuery();
 });
+
+// 页面被缓存复用时不会再触发 onMounted，靠 query 变化接力
+watch(
+  () => route.query,
+  () => {
+    if (route.path === pagePath) openFromQuery();
+  }
+);
 </script>
 
 <template>
@@ -361,6 +389,16 @@ onMounted(async () => {
                 @click="viewDetail(row.id)"
               >
                 详情
+              </el-button>
+              <el-button
+                class="reset-margin outline-hidden!"
+                link
+                type="primary"
+                :size="size"
+                :icon="useRenderIcon(Tickets)"
+                @click="gotoPublishRecords(router, { packageId: row.id })"
+              >
+                发布记录
               </el-button>
               <el-button
                 v-perms="'publishPackage:index:download'"
@@ -567,6 +605,14 @@ onMounted(async () => {
                     p.contentMax
                   }}
                   字 · 标签 {{ p.tagMin }}–{{ p.tagMax }} 个
+                  <el-button
+                    link
+                    type="primary"
+                    size="small"
+                    @click="gotoPublishPlatform(router, p.code)"
+                  >
+                    调整平台配置
+                  </el-button>
                 </div>
 
                 <div class="field">

@@ -1,6 +1,8 @@
 import { RA_DIALOG_WIDTH } from "@/constants";
-import { computed, onMounted, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { computed, onMounted, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { getPublishRecordStats } from "@/api/publish-record";
+import { gotoPublishRecords } from "../publish-nav";
 import { ElMessageBox } from "element-plus";
 import { useCopyToClipboard } from "@pureadmin/utils";
 import { useCrudDialog } from "@/hooks/useCrudDialog";
@@ -73,6 +75,8 @@ function formatRange(min?: number | null, max?: number | null, unit = "") {
 
 export function usePublishPlatform() {
   const router = useRouter();
+  const route = useRoute();
+  const pagePath = route.path;
   const { update } = useCopyToClipboard();
 
   const loading = ref(false);
@@ -84,6 +88,37 @@ export function usePublishPlatform() {
     assetType: "",
     enabled: ""
   });
+
+  /** 从发布记录页点平台名跳过来时，用 keyword 直接定位到该平台 */
+  function applyRouteQuery() {
+    const keyword = route.query.keyword;
+    if (typeof keyword === "string") form.keyword = keyword;
+  }
+
+  /**
+   * 各平台近 30 天（后端默认区间）的发布结果。
+   * 平台配置（字数、语气、启停）是否合适，要看它实际发布得怎么样，
+   * 所以把成功 / 失败数直接放在配置旁边，并可一键进入对应记录。
+   */
+  const platformStats = ref<
+    Record<string, { total: number; successCount: number; failedCount: number }>
+  >({});
+
+  async function loadStats() {
+    try {
+      const { data } = await getPublishRecordStats();
+      platformStats.value = Object.fromEntries(
+        (data?.platformStats ?? []).map(s => [s.platformCode, s])
+      );
+    } catch {
+      // 统计只是辅助信息，拿不到不影响平台配置本身
+      platformStats.value = {};
+    }
+  }
+
+  function viewRecords(platformCode: string, status?: string) {
+    gotoPublishRecords(router, { platformCode, status });
+  }
 
   const filteredList = computed(() => {
     const keyword = form.keyword.trim().toLowerCase();
@@ -159,6 +194,43 @@ export function usePublishPlatform() {
       formatter: row => row.toneHint || "-"
     },
     {
+      label: "近 30 天发布",
+      prop: "stats",
+      width: 150,
+      cellRenderer: ({ row }) => {
+        const s = platformStats.value[row.code];
+        if (!s?.total) {
+          return (
+            <span class="text-xs text-[var(--el-text-color-secondary)]">
+              暂无发布
+            </span>
+          );
+        }
+        return (
+          <div class="flex items-center justify-center gap-3 text-xs">
+            <el-link
+              type="success"
+              underline={false}
+              onClick={() => viewRecords(row.code, "success")}
+            >
+              成功 {s.successCount}
+            </el-link>
+            {s.failedCount > 0 ? (
+              <el-link
+                type="danger"
+                underline={false}
+                onClick={() => viewRecords(row.code, "failed")}
+              >
+                失败 {s.failedCount}
+              </el-link>
+            ) : (
+              <span class="text-[var(--el-text-color-secondary)]">失败 0</span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       label: "排序",
       prop: "sortOrder",
       width: 80
@@ -195,7 +267,7 @@ export function usePublishPlatform() {
     {
       label: "操作",
       fixed: "right",
-      width: 260,
+      width: 330,
       slot: "operation"
     }
   ];
@@ -238,6 +310,7 @@ export function usePublishPlatform() {
     } finally {
       loading.value = false;
     }
+    void loadStats();
   }
 
   function resetForm(formEl: any) {
@@ -255,6 +328,21 @@ export function usePublishPlatform() {
 
   async function handleToggle(row: PublishPlatform, enabled: boolean) {
     if (toggling.value[row.id]) return;
+    if (!enabled) {
+      try {
+        await ElMessageBox.confirm(
+          `停用后，新建的内容包将不再为「${row.name}」生成文案，也不会出现在待发布列表中；已生成的文案和历史发布记录会保留。`,
+          "停用发布平台",
+          {
+            confirmButtonText: "确认停用",
+            cancelButtonText: "取消",
+            type: "warning"
+          }
+        );
+      } catch {
+        return;
+      }
+    }
     toggling.value[row.id] = true;
     try {
       const result = await setPublishPlatformEnabled(row.id, enabled ? 1 : 0);
@@ -362,8 +450,19 @@ export function usePublishPlatform() {
   }
 
   onMounted(() => {
+    applyRouteQuery();
     onSearch();
   });
+
+  // 页面被缓存复用时不会重新 mounted，从其他页面再次跳入靠 query 变化接力
+  watch(
+    () => route.query,
+    () => {
+      if (route.path !== pagePath) return;
+      form.keyword = "";
+      applyRouteQuery();
+    }
+  );
 
   return {
     loading,
@@ -378,6 +477,7 @@ export function usePublishPlatform() {
     handleDelete,
     handleToggle,
     copyPromptCode,
+    viewRecords,
     formatRange
   };
 }
