@@ -336,6 +336,9 @@ export function usePublishPackage() {
       };
 
       const apply = (state: PublishTaskState) => {
+        // 终态后仍可能有在途的轮询响应或已缓冲的 SSE 事件到达；
+        // 若放行，会在调用方清空 taskState 之后把它重新写回，弹窗便永远关不掉
+        if (settled) return;
         lastEventAt = Date.now();
         taskState.value = state;
         if (isTerminal(state.status)) settle(state);
@@ -403,6 +406,8 @@ export function usePublishPackage() {
       taskState.value = data;
 
       const final = await watchTask(data.taskId);
+      // 任务已终结即关闭进度弹窗，后续刷新详情不应让它继续挡住页面
+      taskState.value = null;
       if (final?.status === "FAILED") {
         message(`生成失败：${final.error ?? "未知错误"}`, { type: "error" });
       } else if (final?.status === "SUCCESS") {
@@ -630,6 +635,7 @@ export function usePublishPackage() {
       taskState.value = data;
 
       const final = await watchTask(data.taskId);
+      taskState.value = null;
       if (final?.status === "FAILED") {
         message(`选图失败：${final.error ?? "未知错误"}`, { type: "error" });
       } else if (final?.packageId) {
