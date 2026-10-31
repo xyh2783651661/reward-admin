@@ -471,10 +471,13 @@ export function usePublishPackage() {
       let polling = false;
 
       // 终态可能从多个入口到达，只允许生效一次
+      // 进度弹窗的显隐完全由 taskState 决定，终结时在此统一清空，
+      // 避免任何调用方忘记清理而让弹窗停在 100% 关不掉
       const settle = (state: PublishTaskState | null) => {
         if (settled) return;
         settled = true;
         stopWatch();
+        taskState.value = null;
         resolve(state);
       };
 

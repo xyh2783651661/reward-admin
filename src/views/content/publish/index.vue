@@ -268,7 +268,7 @@ async function submitCreate() {
   createSubmitting.value = true;
   try {
     // 接口返回的是异步任务而非内容包：选图是一次真实的 LLM 调用。
-    // 包 ID 要等任务跑完从状态里回读，因���这里订阅进度而不是直接取 data.id。
+    // 包 ID 要等任务跑完从状���里回读，因���这里订阅进度而不是直接取 data.id。
     const { data } = await preparePublishPackage({
       date: createDate.value || undefined
     });
@@ -284,6 +284,7 @@ async function submitCreate() {
     }
   } finally {
     createSubmitting.value = false;
+    taskState.value = null;
   }
 }
 
