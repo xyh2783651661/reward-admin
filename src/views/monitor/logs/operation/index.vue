@@ -130,7 +130,7 @@ function handleSearch() {
   display: flex;
   gap: 8px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -157,7 +157,7 @@ function handleSearch() {
 
 :deep(.log-status-cell__trigger) {
   padding-left: 2px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -168,13 +168,13 @@ function handleSearch() {
   gap: 6px;
   align-items: center;
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 600;
   line-height: 20px;
   color: var(--tone);
   white-space: nowrap;
   background: color-mix(in srgb, var(--tone) 12%, transparent);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   i {
     width: 6px;
@@ -205,7 +205,7 @@ function handleSearch() {
   height: 4px;
   overflow: hidden;
   background: var(--el-fill-color);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   span {
     display: block;
@@ -234,7 +234,7 @@ function handleSearch() {
   flex-direction: column;
   gap: 4px;
   min-width: 96px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.3;
 }
 
@@ -245,7 +245,7 @@ function handleSearch() {
   font-variant-numeric: tabular-nums;
 
   b {
-    font-size: 14px;
+    font-size: var(--ra-font-base);
     color: var(--el-color-success);
   }
 
@@ -280,7 +280,7 @@ function handleSearch() {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.4;
 
   em {
@@ -305,7 +305,7 @@ function handleSearch() {
 }
 
 :deep(.log-cost__text) {
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 
@@ -327,13 +327,13 @@ function handleSearch() {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
 }
 
 :deep(.log-time__end) {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -343,7 +343,7 @@ function handleSearch() {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.4;
 }
 

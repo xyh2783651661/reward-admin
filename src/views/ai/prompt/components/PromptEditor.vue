@@ -234,7 +234,7 @@ defineExpose({
   overflow: hidden;
   background: #fff;
   border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
   transition: border-color 0.2s;
 }
 
@@ -256,7 +256,7 @@ defineExpose({
   font-family:
     "JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, "Source Code Pro",
     "Courier New", monospace;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
 }
 
 .prompt-editor :deep(.cm-scroller) {
@@ -273,7 +273,7 @@ defineExpose({
   font-weight: 600;
   color: #d97706;
   background: rgb(217 119 6 / 12%);
-  border-radius: 3px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .prompt-editor :deep(.cm-prompt-freemarker) {

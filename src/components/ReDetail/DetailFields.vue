@@ -76,7 +76,7 @@ const isEmpty = (item: DetailFieldItem) =>
 
 .detail-field__label {
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.5;
   color: var(--el-text-color-secondary);
 }
@@ -87,7 +87,7 @@ const isEmpty = (item: DetailFieldItem) =>
   align-items: flex-start;
   min-width: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   line-height: 1.6;
   color: var(--el-text-color-primary);
   word-break: break-all;
@@ -96,7 +96,7 @@ const isEmpty = (item: DetailFieldItem) =>
 .detail-field__value .is-mono {
   font-family:
     SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
 }
 
 .detail-field__empty {

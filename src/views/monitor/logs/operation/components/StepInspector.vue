@@ -207,7 +207,7 @@ function copyStepJson() {
   padding: 18px 20px;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 14px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .inspector__head {
@@ -225,7 +225,7 @@ function copyStepJson() {
     margin: 2px 0 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 16px;
+    font-size: var(--ra-font-md);
     font-weight: 600;
     color: var(--el-text-color-primary);
     white-space: nowrap;
@@ -233,7 +233,7 @@ function copyStepJson() {
 }
 
 .inspector__no {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -250,13 +250,13 @@ function copyStepJson() {
   margin: 0;
 
   dt {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 
   dd {
     margin: 2px 0 0;
-    font-size: 15px;
+    font-size: var(--ra-font-md);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--el-text-color-primary);
@@ -267,7 +267,7 @@ function copyStepJson() {
   height: 5px;
   overflow: hidden;
   background: var(--el-fill-color);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   span {
     display: block;
@@ -294,12 +294,12 @@ function copyStepJson() {
   gap: 8px;
   align-items: flex-start;
   padding: 10px 14px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.6;
   color: var(--el-color-danger);
   word-break: break-word;
   background: color-mix(in srgb, var(--el-color-danger) 10%, transparent);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   > svg,
   > .iconify {
@@ -318,7 +318,7 @@ function copyStepJson() {
     gap: 8px;
     align-items: baseline;
     margin: 0;
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     font-weight: 600;
     color: var(--el-text-color-primary);
 
@@ -327,7 +327,7 @@ function copyStepJson() {
     }
 
     small {
-      font-size: 12px;
+      font-size: var(--ra-font-xs);
       font-weight: 400;
       color: var(--el-text-color-secondary);
     }
@@ -346,15 +346,15 @@ function copyStepJson() {
   gap: 2px;
   padding: 8px 12px;
   background: var(--el-fill-color-light);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   span {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 
   b {
-    font-size: 18px;
+    font-size: var(--ra-font-lg);
     font-variant-numeric: tabular-nums;
     color: var(--el-text-color-primary);
 
@@ -381,7 +381,7 @@ function copyStepJson() {
   flex-direction: column;
   overflow: hidden;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .meta__row {
@@ -389,7 +389,7 @@ function copyStepJson() {
   gap: 12px;
   align-items: baseline;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
 
   & + & {
     border-top: 1px solid var(--el-border-color-extra-light);
@@ -422,12 +422,12 @@ function copyStepJson() {
   padding: 10px 14px;
   margin: 0;
   overflow: auto;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.6;
   color: var(--el-text-color-regular);
   list-style: none;
   background: var(--el-fill-color-light);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   &.is-danger {
     color: var(--el-color-danger);
@@ -441,7 +441,7 @@ function copyStepJson() {
 
 .inspector__hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-placeholder);
 }
 </style>

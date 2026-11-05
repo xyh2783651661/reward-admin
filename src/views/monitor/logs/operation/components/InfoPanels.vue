@@ -198,7 +198,7 @@ const lockRows = computed<InfoRow[]>(() => {
   align-items: baseline;
   justify-content: space-between;
   padding: 9px 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
 
   & + & {
     border-top: 1px solid var(--el-border-color-extra-light);
@@ -221,7 +221,7 @@ const lockRows = computed<InfoRow[]>(() => {
 
     &.is-mono span {
       font-family: var(--el-font-family-mono, ui-monospace, monospace);
-      font-size: 12px;
+      font-size: var(--ra-font-xs);
     }
   }
 }
@@ -238,15 +238,15 @@ const lockRows = computed<InfoRow[]>(() => {
   gap: 2px;
   padding: 10px 12px;
   background: var(--el-fill-color-light);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   span {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 
   b {
-    font-size: 20px;
+    font-size: var(--ra-font-xl);
     font-variant-numeric: tabular-nums;
     color: var(--el-text-color-primary);
 
@@ -273,7 +273,7 @@ const lockRows = computed<InfoRow[]>(() => {
   margin-top: 12px;
   overflow: hidden;
   background: var(--el-fill-color);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   span {
     display: block;

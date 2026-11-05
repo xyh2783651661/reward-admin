@@ -35,7 +35,7 @@ defineProps<{
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .detail-section__header {
@@ -56,13 +56,13 @@ defineProps<{
 
 .detail-section__title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
 .detail-section__desc {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 

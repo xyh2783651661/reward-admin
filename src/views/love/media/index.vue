@@ -208,7 +208,7 @@ onMounted(() => {
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease;
@@ -239,14 +239,14 @@ onMounted(() => {
 .media-card__name {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 500;
   color: var(--el-text-color-primary);
   white-space: nowrap;
 }
 
 .media-card__date {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 

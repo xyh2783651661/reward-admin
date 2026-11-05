@@ -73,11 +73,11 @@ const sorted = computed(() =>
   min-width: 24px;
   height: 24px;
   padding: 0 7px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 700;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 }
 
 .todos {
@@ -122,7 +122,7 @@ const sorted = computed(() =>
 
   strong {
     min-width: 0;
-    font-size: 14px;
+    font-size: var(--ra-font-base);
     font-weight: 600;
     color: var(--el-text-color-primary);
   }
@@ -130,7 +130,7 @@ const sorted = computed(() =>
 
 .todo p {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
@@ -140,7 +140,7 @@ const sorted = computed(() =>
   align-items: center;
   justify-content: space-between;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 
   span {

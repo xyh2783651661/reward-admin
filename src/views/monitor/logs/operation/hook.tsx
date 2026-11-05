@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import {
   getOperationLogsList,
@@ -341,7 +342,9 @@ export function useOperationLog(_tableRef?: Ref) {
         classMethods: data?.classMethods ?? []
       };
     } catch (error) {
-      console.error("加载任务日志筛选选项失败", error);
+      message(getErrorMessage(error, "加载任务日志筛选选项失败"), {
+        type: "error"
+      });
     } finally {
       optionsLoading.value = false;
     }

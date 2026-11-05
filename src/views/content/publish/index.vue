@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import { gotoPublishPlatform, gotoPublishRecords } from "../publish-nav";
 import {
   usePublishPackage,
   PACKAGE_STATUS_LABELS,
@@ -24,6 +25,7 @@ import DocumentCopy from "~icons/ep/document-copy";
 import Check from "~icons/ep/check";
 import Download from "~icons/ep/download";
 import Setting from "~icons/ep/setting";
+import Tickets from "~icons/ep/tickets";
 
 defineOptions({
   name: "PublishPackage"
@@ -31,6 +33,9 @@ defineOptions({
 
 const tableRef = ref();
 const router = useRouter();
+const route = useRoute();
+/** 页面自身路径：keep-alive 下离开后 route 会变成别的页面，据此忽略 */
+const pagePath = route.path;
 
 /**
  * 跳到发布记录页，看该「包 × 平台」的完整尝试历史。
@@ -40,12 +45,9 @@ const router = useRouter();
  * 免得用户过去还要重新筛一遍。
  */
 function gotoPublishHistory(platformCode: string) {
-  router.push({
-    path: "/publish/record",
-    query: {
-      packageId: String(detail.value?.id ?? ""),
-      platformCode
-    }
+  gotoPublishRecords(router, {
+    packageId: detail.value?.id,
+    platformCode
   });
 }
 
@@ -266,7 +268,7 @@ async function submitCreate() {
   createSubmitting.value = true;
   try {
     // 接口返回的是异步任务而非内容包：选图是一次真实的 LLM 调用。
-    // 包 ID 要等任务跑完从状态里回读，因���这里订阅进度而不是直接取 data.id。
+    // 包 ID 要等任务跑完从状���里回读，因���这里订阅进度而不是直接取 data.id。
     const { data } = await preparePublishPackage({
       date: createDate.value || undefined
     });
@@ -282,6 +284,7 @@ async function submitCreate() {
     }
   } finally {
     createSubmitting.value = false;
+    taskState.value = null;
   }
 }
 
@@ -296,10 +299,36 @@ async function viewDetail(id: number) {
   activeTab.value = detailPlatforms.value[0]?.code ?? "";
 }
 
+/**
+ * 从发布记录页点「内容包」跳过来时，query 带着 packageId / platformCode，
+ * 直接进入该包详情并定位到对应平台 Tab，不用再回列表里翻。
+ */
+async function openFromQuery() {
+  const id = Number(route.query.packageId);
+  if (!Number.isFinite(id) || id <= 0) return;
+  await viewDetail(id);
+  const code = route.query.platformCode;
+  if (
+    typeof code === "string" &&
+    detailPlatforms.value.some(p => p.code === code)
+  ) {
+    activeTab.value = code;
+  }
+}
+
 onMounted(async () => {
   await loadPlatforms();
   await onSearch();
+  await openFromQuery();
 });
+
+// 页面被缓存复用时不会再触发 onMounted，靠 query 变化接力
+watch(
+  () => route.query,
+  () => {
+    if (route.path === pagePath) openFromQuery();
+  }
+);
 </script>
 
 <template>
@@ -361,6 +390,16 @@ onMounted(async () => {
                 @click="viewDetail(row.id)"
               >
                 详情
+              </el-button>
+              <el-button
+                class="reset-margin outline-hidden!"
+                link
+                type="primary"
+                :size="size"
+                :icon="useRenderIcon(Tickets)"
+                @click="gotoPublishRecords(router, { packageId: row.id })"
+              >
+                发布记录
               </el-button>
               <el-button
                 v-perms="'publishPackage:index:download'"
@@ -567,6 +606,14 @@ onMounted(async () => {
                     p.contentMax
                   }}
                   字 · 标签 {{ p.tagMin }}–{{ p.tagMax }} 个
+                  <el-button
+                    link
+                    type="primary"
+                    size="small"
+                    @click="gotoPublishPlatform(router, p.code)"
+                  >
+                    调整平台配置
+                  </el-button>
                 </div>
 
                 <div class="field">
@@ -817,12 +864,12 @@ onMounted(async () => {
   align-items: center;
 
   .date {
-    font-size: 16px;
+    font-size: var(--ra-font-md);
     font-weight: 500;
   }
 
   .theme {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-secondary);
   }
 }
@@ -854,7 +901,7 @@ onMounted(async () => {
 
 .col-title {
   margin-bottom: 12px;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   font-weight: 500;
   color: var(--el-text-color-primary);
 }
@@ -871,7 +918,7 @@ onMounted(async () => {
   z-index: 2;
   width: 20px;
   height: 20px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 500;
   line-height: 20px;
   color: #fff;
@@ -884,12 +931,12 @@ onMounted(async () => {
   width: 100%;
   height: 160px;
   background: var(--el-fill-color-light);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .image-meta {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 
   .name {
@@ -912,7 +959,7 @@ onMounted(async () => {
 .pane {
   .hint {
     margin-bottom: 14px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-tertiary);
   }
 
@@ -922,7 +969,7 @@ onMounted(async () => {
 
   .field-label {
     margin-bottom: 6px;
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-regular);
   }
 }
@@ -930,19 +977,19 @@ onMounted(async () => {
 .credit-line {
   padding: 8px 10px;
   margin-bottom: 14px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-color-success);
   background: var(--el-color-success-light-9);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .credit-missing {
   padding: 8px 10px;
   margin-bottom: 14px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-tertiary);
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .pane-actions {
@@ -956,7 +1003,7 @@ onMounted(async () => {
   padding: 10px 12px;
   margin-bottom: 14px;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .result-head {
@@ -967,7 +1014,7 @@ onMounted(async () => {
 }
 
 .result-time {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -977,19 +1024,19 @@ onMounted(async () => {
   margin-top: 8px;
   overflow: auto;
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-color-danger);
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-color-danger-light-9);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .result-link {
   display: block;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   word-break: break-all;
 }
 
@@ -1006,7 +1053,7 @@ onMounted(async () => {
 .picker-item {
   cursor: pointer;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
   transition: border-color 0.15s;
 
   &.selected {
@@ -1018,12 +1065,12 @@ onMounted(async () => {
   width: 100%;
   height: 120px;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .picker-meta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
 }
 
 .picker-name {
@@ -1037,7 +1084,7 @@ onMounted(async () => {
   gap: 6px;
   align-items: center;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--ra-font-2xs);
   color: var(--el-text-color-tertiary);
 
   .warn {
@@ -1051,7 +1098,7 @@ onMounted(async () => {
   justify-content: space-between;
 
   .count {
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     color: var(--el-text-color-secondary);
   }
 }

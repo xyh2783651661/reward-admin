@@ -48,7 +48,7 @@ const { copyText } = useDetailCopy();
 .detail-code {
   position: relative;
   background: var(--el-fill-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .detail-code__copy {
@@ -63,7 +63,7 @@ const { copyText } = useDetailCopy();
   margin: 0;
   font-family:
     SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-text-color-primary);
   word-break: break-word;

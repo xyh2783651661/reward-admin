@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
   min-height: 240px;
   overflow: hidden;
   border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .mail-rich-editor__toolbar {

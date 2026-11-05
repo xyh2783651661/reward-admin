@@ -71,9 +71,9 @@ const attentionCount = computed(
 <style scoped lang="scss">
 .badge {
   padding: 2px 10px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--ra-radius-pill);
 
   &.is-alert {
     color: var(--el-color-danger);
@@ -105,7 +105,7 @@ const attentionCount = computed(
   text-align: left;
   background: var(--el-fill-color-extra-light);
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
   transition: border-color 0.2s;
 
   &.is-clickable {
@@ -136,10 +136,10 @@ const attentionCount = computed(
   place-items: center;
   width: 32px;
   height: 32px;
-  font-size: 16px;
+  font-size: var(--ra-font-md);
   color: var(--el-color-success);
   background: var(--el-color-success-light-9);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 
   .is-warn & {
     color: var(--el-color-warning);
@@ -161,7 +161,7 @@ const attentionCount = computed(
   strong {
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 14px;
+    font-size: var(--ra-font-base);
     font-weight: 600;
     color: var(--el-text-color-primary);
     white-space: nowrap;
@@ -169,7 +169,7 @@ const attentionCount = computed(
 
   em {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     font-style: normal;
     line-height: 1.4;
     color: var(--el-text-color-regular);
@@ -177,7 +177,7 @@ const attentionCount = computed(
 }
 
 .light__label {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 

@@ -166,7 +166,7 @@ const cards = computed<MetricCard[]>(() => {
   text-align: left;
   background: var(--el-bg-color-overlay);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 12px;
+  border-radius: var(--ra-radius-lg);
 
   &.is-clickable {
     cursor: pointer;
@@ -193,7 +193,7 @@ const cards = computed<MetricCard[]>(() => {
 }
 
 .metric__label {
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   color: var(--el-text-color-secondary);
 }
 
@@ -202,15 +202,15 @@ const cards = computed<MetricCard[]>(() => {
   place-items: center;
   width: 28px;
   height: 28px;
-  font-size: 16px;
-  border-radius: 8px;
+  font-size: var(--ra-font-md);
+  border-radius: var(--ra-radius-md);
 }
 
 .metric__value {
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 24px;
+  font-size: var(--ra-font-2xl);
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
   color: var(--el-text-color-primary);
@@ -218,7 +218,7 @@ const cards = computed<MetricCard[]>(() => {
   white-space: nowrap;
 
   &.is-text {
-    font-size: 15px;
+    font-size: var(--ra-font-md);
     line-height: 2;
     letter-spacing: 0;
   }
@@ -228,7 +228,7 @@ const cards = computed<MetricCard[]>(() => {
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
   white-space: nowrap;
 }

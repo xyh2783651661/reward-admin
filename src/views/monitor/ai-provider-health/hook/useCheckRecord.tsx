@@ -1,3 +1,5 @@
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
+import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import { reactive, ref, computed, onMounted, toRaw, type Ref } from "vue";
 import { message } from "@/utils/message";
@@ -16,12 +18,6 @@ import type {
 
 export function formatTime(value?: string | null) {
   return value ? dayjs(value).format("YYYY-MM-DD HH:mm:ss") : "-";
-}
-
-function getStatusType(status?: string) {
-  if (status === "SUCCESS") return "success";
-  if (status === "FAIL") return "danger";
-  return "info";
 }
 
 function getCostType(value?: number) {
@@ -139,13 +135,11 @@ export function useCheckRecord(_tableRef?: Ref, initialProvider?: string) {
       prop: "status",
       minWidth: 90,
       cellRenderer: ({ row, props }) => (
-        <el-tag
+        <ReStatusTag
+          active={row.status === "SUCCESS"}
+          preset="result"
           size={props.size}
-          type={getStatusType(row.status)}
-          effect="plain"
-        >
-          {row.status === "SUCCESS" ? "成功" : "失败"}
-        </el-tag>
+        />
       )
     },
     {
@@ -230,7 +224,7 @@ export function useCheckRecord(_tableRef?: Ref, initialProvider?: string) {
       const { data } = await getDropdownOptions<DropdownOptions>();
       Object.assign(dropdownOptions, data);
     } catch (error) {
-      console.error("加载下拉选项失败", error);
+      message(getErrorMessage(error, "加载下拉选项失败"), { type: "error" });
     }
   }
 

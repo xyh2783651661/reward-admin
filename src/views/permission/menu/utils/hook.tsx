@@ -1,3 +1,5 @@
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
+import { RA_DIALOG_WIDTH } from "@/constants";
 import editForm from "../form.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
@@ -148,11 +150,7 @@ export function useMenu() {
       prop: "status",
       width: 80,
       align: "center",
-      cellRenderer: ({ row }) => (
-        <el-tag type={row.status === 1 ? "success" : "danger"} effect="plain">
-          {row.status === 1 ? "启用" : "禁用"}
-        </el-tag>
-      )
+      cellRenderer: ({ row }) => <ReStatusTag active={row.status === 1} />
     },
     { label: "操作", fixed: "right", width: 160, slot: "operation" }
   ];
@@ -219,7 +217,7 @@ export function useMenu() {
         formInline,
         menuTree: dataList.value
       },
-      width: "720px",
+      width: RA_DIALOG_WIDTH.md,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

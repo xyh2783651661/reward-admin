@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import editForm from "./form.vue";
 import { message } from "@/utils/message";
@@ -143,7 +144,7 @@ export function useLoveRecords(_tableRef?: Ref) {
           media: row?.media ?? []
         }
       },
-      width: "50%",
+      width: RA_DIALOG_WIDTH.lg,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

@@ -347,19 +347,19 @@ onMounted(() => {
   cursor: pointer;
   background: var(--el-fill-color-lighter);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
   transition:
     border-color 0.2s,
     background 0.2s;
 }
 
 .stat-chip__value {
-  font-size: 20px;
+  font-size: var(--ra-font-xl);
   font-weight: 700;
 }
 
 .stat-chip__label {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -370,12 +370,12 @@ onMounted(() => {
   padding: 8px 12px;
   background: var(--el-color-primary-light-9);
   border: 1px solid var(--el-color-primary-light-7);
-  border-radius: 8px;
+  border-radius: var(--ra-radius-md);
 }
 
 .batch-bar__info {
   margin-right: 8px;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 600;
   color: var(--el-color-primary);
 }
@@ -399,7 +399,7 @@ onMounted(() => {
   overflow: hidden;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 }
 
 .provider-card::before {
@@ -463,7 +463,7 @@ onMounted(() => {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 15px;
+  font-size: var(--ra-font-md);
   font-weight: 600;
   color: var(--el-text-color-primary);
   white-space: nowrap;
@@ -485,7 +485,7 @@ onMounted(() => {
 
 .metric dt {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -494,7 +494,7 @@ onMounted(() => {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   font-weight: 500;
   color: var(--el-text-color-primary);
   white-space: nowrap;
@@ -507,7 +507,7 @@ onMounted(() => {
 .provider-card__times {
   display: flex;
   gap: 16px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -516,11 +516,11 @@ onMounted(() => {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-color-danger);
   white-space: nowrap;
   background: var(--el-color-danger-light-9);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .provider-card__actions {

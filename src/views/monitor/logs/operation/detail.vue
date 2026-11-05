@@ -361,13 +361,13 @@ function showException() {
   em {
     min-width: 18px;
     padding: 0 6px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     font-style: normal;
     line-height: 18px;
     color: var(--el-text-color-secondary);
     text-align: center;
     background: var(--el-fill-color);
-    border-radius: 999px;
+    border-radius: var(--ra-radius-pill);
 
     &.is-danger {
       color: var(--el-color-danger);

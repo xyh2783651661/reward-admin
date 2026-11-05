@@ -151,7 +151,7 @@ function clearAll() {
   overflow: hidden;
   text-overflow: ellipsis;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 

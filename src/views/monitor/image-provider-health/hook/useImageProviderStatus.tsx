@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import { computed, reactive, ref } from "vue";
 import { message } from "@/utils/message";
 import {
@@ -121,7 +122,7 @@ export function useImageProviderStatus() {
         await getImageProviderStatsOverview<ImageProviderStatsOverview>();
       Object.assign(statsOverview, data);
     } catch (error) {
-      console.error("加载统计概览失败", error);
+      message(getErrorMessage(error, "加载统计概览失败"), { type: "error" });
     }
   }
 

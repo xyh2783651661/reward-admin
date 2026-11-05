@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import { h, ref, reactive, computed, onMounted, onUnmounted, toRaw } from "vue";
 import { message } from "@/utils/message";
 import { DownloadError, useDownload } from "@/hooks/useDownload";
@@ -630,7 +631,7 @@ export function useDailyImage() {
       const { data } = await getDailyImageOptions();
       sourceOptions.value = data?.sourceOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载图片来源选项失败"), { type: "error" });
     }
   }
 

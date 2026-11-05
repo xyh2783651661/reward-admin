@@ -317,7 +317,7 @@ watch(
   padding: 4px 8px;
   overflow: auto;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 
   :deep(.el-tree-node__content) {
     height: 30px;

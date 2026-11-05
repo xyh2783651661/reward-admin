@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import { h, ref, computed } from "vue";
 import { ElMessageBox } from "element-plus";
@@ -226,7 +227,7 @@ export function useAiPrompt() {
   function openVersionHistory(row: any) {
     addDialog({
       title: `版本历史 · ${row.name || row.code}`,
-      width: "960px",
+      width: RA_DIALOG_WIDTH.lg,
       closeOnClickModal: false,
       hideFooter: true,
       contentRenderer: () =>
@@ -238,7 +239,7 @@ export function useAiPrompt() {
   function openTestRender(row: any) {
     addDialog({
       title: `测试渲染 · ${row.name || row.code}`,
-      width: "720px",
+      width: RA_DIALOG_WIDTH.md,
       closeOnClickModal: false,
       hideFooter: true,
       contentRenderer: () => h(testRenderComp, { record: row })

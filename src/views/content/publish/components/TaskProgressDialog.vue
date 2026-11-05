@@ -182,7 +182,7 @@ function stepIcon(status: string) {
   display: flex;
   gap: 8px;
   align-items: center;
-  font-size: 15px;
+  font-size: var(--ra-font-md);
   font-weight: 500;
   color: var(--el-text-color-primary);
 
@@ -191,7 +191,7 @@ function stepIcon(status: string) {
   }
 
   .spinner {
-    font-size: 18px;
+    font-size: var(--ra-font-lg);
     color: var(--el-color-primary);
   }
 
@@ -203,7 +203,7 @@ function stepIcon(status: string) {
 .meta {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -212,7 +212,7 @@ function stepIcon(status: string) {
   margin: 0;
   list-style: none;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .step {
@@ -226,7 +226,7 @@ function stepIcon(status: string) {
   }
 
   .step-icon {
-    font-size: 18px;
+    font-size: var(--ra-font-lg);
     color: var(--el-text-color-placeholder);
   }
 
@@ -236,19 +236,19 @@ function stepIcon(status: string) {
   }
 
   .step-name {
-    font-size: 14px;
+    font-size: var(--ra-font-base);
     color: var(--el-text-color-primary);
   }
 
   .step-msg {
     margin-top: 2px;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
     word-break: break-all;
   }
 
   .step-status {
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 
@@ -279,7 +279,7 @@ function stepIcon(status: string) {
 
 .tip {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-placeholder);
 }
 </style>

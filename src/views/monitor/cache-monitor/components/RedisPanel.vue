@@ -40,13 +40,13 @@ defineProps<{
   min-width: 0;
   padding: 12px 14px;
   background: var(--el-fill-color-lighter);
-  border-radius: 10px;
+  border-radius: var(--ra-radius-lg);
 
   dt {
     display: flex;
     gap: 4px;
     align-items: center;
-    font-size: 12px;
+    font-size: var(--ra-font-xs);
     color: var(--el-text-color-secondary);
   }
 
@@ -54,7 +54,7 @@ defineProps<{
     margin: 4px 0 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 16px;
+    font-size: var(--ra-font-md);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     color: var(--el-text-color-primary);

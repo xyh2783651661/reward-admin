@@ -192,7 +192,7 @@ const tableHeaderStyle = {
 :deep(.cache-key-copy) {
   flex-shrink: 0;
   padding: 0;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-color-primary);
   cursor: pointer;
   background: transparent;

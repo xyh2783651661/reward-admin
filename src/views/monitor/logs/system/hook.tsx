@@ -1,4 +1,6 @@
-﻿import dayjs from "dayjs";
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
+import { getErrorMessage } from "@/utils/error";
+import dayjs from "dayjs";
 import Detail from "./detail.vue";
 import { message } from "@/utils/message";
 import { useDownload } from "@/hooks/useDownload";
@@ -15,7 +17,6 @@ import {
 } from "@/api/system";
 import { getAccessLogOptions } from "@/api/logs";
 import Info from "~icons/ri/question-line";
-import { usePublicHooks } from "@/hooks/usePublicHooks";
 
 export function useSystemLog(_tableRef: Ref) {
   const form = reactive({
@@ -42,7 +43,6 @@ export function useSystemLog(_tableRef: Ref) {
   const loading = ref(true);
   const { loading: exportLoading, runExport } = useDownload();
   const { copied, update } = useCopyToClipboard();
-  const { tagStyle } = usePublicHooks();
   const optionsLoading = ref(false);
   const successOptions = ref<{ value: string; label: string }[]>([]);
 
@@ -117,9 +117,7 @@ export function useSystemLog(_tableRef: Ref) {
       prop: "status",
       minWidth: 100,
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.success ? 1 : 2)}>
-          {row.success ? "成功" : "失败"}
-        </el-tag>
+        <ReStatusTag active={!!row.success} preset="result" size={props.size} />
       )
     },
     {
@@ -287,7 +285,7 @@ export function useSystemLog(_tableRef: Ref) {
       };
       successOptions.value = successOpts.data?.successOptions ?? [];
     } catch (error) {
-      console.error("加载筛选选项失败", error);
+      message(getErrorMessage(error, "加载筛选选项失败"), { type: "error" });
     } finally {
       optionsLoading.value = false;
     }

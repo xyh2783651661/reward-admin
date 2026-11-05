@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
 import { ReSelect } from "@/components/ReSelect";
 import { onMounted, ref, computed } from "vue";
 import {
@@ -245,13 +246,11 @@ onMounted(() => {
             }}
           </el-descriptions-item>
           <el-descriptions-item label="结果">
-            <el-tag
+            <ReStatusTag
+              :active="drawerItem.status === 'SUCCESS'"
+              preset="result"
               size="small"
-              :type="drawerItem.status === 'SUCCESS' ? 'success' : 'danger'"
-              effect="plain"
-            >
-              {{ drawerItem.status === "SUCCESS" ? "成功" : "失败" }}
-            </el-tag>
+            />
           </el-descriptions-item>
           <el-descriptions-item label="故障原因">
             {{
@@ -377,7 +376,7 @@ onMounted(() => {
 }
 
 .detail-nav__pos {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -406,7 +405,7 @@ onMounted(() => {
 
   h4 {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--ra-font-sm);
     font-weight: 600;
     color: var(--el-text-color-primary);
   }
@@ -417,13 +416,13 @@ onMounted(() => {
   padding: 10px 12px;
   margin: 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-color-danger);
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-color-danger-light-9);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .detail-section__raw {
@@ -431,12 +430,12 @@ onMounted(() => {
   padding: 10px 12px;
   margin: 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   line-height: 1.6;
   color: var(--el-text-color-primary);
   word-break: break-all;
   white-space: pre-wrap;
   background: var(--el-fill-color-light);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 </style>

@@ -80,7 +80,7 @@ defineExpose({ getRef, getFormData: () => newFormInline.value });
 <style scoped>
 .tip {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 </style>

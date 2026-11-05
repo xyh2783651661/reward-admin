@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReStatusTag from "@/components/ReStatusTag/index.vue";
 import { computed, ref } from "vue";
 import ReJsonField from "@/components/ReJsonField/index.vue";
 import {
@@ -143,9 +144,7 @@ const payloadTabs = computed(() => {
   <DetailPage>
     <DetailHeader :title="title || '系统日志'">
       <template #tags>
-        <el-tag :type="item.success ? 'success' : 'danger'" effect="light">
-          {{ item.success ? "成功" : "失败" }}
-        </el-tag>
+        <ReStatusTag :active="!!item.success" preset="result" effect="light" />
       </template>
       <template #subtitle>
         <span v-if="item.method" class="log-method">{{ item.method }}</span>

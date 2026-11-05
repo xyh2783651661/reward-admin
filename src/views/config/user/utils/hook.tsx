@@ -1,3 +1,4 @@
+import { RA_DIALOG_WIDTH } from "@/constants";
 import dayjs from "dayjs";
 import editForm from "../form.vue";
 import roleForm from "../role.vue";
@@ -186,7 +187,7 @@ export function useRewardUser() {
   const { open } = useCrudDialog<FormItemProps>({
     title: "用户",
     formComponent: editForm,
-    width: "680px",
+    width: RA_DIALOG_WIDTH.md,
     defaultForm: row => ({
       id: row?.id ?? "",
       nickName: row?.nickName ?? "",
@@ -208,7 +209,7 @@ export function useRewardUser() {
   function handleUpload(row) {
     addDialog({
       title: "裁剪、上传头像",
-      width: "680px",
+      width: RA_DIALOG_WIDTH.md,
       closeOnClickModal: false,
       fullscreen: deviceDetection(),
       sureBtnLoading: true,
@@ -230,7 +231,7 @@ export function useRewardUser() {
   function handleReset(row) {
     addDialog({
       title: `重置 ${row.nickName} 用户的密码`,
-      width: "480px",
+      width: RA_DIALOG_WIDTH.sm,
       draggable: true,
       closeOnClickModal: false,
       fullscreen: deviceDetection(),
@@ -325,7 +326,7 @@ export function useRewardUser() {
           ids
         }
       },
-      width: "560px",
+      width: RA_DIALOG_WIDTH.sm,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

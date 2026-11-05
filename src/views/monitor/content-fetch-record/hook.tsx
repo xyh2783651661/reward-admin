@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import { reactive, ref, toRaw, onMounted, computed } from "vue";
 import { message } from "@/utils/message";
@@ -231,7 +232,7 @@ export function useContentFetchRecord() {
       statusOptions.value = data?.statusOptions ?? [];
       sourceKeyOptions.value = data?.sourceKeyOptions ?? [];
     } catch (e) {
-      console.error(e);
+      message(getErrorMessage(e, "加载筛选选项失败"), { type: "error" });
     }
   }
 

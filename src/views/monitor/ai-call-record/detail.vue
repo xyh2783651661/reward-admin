@@ -473,7 +473,7 @@ watch(
 }
 
 .ai-detail__hint {
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   color: var(--el-text-color-secondary);
 }
 
@@ -484,23 +484,23 @@ watch(
 .ai-detail__text {
   padding: 16px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--ra-font-sm);
   line-height: 1.8;
   color: var(--el-text-color-primary);
   word-break: break-word;
   white-space: pre-wrap;
   background: var(--el-fill-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .markdown-body {
   padding: 16px;
-  font-size: 14px;
+  font-size: var(--ra-font-base);
   line-height: 1.8;
   color: var(--el-text-color-primary);
   word-break: break-word;
   background: var(--el-fill-color-lighter);
-  border-radius: 6px;
+  border-radius: var(--ra-radius-md);
 }
 
 .markdown-body :deep(*:first-child) {
@@ -541,21 +541,21 @@ watch(
 
 .markdown-body :deep(code) {
   padding: 2px 6px;
-  font-size: 12px;
+  font-size: var(--ra-font-xs);
   background: var(--el-fill-color);
-  border-radius: 4px;
+  border-radius: var(--ra-radius-sm);
 }
 
 .markdown-body :deep(pre) {
   padding: 14px 16px;
   overflow: auto;
-  background: #0f172a;
-  border-radius: 8px;
+  background: var(--ra-code-bg);
+  border-radius: var(--ra-radius-md);
 }
 
 .markdown-body :deep(pre code) {
   padding: 0;
-  color: #e2e8f0;
+  color: var(--ra-code-text);
   background: transparent;
 }
 

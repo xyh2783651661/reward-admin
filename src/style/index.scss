@@ -25,13 +25,47 @@
   --pure-theme-menu-title-hover: initial;
   --pure-theme-menu-active-before: transparent;
 
-  /* reward-admin 间距 / 圆角 / 阴影 token */
+  /* ==== reward-admin 设计 Token（规范见 docs/DESIGN_SYSTEM.md） ==== */
+
+  /* 间距：4 的倍数阶梯 */
+  --ra-space-2xs: 4px;
   --ra-space-xs: 8px;
   --ra-space-sm: 12px;
   --ra-space-md: 16px;
   --ra-space-lg: 24px;
-  --ra-radius-card: 8px;
+  --ra-space-xl: 32px;
+
+  /* 圆角：控件 / 卡片 / 大面板 / 胶囊 */
+  --ra-radius-sm: 4px;
+  --ra-radius-md: 8px;
+  --ra-radius-lg: 12px;
+  --ra-radius-pill: 999px;
+  --ra-radius-card: var(--ra-radius-md);
+
+  /* 字号：辅助 / 次要 / 正文 / 小标题 / 标题 / 区块标题 / 指标 */
+  --ra-font-2xs: 11px;
+  --ra-font-xs: 12px;
+  --ra-font-sm: 13px;
+  --ra-font-base: 14px;
+  --ra-font-md: 16px;
+  --ra-font-lg: 18px;
+  --ra-font-xl: 20px;
+  --ra-font-2xl: 24px;
+  --ra-font-display: 28px;
+
+  /* 等宽字体：ID、编号、JSON、代码块统一使用 */
+  --ra-font-mono:
+    ui-monospace, sfmono-regular, menlo, monaco, consolas, "Liberation Mono",
+    monospace;
+
+  /* 阴影 */
   --ra-shadow-card: 0 1px 2px rgb(0 0 0 / 4%);
+  --ra-shadow-popover: var(--el-box-shadow-light);
+
+  /* 代码块 / 深色预览区（亮暗主题下都保持深底，保证语法高亮可读） */
+  --ra-code-bg: #0f172a;
+  --ra-code-text: #e2e8f0;
+  --ra-code-border: #1e293b;
 }
 
 /* 灰色模式 */
