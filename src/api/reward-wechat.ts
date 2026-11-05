@@ -69,3 +69,32 @@ export const updateMiniSharedMode = (data: {
     data
   });
 };
+
+/** 迁移报告 */
+export type MigrationReport = {
+  dryRun: boolean;
+  targetUserId: number;
+  identitiesScanned: number;
+  identitiesAlreadyOk: number;
+  identitiesMoved: number;
+  identitiesSkipped: number;
+  shellUsersRemoved: number;
+  details: string[];
+  summary: string;
+};
+
+/**
+ * 上线后的数据迁移：把微信身份收拢到目标用户、清理空壳用户。
+ * dryRun 缺省为 true（后端也把缺省当试运行），要真正写库必须显式传 false。
+ * 可重复执行：第二次跑时 moved=0。
+ */
+export const migrateSharedMode = (data: {
+  targetUserId?: number;
+  dryRun: boolean;
+}) => {
+  return http.request<ApiResult<MigrationReport>>(
+    "post",
+    "/api/admin/reward/migration/shared-mode",
+    { data }
+  );
+};

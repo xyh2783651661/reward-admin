@@ -5,6 +5,7 @@ import { addDialog } from "@/components/ReDialog";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { useCrudTable } from "../../composables";
 import rebindForm from "../form.vue";
+import migratePanel from "../migrate.vue";
 import {
   getWeChatIdentityPage,
   rebindWeChatIdentity,
@@ -141,6 +142,16 @@ export function useWeChatIdentity() {
     handleDelete(row);
   }
 
+  /** 数据迁移：可重复执行，默认先试运行 */
+  function openMigration() {
+    addDialog({
+      title: "数据迁移（可重复执行）",
+      width: "720px",
+      hideFooter: true,
+      contentRenderer: () => h(migratePanel, { targetUserId: mode.userId })
+    });
+  }
+
   // ---------------- 单用户兼容模式 ----------------
   const modeLoading = ref(false);
   const modeSaving = ref(false);
@@ -218,6 +229,7 @@ export function useWeChatIdentity() {
     // 行操作
     openRebind,
     handleUnbind,
+    openMigration,
     // 开关
     mode,
     modeLoading,

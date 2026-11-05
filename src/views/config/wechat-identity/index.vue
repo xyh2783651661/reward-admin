@@ -24,6 +24,7 @@ const {
   handleCurrentChange,
   openRebind,
   handleUnbind,
+  openMigration,
   mode,
   modeLoading,
   modeSaving,
@@ -102,6 +103,16 @@ function handleSearch() {
       :columns="columns"
       @refresh="onSearch"
     >
+      <template #buttons>
+        <el-button
+          v-perms="'config:wechat-identity:migrate'"
+          type="primary"
+          plain
+          @click="openMigration"
+        >
+          数据迁移
+        </el-button>
+      </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
           align-whole="center"
