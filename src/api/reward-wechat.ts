@@ -23,11 +23,17 @@ export type MiniSharedMode = {
   userId: number;
 };
 
-export const getWeChatIdentityPage = (params?: object) => {
+export const getWeChatIdentityPage = (params?: Record<string, any>) => {
+  // 剔除空值：后端 userId 是 Long，收到 "" 会直接参数转换失败（400）
+  const clean: Record<string, any> = {};
+  Object.keys(params || {}).forEach(k => {
+    const v = params[k];
+    if (v !== "" && v !== null && v !== undefined) clean[k] = v;
+  });
   return http.request<ApiPageResult<WeChatIdentityRow>>(
     "get",
     "/api/admin/reward/wechat-identities/page",
-    { params }
+    { params: clean }
   );
 };
 
