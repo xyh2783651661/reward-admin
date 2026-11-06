@@ -58,6 +58,7 @@
   - 上传 `el-dialog`/详情 `el-drawer`：业务内容相关（拖拽上传、左右切换），Phase 1 §XVII 已判定保留。
 - **结论**：Content 特殊合理；但**整页不套 `.main` 容器、不套 `PureTableBar`** 是「看起来不属于同一系统」的根因。
 - **改造后结构（建议）**：
+
   ```
   .main
    ├─ RePureTableBar(title="图片管理"; #buttons: 上传图片/刷新; 右侧放 segmented)
@@ -145,6 +146,9 @@
 
 - `check-record.vue` / `alert-record.vue` 的 `.filter-bar` 自定义 CSS（迁 `ReSearchBar` 后删除）。
 - （Phase 2 候选）三个 `provider-health` 顶层页 90% 重复 + Hero 头 CSS 重复 3 份 → 合并为参数化单页后删 2 份。
+  - **已修复（2026-11-07）**：抽出 `views/monitor/provider-health-shared/ProviderHealthShell.vue`，
+    三个顶层页各留 ~20 行薄壳（菜单 `component` 路径不变）。3 份 Hero 头 CSS 合并为 1 份，
+    且去掉渐变背景/边框/圆角，改为与 `cache-monitor/CacheHeader` 一致的纯 `<header>` + `h1`。
 - `daily-image/manage` 的 `.toolbar`/`.batch-bar` CSS（若迁 `PureTableBar`，部分可删；高风险，递延）。
 
 ### 3.6 哪些公共组件可以直接复用？
@@ -157,6 +161,8 @@
 ### 3.7 哪些地方需要新增轻量公共组件？
 
 - **`ReStatHero`**（可选）：Hero 头模式出现在 `notice/sysNotice` + 3×`provider-health`（共 4 处）。若合并 provider-health 顶层页，可抽；否则不抽（单一使用方时不抽象）。
+  - **结论（2026-11-07）**：不抽。`sysNotice` 早已是标准 `ReSearchBar + PureTableBar`，无 Hero；
+    3×`provider-health` 的 Hero 已统一收敛为纯 `<header>`（无背景/边框/圆角），已无「Hero 模式」可抽。
 - **不新增**：`ListPage`/`DataTable`/`useListTable`/`OperationButtons`（上阶段已定，避免过度抽象）。
 
 ### 3.8 改造优先级
@@ -164,6 +170,7 @@
 - **P0（最明显历史遗留，低风险高收益）**：`check-record.vue` + `alert-record.vue` 查询栏迁 `ReSearchBar`。
 - **P1（低成本接入标准体系）**：`daily-image/manage` 包 `.main` + 卡片圆角 token 对齐（`10px→8px`）+ 可选 `PureTableBar` 接管 chrome。
 - **P2（需较大业务重构，谨慎）**：3× `provider-health` 顶层页去重合并为参数化单页 + 抽 `ReStatHero`。
+  - **状态：已完成（2026-11-07）** —— 仅做「外壳去重 + 头部统一」，未动 3 套 hook 与内层表格（它们是各源特有字段）。
 - **保留（确实应特殊）**：`love/media` Grid、`cache-monitor` 看板、3× `provider-health` 看板结构、各页 Grid/Drawer 内容。
 
 ---
