@@ -158,7 +158,7 @@ export function useProviderModel() {
         <el-tag
           size="small"
           effect="plain"
-          type={row.available ? "success" : "info"}
+          type={row.available ? "success" : "danger"}
         >
           {row.available ? "可用" : "已下线"}
         </el-tag>

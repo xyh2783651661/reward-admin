@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useProviderModel } from "./hook/useProviderModel";
 import SyncResultDialog from "./components/sync-result-dialog.vue";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -31,30 +32,30 @@ const {
   handleCurrentChange
 } = useProviderModel();
 
+const emptyDescription = computed(() =>
+  hasFilter.value
+    ? "当前筛选条件下没有模型，可清空筛选后重试"
+    : "暂无模型目录数据，点「同步全部」从供应商拉取模型列表"
+);
+
 function handleSearch() {
+  form.current = 1;
+  onSearch();
+}
+
+/** 空态里的「清空筛选」：ReSearchBar 的 reset 需要表单实例，这里直接复位查询条件 */
+function clearFilters() {
+  form.provider = "";
+  form.capability = "";
+  form.keyword = "";
+  form.available = "";
   form.current = 1;
   onSearch();
 }
 </script>
 
 <template>
-  <div class="main provider-model-page">
-    <header class="provider-model-hero">
-      <div>
-        <p class="provider-model-hero__eyebrow">Model Catalog</p>
-        <h1>AI 模型目录</h1>
-        <p>
-          从供应商真实模型列表中选模型，避免配置的模型被下线后调用
-          404。同步会把本次未返回的模型标记为已下线。
-        </p>
-      </div>
-      <div class="provider-model-hero__tip">
-        <el-tag effect="plain" type="info"
-          >配置入口：系统配置 → ai.*.model</el-tag
-        >
-      </div>
-    </header>
-
+  <div class="main">
     <ReSearchBar
       v-model="form"
       :fields="searchFields"
@@ -63,22 +64,23 @@ function handleSearch() {
       @reset="resetForm"
     />
 
-    <el-alert
+    <el-empty
       v-if="!loading && !dataList.length"
-      :type="hasFilter ? 'info' : 'warning'"
-      :closable="false"
-      show-icon
-      :title="
-        hasFilter
-          ? '当前筛选条件下没有模型'
-          : '模型目录还没有数据，先点「同步全部」拉取供应商模型列表'
-      "
-      :description="
-        hasFilter
-          ? '可清空筛选条件后重试。'
-          : '供应商没有标准 /models 接口时同步会跳过，可用「手工补录」补一条。'
-      "
-    />
+      :image-size="90"
+      :description="emptyDescription"
+    >
+      <el-button
+        v-if="!hasFilter"
+        v-perms="'monitor:aiProviderModel:sync'"
+        type="primary"
+        :loading="syncLoading"
+        :icon="useRenderIcon(Sync)"
+        @click="handleSync()"
+      >
+        同步全部
+      </el-button>
+      <el-button v-else plain @click="clearFilters">清空筛选</el-button>
+    </el-empty>
 
     <PureTableBar title="模型目录" :columns="columns" @refresh="onSearch">
       <template #buttons>
@@ -163,59 +165,3 @@ function handleSearch() {
     </el-dialog>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.provider-model-page {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.provider-model-hero {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 18px 22px;
-  background: linear-gradient(
-    135deg,
-    var(--el-bg-color),
-    var(--el-fill-color-light)
-  );
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--ra-radius-lg);
-
-  h1 {
-    margin: 3px 0 6px;
-    font-size: var(--ra-font-2xl);
-    color: var(--el-text-color-primary);
-  }
-
-  p {
-    max-width: 720px;
-    margin: 0;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.provider-model-hero__eyebrow {
-  font-size: var(--ra-font-xs);
-  font-weight: 700;
-  color: var(--el-color-primary) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.provider-model-hero__tip {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-}
-
-@media (width <= 768px) {
-  .provider-model-hero {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-</style>
