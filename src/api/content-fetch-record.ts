@@ -27,6 +27,21 @@ export const exportContentFetchRecords = (data?: object) => {
   );
 };
 
+/**
+ * 某条抓取流水解析出的条目（抓到了什么）。
+ *
+ * 与「原始请求」的区别：原始请求是 HTTP 报文，只有真正发过请求才有；
+ * 本接口是解析后的内容条目，是后台最常看的那个。
+ */
+export const getContentFetchRecordItems = <T = Record<string, any>>(
+  id: number
+) => {
+  return http.request<ApiResult<T[]>>(
+    "get",
+    `/api/daily-content-fetch-records/${id}/items`
+  );
+};
+
 /** 筛选选项：statusOptions（固定三态）、sourceKeyOptions（取自已注册信源） */
 export const getContentFetchRecordOptions = () => {
   return http.request<ApiResult<Record<string, any[]>>>(

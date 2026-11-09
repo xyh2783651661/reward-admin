@@ -15,6 +15,11 @@ const {
   form,
   loading,
   columns,
+  itemColumns,
+  itemsVisible,
+  itemsLoading,
+  itemsList,
+  itemsRecord,
   dataList,
   pagination,
   searchFields,
@@ -80,5 +85,52 @@ onMounted(() => {
         />
       </template>
     </PureTableBar>
+
+    <!-- 抓取内容抽屉：回答「这条流水到底抓到了什么」 -->
+    <el-drawer
+      v-model="itemsVisible"
+      :title="`抓取内容 #${itemsRecord?.id ?? ''}`"
+      size="900px"
+      destroy-on-close
+    >
+      <el-descriptions
+        v-if="itemsRecord"
+        :column="2"
+        border
+        size="small"
+        class="mb-3"
+      >
+        <el-descriptions-item label="信源">
+          {{ itemsRecord.sourceKey || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="业务日期">
+          {{ itemsRecord.bizDate || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="抓取结果">
+          {{ itemsRecord.status || "-" }}
+        </el-descriptions-item>
+        <el-descriptions-item label="条目数">
+          {{ itemsRecord.itemCount ?? 0 }}
+        </el-descriptions-item>
+      </el-descriptions>
+
+      <el-alert
+        v-if="!itemsLoading && itemsList.length === 0"
+        type="info"
+        :closable="false"
+        show-icon
+        title="本次没有内容条目"
+        description="可能是：命中缓存且该次未落条目、抓取失败（见列表「错误信息」），或该流水写入早于条目存储上线。"
+      />
+
+      <pure-table
+        v-else
+        row-key="id"
+        table-layout="auto"
+        :loading="itemsLoading"
+        :data="itemsList"
+        :columns="itemColumns"
+      />
+    </el-drawer>
   </div>
 </template>

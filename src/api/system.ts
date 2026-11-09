@@ -128,7 +128,8 @@ export {
 export {
   getContentFetchRecordPage,
   exportContentFetchRecords,
-  getContentFetchRecordOptions
+  getContentFetchRecordOptions,
+  getContentFetchRecordItems
 } from "./content-fetch-record";
 
 export {
