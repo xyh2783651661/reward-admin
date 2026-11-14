@@ -5,7 +5,8 @@ import {
   BarChart,
   LineChart,
   HeatmapChart,
-  RadarChart
+  RadarChart,
+  ScatterChart
 } from "echarts/charts";
 import { CanvasRenderer, SVGRenderer } from "echarts/renderers";
 import {
@@ -17,7 +18,10 @@ import {
   ToolboxComponent,
   TooltipComponent,
   DataZoomComponent,
-  VisualMapComponent
+  VisualMapComponent,
+  MarkPointComponent,
+  MarkLineComponent,
+  MarkAreaComponent
 } from "echarts/components";
 
 const { use } = echarts;
@@ -28,6 +32,7 @@ use([
   LineChart,
   HeatmapChart,
   RadarChart,
+  ScatterChart,
   CanvasRenderer,
   SVGRenderer,
   GridComponent,
@@ -38,7 +43,10 @@ use([
   ToolboxComponent,
   TooltipComponent,
   DataZoomComponent,
-  VisualMapComponent
+  VisualMapComponent,
+  MarkPointComponent,
+  MarkLineComponent,
+  MarkAreaComponent
 ]);
 
 /**
