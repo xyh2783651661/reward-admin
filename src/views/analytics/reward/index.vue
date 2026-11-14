@@ -1,322 +1,341 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from "vue";
-import PanelCard from "@/components/PanelCard/index.vue";
+import { computed } from "vue";
 import {
   getAnalyticsRewardOverview,
   type AnalyticsRewardOverview
 } from "@/api/analytics";
-import { useChartMount } from "../useChartMount";
+import AnalyticsPage from "../components/AnalyticsPage.vue";
+import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
+import AnalyticsState from "../components/AnalyticsState.vue";
+import AnalyticsSection from "../components/AnalyticsSection.vue";
+import StatsMetaLine from "../components/StatsMetaLine.vue";
+import MetricCard from "../components/MetricCard.vue";
+import ChartCard from "../components/ChartCard.vue";
+import DataTable from "../components/DataTable.vue";
+import RateBar from "../components/RateBar.vue";
+import InsightPanel, { type Insight } from "../components/InsightPanel.vue";
+import { useAnalyticsQuery } from "../composables/useAnalyticsQuery";
+import { SEMANTIC, cartesianOption, rankingOption } from "../utils/chartTheme";
+import { formatNumber, formatPercent, successRateTone } from "../utils/format";
 
 defineOptions({ name: "AnalyticsReward" });
 
-const { setChartRef, mountChart, resizeAll } = useChartMount();
+const { data, meta, loading, error, load } =
+  useAnalyticsQuery<AnalyticsRewardOverview>(
+    () => getAnalyticsRewardOverview(),
+    { errorLabel: "加载成绩分析数据失败" }
+  );
 
-const loading = ref(true);
-const data = ref<AnalyticsRewardOverview | null>(null);
-
-async function loadData() {
-  loading.value = true;
-  try {
-    const res = await getAnalyticsRewardOverview();
-    data.value = res.data?.data ?? null;
-  } catch (e) {
-    console.error("加载成绩分析数据失败", e);
+const insights = computed<Insight[]>(() => {
+  const d = data.value;
+  if (!d) return [];
+  const list: Insight[] = [];
+  const behind = [...(d.targetGapStats ?? [])]
+    .filter(s => s.avgGap < 0)
+    .sort((a, b) => a.avgGap - b.avgGap);
+  for (const s of behind.slice(0, 3)) {
+    list.push({
+      level: s.achievementRate < 50 ? "critical" : "warning",
+      title: `${s.subjectName} 平均分低于目标`,
+      evidence: `平均 ${formatNumber(s.avgScore, 1)} 分，目标 ${formatNumber(s.avgTarget, 1)} 分，差 ${formatNumber(Math.abs(s.avgGap), 1)} 分；达标 ${s.aboveCount} 次 / 未达标 ${s.belowCount} 次（达标率 ${formatPercent(s.achievementRate)}）`
+    });
   }
-  loading.value = false;
-  await nextTick();
-  setTimeout(renderCharts, 60);
-}
+  const trend = d.rankTrend ?? [];
+  if (trend.length >= 2) {
+    const last = trend[trend.length - 1];
+    const prev = trend[trend.length - 2];
+    if (last.rankValue > prev.rankValue) {
+      list.push({
+        level: "info",
+        title: "最近一次考试排名下降",
+        evidence: `${prev.examName} 第 ${prev.rankValue} 名 → ${last.examName} 第 ${last.rankValue} 名（下降 ${last.rankValue - prev.rankValue} 名）`
+      });
+    }
+  }
+  return list;
+});
 
-function renderCharts() {
-  renderRadar();
-  renderRankTrend();
-  renderTargetGap();
-  renderScoreTrend();
-  resizeAll();
-}
+const subjectRateOption = computed(() =>
+  rankingOption({
+    items: (data.value?.subjectStats ?? []).map(s => ({
+      name: s.subjectName,
+      value: s.avgScoreRate,
+      note: `平均 ${formatNumber(s.avgScore, 1)} 分 · 最低 ${s.minScore} · 最高 ${s.maxScore} · 共 ${s.count} 次考试`
+    })),
+    valueName: "平均得分率",
+    format: v => formatPercent(v),
+    max: 100
+  })
+);
 
-function renderTargetGap() {
-  const stats = data.value?.targetGapStats ?? [];
-  if (!stats.length) return;
-  // 按平均差距升序（差距越小/越负越靠下），便于看出哪科落后
-  const sorted = [...stats].sort((a, b) => a.avgGap - b.avgGap);
-  mountChart("targetGap", {
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow" },
-      formatter: (params: any) => {
-        const p = params[0];
-        const item = sorted[p.dataIndex];
-        return `${item.subjectName}<br/>平均分: ${item.avgScore}<br/>目标分: ${item.avgTarget}<br/>差距: ${item.avgGap > 0 ? "+" : ""}${item.avgGap}<br/>达标率: ${item.achievementRate}%`;
-      }
-    },
-    grid: { left: 16, right: 64, bottom: 8, top: 16, containLabel: true },
-    xAxis: { type: "value", name: "分差" },
-    yAxis: { type: "category", data: sorted.map(s => s.subjectName) },
+const gapOption = computed(() =>
+  rankingOption({
+    items: (data.value?.targetGapStats ?? []).map(s => ({
+      name: s.subjectName,
+      value: s.avgGap,
+      color: s.avgGap >= 0 ? SEMANTIC.positive : SEMANTIC.negative,
+      label: `${s.avgGap > 0 ? "+" : ""}${formatNumber(s.avgGap, 1)}`,
+      note: `平均 ${formatNumber(s.avgScore, 1)} 分，目标 ${formatNumber(s.avgTarget, 1)} 分，达标率 ${formatPercent(s.achievementRate)}`
+    })),
+    valueName: "平均分差",
+    format: v => `${v > 0 ? "+" : ""}${formatNumber(v, 1)}`
+  })
+);
+
+const scoreTrendOption = computed(() => {
+  const t = data.value?.scoreTrend ?? [];
+  return cartesianOption({
+    categories: t.map(i => i.examDate),
     series: [
       {
-        type: "bar",
-        barMaxWidth: 20,
-        data: sorted.map(s => ({
-          value: s.avgGap,
-          itemStyle: {
-            color: s.avgGap >= 0 ? "#10b981" : "#ef4444",
-            borderRadius: s.avgGap >= 0 ? [0, 4, 4, 0] : [4, 0, 0, 4]
-          }
-        })),
-        label: {
-          show: true,
-          position: (p: any) => (p.value >= 0 ? "right" : "left"),
-          formatter: (p: any) => `${p.value > 0 ? "+" : ""}${p.value}`
-        }
-      }
-    ]
-  });
-}
-
-function renderScoreTrend() {
-  const trend = data.value?.scoreTrend ?? [];
-  if (!trend.length) return;
-  mountChart("scoreTrend", {
-    color: ["#2563eb", "#f59e0b"],
-    tooltip: {
-      trigger: "axis",
-      formatter: (params: any) => {
-        const idx = params[0].dataIndex;
-        const item = trend[idx];
-        return `${item.examName}<br/>日期: ${item.examDate}<br/>总分: ${item.totalScore}/${item.totalFullScore}<br/>得分率: ${item.scoreRate}%<br/>奖励: ${item.totalReward}`;
-      }
-    },
-    legend: { data: ["得分率", "奖励金额"], top: 0 },
-    grid: { left: 16, right: 28, bottom: 8, top: 44, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: trend.map(t => t.examDate),
-      axisLabel: { rotate: 30 }
-    },
-    yAxis: [
-      { type: "value", name: "得分率%", max: 100, min: 60 },
-      { type: "value", name: "奖励" }
-    ],
-    series: [
+        name: "奖励金额",
+        data: t.map(i => i.totalReward),
+        color: SEMANTIC.muted
+      },
       {
         name: "得分率",
         type: "line",
-        smooth: 0.25,
-        symbol: "circle",
-        symbolSize: 7,
-        data: trend.map(t => t.scoreRate)
-      },
-      {
-        name: "奖励金额",
-        type: "bar",
-        yAxisIndex: 1,
-        barMaxWidth: 26,
-        data: trend.map(t => t.totalReward)
+        rightAxis: true,
+        data: t.map(i => i.scoreRate),
+        color: SEMANTIC.primary
       }
-    ]
+    ],
+    leftAxis: { name: "奖励" },
+    rightAxis: { name: "得分率", formatter: v => `${v}%` },
+    tooltipFormatters: {
+      奖励金额: v => formatNumber(v, 2),
+      得分率: v => formatPercent(v)
+    },
+    tooltipNote: i => {
+      const item = t[i ?? -1];
+      return item
+        ? `${item.examName} · 总分 ${item.totalScore} / ${item.totalFullScore}`
+        : undefined;
+    },
+    xLabel: { rotate: t.length > 8 ? 30 : 0 }
   });
-}
+});
 
-function renderRadar() {
-  const subjects = data.value?.subjectStats ?? [];
-  if (!subjects.length) return;
-  mountChart("radar", {
-    color: ["#2563eb"],
-    tooltip: {},
-    legend: { bottom: 0 },
-    radar: {
-      indicator: subjects.map(s => ({
-        name: s.subjectName,
-        max: s.maxScore > 0 ? s.maxScore : 150
-      })),
-      radius: "62%",
-      splitArea: { areaStyle: { color: ["#f8fbff", "#eef5ff"] } }
-    },
-    series: [
-      {
-        type: "radar",
-        data: [
-          {
-            value: subjects.map(s => s.avgScore),
-            name: "平均分",
-            areaStyle: { opacity: 0.25 }
-          }
-        ]
-      }
-    ]
-  });
-}
-
-function renderRankTrend() {
-  const trend = data.value?.rankTrend ?? [];
-  if (!trend.length) return;
-  mountChart("rank", {
-    color: ["#2563eb"],
-    tooltip: {
-      trigger: "axis",
-      formatter: (params: any) => {
-        const p = params[0];
-        const item = trend[p.dataIndex];
-        return `${item.examName}<br/>日期: ${item.examDate}<br/>排名: ${item.rankValue}`;
-      }
-    },
-    grid: { left: 16, right: 32, top: 32, bottom: 48, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: trend.map(t => t.examDate),
-      axisLabel: { rotate: 30 }
-    },
-    yAxis: {
-      type: "value",
-      name: "排名",
-      inverse: true,
-      minInterval: 1
-    },
+const rankOption = computed(() => {
+  const t = data.value?.rankTrend ?? [];
+  const option = cartesianOption({
+    categories: t.map(i => i.examDate),
     series: [
       {
         name: "总分排名",
         type: "line",
-        smooth: 0.25,
-        symbol: "circle",
-        symbolSize: 8,
-        lineStyle: { width: 2.5 },
-        data: trend.map(t => t.rankValue),
-        label: { show: true, position: "top", formatter: "{c}" }
+        data: t.map(i => i.rankValue),
+        color: SEMANTIC.primary
       }
-    ]
+    ],
+    tooltipFormatters: { 总分排名: v => `第 ${v} 名` },
+    tooltipNote: i => t[i ?? -1]?.examName,
+    xLabel: { rotate: t.length > 8 ? 30 : 0 }
   });
-}
+  // 排名越小越好：反转 Y 轴并只允许整数刻度
+  option.yAxis[0] = {
+    ...option.yAxis[0],
+    inverse: true,
+    minInterval: 1,
+    axisLabel: { formatter: (v: number) => `第 ${v} 名` }
+  };
+  option.series[0].label = { show: true, position: "top", fontSize: 11 };
+  return option;
+});
 
-onMounted(() => loadData());
+const totalReward = computed(() =>
+  (data.value?.scoreTrend ?? []).reduce((s, i) => s + (i.totalReward ?? 0), 0)
+);
 </script>
 
 <template>
-  <div style="padding: 20px">
+  <AnalyticsPage>
+    <AnalyticsPageHeader
+      title="成绩分析"
+      description="科目表现、目标达成与历次考试变化（全部历史数据）"
+      :loading="loading"
+      @refresh="load"
+    />
+    <StatsMetaLine :meta="meta" />
+
+    <AnalyticsState
+      :loading="loading"
+      :error="error"
+      :has-data="!!data"
+      @retry="load"
+    />
+
     <template v-if="data">
-      <el-row :gutter="16" style="margin-bottom: 16px">
-        <el-col :span="8"
-          ><el-card shadow="hover"
-            ><el-statistic title="考试总数" :value="data.totalExams" /></el-card
-        ></el-col>
-        <el-col :span="8"
-          ><el-card shadow="hover"
-            ><el-statistic
-              title="奖励记录数"
-              :value="data.totalRewards" /></el-card
-        ></el-col>
-        <el-col :span="8"
-          ><el-card shadow="hover"
-            ><el-statistic
-              title="科目数"
-              :value="data.subjectStats?.length || 0" /></el-card
-        ></el-col>
-      </el-row>
+      <InsightPanel
+        :insights="insights"
+        rules="科目平均分低于目标；最近一次考试排名下降"
+        :loading="loading"
+      />
 
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <PanelCard title="科目成绩雷达图" description="各科目平均分对比">
-            <div
-              :ref="el => setChartRef('radar', el)"
-              style=" width: 100%;height: 400px"
-            />
-          </PanelCard>
-        </el-col>
-        <el-col :span="12">
-          <PanelCard title="科目成绩明细">
-            <el-table :data="data.subjectStats" stripe size="small">
-              <el-table-column prop="subjectName" label="科目" width="100" />
-              <el-table-column prop="count" label="考试次数" width="90" />
-              <el-table-column prop="avgScore" label="平均分" width="90" />
-              <el-table-column prop="avgScoreRate" label="得分率" width="90"
-                ><template #default="{ row }"
-                  >{{ row.avgScoreRate }}%</template
-                ></el-table-column
-              >
-              <el-table-column prop="minScore" label="最低分" width="80" />
-              <el-table-column prop="maxScore" label="最高分" width="80" />
-            </el-table>
-          </PanelCard>
-        </el-col>
-      </el-row>
+      <div class="reward-metrics">
+        <MetricCard label="考试总数" :value="data.totalExams" size="hero" />
+        <MetricCard
+          label="奖励记录数"
+          :value="data.totalRewards"
+          size="hero"
+          :caption="`累计奖励金额 ${formatNumber(totalReward, 2)}`"
+        />
+        <MetricCard
+          label="科目数"
+          :value="data.subjectStats?.length ?? 0"
+          size="hero"
+        />
+      </div>
 
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="12">
-          <PanelCard
+      <AnalyticsSection
+        title="科目表现"
+        description="得分率便于跨科目比较，不受满分差异影响"
+      >
+        <div class="reward-grid">
+          <ChartCard
+            title="科目平均得分率"
+            :option="subjectRateOption"
+            :height="Math.max(220, (data.subjectStats?.length ?? 0) * 40)"
+            :empty="!data.subjectStats?.length"
+          />
+          <ChartCard
             title="科目目标达成差距"
-            description="分差 = 平均分 - 目标分，绿色为达标"
+            description="分差 = 平均分 − 目标分；绿色达标，红色未达标"
+            :option="gapOption"
+            :height="Math.max(220, (data.targetGapStats?.length ?? 0) * 40)"
+            :empty="!data.targetGapStats?.length"
+          />
+        </div>
+        <div class="reward-grid">
+          <ChartCard title="科目成绩明细" :empty="!data.subjectStats?.length">
+            <DataTable :data="data.subjectStats">
+              <el-table-column prop="subjectName" label="科目" min-width="90" />
+              <el-table-column
+                prop="count"
+                label="考试次数"
+                width="90"
+                align="right"
+              />
+              <el-table-column
+                prop="avgScore"
+                label="平均分"
+                width="90"
+                align="right"
+              />
+              <el-table-column label="得分率" width="160">
+                <template #default="{ row }">
+                  <RateBar
+                    :value="row.avgScoreRate"
+                    :tone="successRateTone(row.avgScoreRate)"
+                  />
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="minScore"
+                label="最低"
+                width="70"
+                align="right"
+              />
+              <el-table-column
+                prop="maxScore"
+                label="最高"
+                width="70"
+                align="right"
+              />
+            </DataTable>
+          </ChartCard>
+          <ChartCard
+            title="科目目标达成明细"
+            :empty="!data.targetGapStats?.length"
           >
-            <div
-              :ref="el => setChartRef('targetGap', el)"
-              style=" width: 100%;height: 360px"
-            />
-          </PanelCard>
-        </el-col>
-        <el-col :span="12">
-          <PanelCard title="科目目标达成明细">
-            <el-table :data="data.targetGapStats" stripe size="small">
-              <el-table-column prop="subjectName" label="科目" width="90" />
-              <el-table-column prop="avgScore" label="平均分" width="90" />
-              <el-table-column prop="avgTarget" label="目标分" width="90" />
-              <el-table-column prop="avgGap" label="分差" width="90">
+            <DataTable :data="data.targetGapStats">
+              <el-table-column prop="subjectName" label="科目" min-width="90" />
+              <el-table-column
+                prop="avgScore"
+                label="平均分"
+                width="80"
+                align="right"
+              />
+              <el-table-column
+                prop="avgTarget"
+                label="目标分"
+                width="80"
+                align="right"
+              />
+              <el-table-column label="分差" width="80" align="right">
                 <template #default="{ row }">
                   <span
-                    :style="{ color: row.avgGap >= 0 ? '#67c23a' : '#f56c6c' }"
+                    :class="row.avgGap >= 0 ? 'text-positive' : 'text-negative'"
                   >
                     {{ row.avgGap > 0 ? "+" : "" }}{{ row.avgGap }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column prop="achievementRate" label="达标率" width="90">
-                <template #default="{ row }"
-                  >{{ row.achievementRate }}%</template
-                >
+              <el-table-column label="达标率" width="160">
+                <template #default="{ row }">
+                  <RateBar
+                    :value="row.achievementRate"
+                    :tone="successRateTone(row.achievementRate)"
+                  />
+                </template>
               </el-table-column>
-              <el-table-column label="达标/未达" min-width="100">
-                <template #default="{ row }"
-                  >{{ row.aboveCount }} / {{ row.belowCount }}</template
-                >
+              <el-table-column label="达标 / 未达" width="100" align="right">
+                <template #default="{ row }">
+                  {{ row.aboveCount }} / {{ row.belowCount }}
+                </template>
               </el-table-column>
-            </el-table>
-          </PanelCard>
-        </el-col>
-      </el-row>
+            </DataTable>
+          </ChartCard>
+        </div>
+      </AnalyticsSection>
 
-      <PanelCard
-        v-if="data.scoreTrend?.length"
-        title="历次考试得分率与奖励金额"
-        description="得分率基于「各科分数合计 / 满分合计」"
-        style="margin-top: 16px"
-      >
-        <div
-          :ref="el => setChartRef('scoreTrend', el)"
-          style=" width: 100%;height: 320px"
+      <AnalyticsSection title="历次考试变化">
+        <ChartCard
+          v-if="data.scoreTrend?.length"
+          title="得分率与奖励金额"
+          description="得分率 = 各科分数合计 / 满分合计"
+          :option="scoreTrendOption"
+          :height="300"
         />
-      </PanelCard>
-
-      <PanelCard
-        v-if="data.rankTrend?.length"
-        title="总分排名变化"
-        description="排名越靠上越好（Y 轴已反转）"
-        style="margin-top: 16px"
-      >
-        <div
-          :ref="el => setChartRef('rank', el)"
-          style=" width: 100%;height: 320px"
+        <ChartCard
+          v-if="data.rankTrend?.length"
+          title="总分排名变化"
+          description="排名越靠上越好（纵轴已反转）"
+          :option="rankOption"
+          :height="280"
         />
-      </PanelCard>
+      </AnalyticsSection>
 
-      <PanelCard title="考试记录" style="margin-top: 16px">
-        <el-table :data="data.examResults" stripe size="small">
+      <ChartCard title="考试记录" :empty="!data.examResults?.length">
+        <DataTable :data="data.examResults">
           <el-table-column prop="examName" label="考试名称" min-width="200" />
           <el-table-column prop="examDate" label="日期" width="120" />
           <el-table-column prop="stage" label="学段" width="100" />
           <el-table-column prop="rewardStatus" label="奖励状态" width="120" />
-        </el-table>
-      </PanelCard>
+        </DataTable>
+      </ChartCard>
     </template>
-
-    <el-empty v-else-if="!loading" description="暂无数据" />
-    <el-skeleton v-if="loading" :rows="6" animated />
-  </div>
+  </AnalyticsPage>
 </template>
+
+<style scoped lang="scss">
+.reward-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--ra-space-md);
+}
+
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: var(--ra-space-md);
+}
+
+.text-positive {
+  color: var(--el-color-success);
+}
+
+.text-negative {
+  color: var(--el-color-danger);
+}
+</style>
