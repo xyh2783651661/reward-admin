@@ -1,392 +1,649 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import PanelCard from "@/components/PanelCard/index.vue";
 import {
   getAnalyticsAiOverview,
   type AnalyticsAiOverview
 } from "@/api/analytics";
-import { useChartMount } from "../useChartMount";
+import AnalyticsChart from "../components/AnalyticsChart.vue";
+import AnalyticsPage from "../components/AnalyticsPage.vue";
+import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
+import AnalyticsState from "../components/AnalyticsState.vue";
+import Chapter from "../components/Chapter.vue";
+import DataTable from "../components/DataTable.vue";
+import FindingList from "../components/FindingList.vue";
+import RateBar from "../components/RateBar.vue";
+import Readout from "../components/Readout.vue";
+import StatsMetaLine from "../components/StatsMetaLine.vue";
+import { useAnalyticsQuery } from "../composables/useAnalyticsQuery";
+import {
+  PALETTE,
+  SEMANTIC,
+  cartesianOption,
+  rankingOption,
+  toneColor,
+  tooltipHtml
+} from "../utils/chartTheme";
+import {
+  FAIL_RATE_WARN,
+  FINDING_RULES,
+  MIN_SAMPLE_AI,
+  aiFindings
+} from "../utils/findings";
+import {
+  failRateTone,
+  formatDuration,
+  formatNumber,
+  formatPercent,
+  formatTokens,
+  successRateTone
+} from "../utils/format";
+import { compareHalves, peakIndex, ratioPercent } from "../utils/series";
 
 defineOptions({ name: "AnalyticsAi" });
 
 const router = useRouter();
-const { setChartRef, mountChart, resizeAll, onChartClick } = useChartMount();
-
-const loading = ref(true);
-const data = ref<AnalyticsAiOverview | null>(null);
 const range = ref(30);
+const scope = computed(() => `近 ${range.value} 天`);
 
-const CHART_COLORS = [
-  "#2563eb",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ef4444",
-  "#06b6d4",
-  "#f97316",
-  "#14b8a6"
+const { data, meta, loading, error, load } =
+  useAnalyticsQuery<AnalyticsAiOverview>(days => getAnalyticsAiOverview(days), {
+    range,
+    errorLabel: "加载 AI 分析数据失败"
+  });
+
+function goCallRecords(query: Record<string, string>) {
+  router.push({ path: "/monitor/ai-call-records", query });
+}
+
+// ==================== 发现 ====================
+
+const findings = computed(() => {
+  const d = data.value;
+  if (!d) return [];
+  const list = aiFindings(d, scope.value, {
+    onModel: model => goCallRecords({ model })
+  });
+  const slow = d.slowCalls?.length ?? 0;
+  if (slow > 0)
+    list.push({
+      level: "info",
+      module: "AI 调用",
+      title: `存在 ${slow} 条耗时超过 30 秒的慢调用`,
+      evidence: "详见页面底部「明细」中的慢调用 TOP10，可按模型与业务类型定位"
+    });
+  return list;
+});
+
+// ==================== 01 调用趋势 ====================
+
+type TrendMetric = "calls" | "token" | "fallback";
+const trendMetric = ref<TrendMetric>("calls");
+const TREND_OPTIONS: Array<{ label: string; value: TrendMetric }> = [
+  { label: "调用与失败", value: "calls" },
+  { label: "Token 与耗时", value: "token" },
+  { label: "Fallback", value: "fallback" }
 ];
 
-async function loadData() {
-  loading.value = true;
-  try {
-    const res = await getAnalyticsAiOverview(range.value);
-    data.value = res.data?.data ?? null;
-  } catch (e) {
-    console.error("加载AI分析数据失败", e);
-  }
-  loading.value = false;
-  await nextTick();
-  setTimeout(renderCharts, 60);
-}
+const trend = computed(() => data.value?.monthlyTrend ?? []);
+const months = computed(() => trend.value.map(i => i.month));
 
-function renderCharts() {
-  renderModelChart();
-  renderBizTypeChart();
-  renderTrendChart();
-  renderTokenTrend();
-  resizeAll();
-}
-
-function navigateToCallRecord(model?: string) {
-  if (!model) return;
-  router.push({ path: "/monitor/ai-call-records", query: { model } });
-}
-
-function renderModelChart() {
-  if (!data.value) return;
-  const stats = [...(data.value.modelStats ?? [])].sort(
-    (a, b) => a.failRate - b.failRate
-  );
-  mountChart("model", {
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    grid: { left: 16, right: 56, bottom: 8, top: 16, containLabel: true },
-    xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
-    yAxis: { type: "category", data: stats.map(s => s.model) },
-    series: [
-      {
-        type: "bar",
-        barMaxWidth: 20,
-        data: stats.map(s => ({
-          value: s.failRate,
-          itemStyle: {
-            color:
-              s.failRate > 30
-                ? "#ef4444"
-                : s.failRate > 15
-                  ? "#f59e0b"
-                  : "#10b981",
-            borderRadius: [0, 4, 4, 0]
-          }
-        })),
-        label: { show: true, position: "right", formatter: "{c}%" }
+const trendOption = computed(() => {
+  const t = trend.value;
+  const base = { categories: months.value };
+  if (trendMetric.value === "token")
+    return cartesianOption({
+      ...base,
+      series: [
+        {
+          name: "Token 消耗",
+          data: t.map(i => i.totalTokens ?? null),
+          color: PALETTE[3]
+        },
+        {
+          name: "平均耗时",
+          data: t.map(i => i.avgCostMs),
+          type: "line",
+          rightAxis: true,
+          color: SEMANTIC.warning
+        }
+      ],
+      leftAxis: { formatter: v => formatTokens(v) },
+      rightAxis: { formatter: v => formatDuration(v) },
+      tooltipFormatters: {
+        "Token 消耗": v => formatTokens(v),
+        平均耗时: v => formatDuration(v)
       }
-    ]
-  });
-  onChartClick("model", (params: any) => navigateToCallRecord(params?.name));
-}
-
-function renderBizTypeChart() {
-  if (!data.value) return;
-  const stats = (data.value.bizTypeStats ?? []).slice(0, 8);
-  mountChart("bizType", {
-    color: CHART_COLORS,
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
-    legend: { type: "scroll", orient: "vertical", right: 8, top: "center" },
-    series: [
-      {
-        type: "pie",
-        radius: ["42%", "68%"],
-        center: ["36%", "50%"],
-        avoidLabelOverlap: true,
-        data: stats.map(s => ({ name: s.bizType, value: s.count })),
-        label: { formatter: "{d}%" }
-      }
-    ]
-  });
-  onChartClick("bizType", (params: any) => {
-    if (!params?.name) return;
-    router.push({
-      path: "/monitor/ai-call-records",
-      query: { bizType: params.name }
     });
-  });
-}
-
-function renderTrendChart() {
-  if (!data.value) return;
-  const trend = data.value.monthlyTrend ?? [];
-  mountChart("trend", {
-    color: ["#2563eb", "#ef4444", "#8b5cf6"],
-    tooltip: { trigger: "axis" },
-    legend: { data: ["调用总量", "失败数", "失败率"], top: 0 },
-    grid: { left: 16, right: 28, bottom: 8, top: 44, containLabel: true },
-    xAxis: { type: "category", data: trend.map(t => t.month) },
-    yAxis: [
-      { type: "value", name: "调用量" },
-      {
-        type: "value",
-        name: "失败率%",
-        max: 100,
-        axisLabel: { formatter: "{value}%" }
+  if (trendMetric.value === "fallback")
+    return cartesianOption({
+      ...base,
+      series: [
+        {
+          name: "Fallback 次数",
+          data: t.map(i => i.fallbackCount ?? null),
+          color: PALETTE[2]
+        },
+        {
+          name: "Fallback 触发率",
+          data: t.map(i => i.fallbackRate ?? null),
+          type: "line",
+          rightAxis: true,
+          color: SEMANTIC.negative
+        }
+      ],
+      leftAxis: { formatter: v => formatNumber(v) },
+      rightAxis: { formatter: v => `${v}%`, min: 0 },
+      tooltipFormatters: {
+        "Fallback 次数": v => `${formatNumber(v)} 次`,
+        "Fallback 触发率": v => formatPercent(v)
       }
-    ],
+    });
+  const option = cartesianOption({
+    ...base,
     series: [
       {
-        name: "调用总量",
-        type: "bar",
-        barMaxWidth: 24,
-        data: trend.map(t => t.total)
+        name: "成功",
+        data: t.map(i => i.success),
+        stack: "calls",
+        color: SEMANTIC.positive
       },
       {
-        name: "失败数",
-        type: "bar",
-        barMaxWidth: 24,
-        data: trend.map(t => t.fail)
+        name: "失败",
+        data: t.map(i => i.fail),
+        stack: "calls",
+        color: SEMANTIC.negative
       },
       {
         name: "失败率",
+        data: t.map(i => (i.total > 0 ? i.failRate : null)),
         type: "line",
-        yAxisIndex: 1,
-        smooth: 0.25,
-        symbol: "circle",
-        symbolSize: 6,
-        data: trend.map(t => t.failRate)
-      }
-    ]
-  });
-}
-
-function renderTokenTrend() {
-  if (!data.value) return;
-  const trend = data.value.monthlyTrend ?? [];
-  mountChart("tokenTrend", {
-    color: ["#10b981", "#f59e0b", "#8b5cf6"],
-    tooltip: { trigger: "axis" },
-    legend: {
-      data: ["Token 消耗", "Fallback 次数", "Fallback 触发率"],
-      top: 0
-    },
-    grid: { left: 16, right: 28, bottom: 8, top: 44, containLabel: true },
-    xAxis: { type: "category", data: trend.map(t => t.month) },
-    yAxis: [
-      { type: "value", name: "Token" },
-      {
-        type: "value",
-        name: "触发率%",
-        max: 100,
-        axisLabel: { formatter: "{value}%" }
+        rightAxis: true,
+        color: SEMANTIC.warning
       }
     ],
-    series: [
-      {
-        name: "Token 消耗",
-        type: "bar",
-        barMaxWidth: 26,
-        data: trend.map(t => t.totalTokens ?? 0)
-      },
-      {
-        name: "Fallback 次数",
-        type: "bar",
-        barMaxWidth: 26,
-        data: trend.map(t => t.fallbackCount ?? 0)
-      },
-      {
-        name: "Fallback 触发率",
-        type: "line",
-        yAxisIndex: 1,
-        smooth: 0.25,
-        symbol: "circle",
-        symbolSize: 6,
-        data: trend.map(t => t.fallbackRate ?? 0)
-      }
-    ]
+    leftAxis: { formatter: v => formatNumber(v) },
+    rightAxis: { formatter: v => `${v}%`, min: 0 },
+    tooltipFormatters: {
+      成功: v => `${formatNumber(v)} 次`,
+      失败: v => `${formatNumber(v)} 次`,
+      失败率: v => formatPercent(v)
+    }
   });
+  const line = (option.series as any[])[2];
+  line.markLine = {
+    silent: true,
+    symbol: "none",
+    data: [{ yAxis: FAIL_RATE_WARN }],
+    lineStyle: {
+      type: "dashed",
+      color: SEMANTIC.negative,
+      width: 1,
+      opacity: 0.6
+    },
+    label: {
+      position: "insideEndTop",
+      color: "@text-secondary",
+      fontSize: 11,
+      formatter: `关注线 ${FAIL_RATE_WARN}%`
+    }
+  };
+  return option;
+});
+
+const trendFacts = computed(() => {
+  const t = trend.value;
+  const facts: Array<{ label: string; value: string; hint: string }> = [];
+  if (!t.length) return facts;
+  const pk = peakIndex(t.map(i => i.total));
+  if (pk >= 0)
+    facts.push({
+      label: "调用最多的时段",
+      value: t[pk].month,
+      hint: `${formatNumber(t[pk].total)} 次调用`
+    });
+  const worst = peakIndex(
+    t.map(i => i.failRate),
+    i => t[i].total >= MIN_SAMPLE_AI / 2
+  );
+  if (worst >= 0)
+    facts.push({
+      label: "失败率最高的时段",
+      value: formatPercent(t[worst].failRate),
+      hint: `${t[worst].month}，${formatNumber(t[worst].fail)} / ${formatNumber(t[worst].total)} 次`
+    });
+  const cmp = compareHalves(t.map(i => (i.total > 0 ? i.failRate : null)));
+  if (cmp)
+    facts.push({
+      label: "失败率前后半段",
+      value: `${cmp.diff > 0 ? "+" : ""}${cmp.diff.toFixed(1)} 个百分点`,
+      hint: `${formatPercent(cmp.first)} → ${formatPercent(cmp.second)}`
+    });
+  return facts;
+});
+
+// ==================== 02 模型 ====================
+
+const selectedModel = ref<string | null>(null);
+
+const models = computed(() =>
+  [...(data.value?.modelStats ?? [])].sort((a, b) => b.total - a.total)
+);
+const selected = computed(
+  () => models.value.find(m => m.model === selectedModel.value) ?? null
+);
+
+function toggleModel(model: string | undefined) {
+  if (!model) return;
+  selectedModel.value = selectedModel.value === model ? null : model;
 }
 
-onMounted(() => loadData());
+const scatterOption = computed(() => {
+  const list = models.value.filter(m => m.total > 0);
+  const maxTotal = Math.max(...list.map(m => m.total), 1);
+  return {
+    grid: { left: 8, right: 24, top: 24, bottom: 8, containLabel: true },
+    tooltip: {
+      trigger: "item",
+      formatter: (p: any) => {
+        const m = p.data.stat;
+        return tooltipHtml(
+          m.model,
+          [
+            { label: "调用次数", value: formatNumber(m.total) },
+            {
+              label: "失败率",
+              value: formatPercent(m.failRate),
+              color: toneColor(failRateTone(m.failRate))
+            },
+            { label: "平均耗时", value: formatDuration(m.avgCostMs) },
+            { label: "Token", value: formatTokens(m.totalTokens) }
+          ],
+          "点击查看该模型详情"
+        );
+      }
+    },
+    xAxis: {
+      type: "value",
+      name: "平均耗时",
+      nameLocation: "middle",
+      nameGap: 28,
+      axisLabel: { formatter: (v: number) => formatDuration(v) }
+    },
+    yAxis: {
+      type: "value",
+      name: "失败率",
+      min: 0,
+      axisLabel: { formatter: (v: number) => `${v}%` }
+    },
+    series: [
+      {
+        type: "scatter",
+        data: list.map(m => ({
+          value: [m.avgCostMs, m.failRate],
+          stat: m,
+          symbolSize: 12 + Math.sqrt(m.total / maxTotal) * 34,
+          itemStyle: {
+            color: toneColor(failRateTone(m.failRate)),
+            opacity:
+              selectedModel.value && selectedModel.value !== m.model
+                ? 0.3
+                : 0.8,
+            borderColor:
+              selectedModel.value === m.model ? "@text-primary" : "transparent",
+            borderWidth: 2
+          },
+          name: m.model
+        })),
+        label: {
+          show: true,
+          position: "top",
+          fontSize: 11,
+          color: "@text-secondary",
+          formatter: (p: any) => p.data.name
+        },
+        markLine: {
+          silent: true,
+          symbol: "none",
+          data: [{ yAxis: FAIL_RATE_WARN }],
+          lineStyle: {
+            type: "dashed",
+            color: SEMANTIC.negative,
+            width: 1,
+            opacity: 0.6
+          },
+          label: { show: false }
+        }
+      }
+    ]
+  };
+});
+
+function onScatterClick(p: any) {
+  toggleModel(p?.data?.name);
+}
+
+function modelRowClass({ row }: { row: { model: string } }) {
+  return row.model === selectedModel.value ? "is-selected-row" : "";
+}
+
+// ==================== 03 业务类型 ====================
+
+const bizTypes = computed(() => data.value?.bizTypeStats ?? []);
+
+const bizVolumeOption = computed(() =>
+  rankingOption({
+    items: bizTypes.value.slice(0, 10).map(b => ({
+      name: b.bizType,
+      value: b.count,
+      color: PALETTE[0],
+      note: `占比 ${formatPercent(b.percentage)}，平均耗时 ${formatDuration(b.avgCostMs)}，${formatTokens(b.totalTokens)} Token`
+    })),
+    valueName: "调用次数",
+    format: v => formatNumber(v)
+  })
+);
+
+const bizFailItems = computed(() =>
+  bizTypes.value
+    .filter(b => b.count >= MIN_SAMPLE_AI)
+    .map(b => ({ b, rate: ratioPercent(b.failCount, b.count) ?? 0 }))
+    .filter(i => i.rate > 0)
+    .sort((a, b) => b.rate - a.rate)
+    .slice(0, 10)
+);
+
+const bizFailOption = computed(() =>
+  rankingOption({
+    items: bizFailItems.value.map(({ b, rate }) => ({
+      name: b.bizType,
+      value: rate,
+      color: toneColor(failRateTone(rate)),
+      note: `失败 ${formatNumber(b.failCount)} / 调用 ${formatNumber(b.count)} 次`
+    })),
+    valueName: "失败率",
+    format: v => formatPercent(v),
+    min: 0
+  })
+);
+
+const findingRules = FINDING_RULES.ai;
+
+const lead = computed(() => {
+  const d = data.value;
+  if (!d) return null;
+  return {
+    failTone: failRateTone(d.failRate),
+    successSpark: trend.value.map(i => (i.total > 0 ? 100 - i.failRate : null)),
+    callSpark: trend.value.map(i => i.total),
+    costSpark: trend.value.map(i => (i.total > 0 ? i.avgCostMs : null)),
+    tokenSpark: trend.value.map(i => i.totalTokens ?? null),
+    fallbackSpark: trend.value.map(i => i.fallbackRate ?? null)
+  };
+});
 </script>
+
 <template>
-  <div class="analytics-ai" style="padding: 20px">
-    <el-radio-group
-      v-model="range"
-      style="margin-bottom: 16px"
-      @change="loadData"
-    >
-      <el-radio-button :value="7">近7天</el-radio-button>
-      <el-radio-button :value="30">近30天</el-radio-button>
-      <el-radio-button :value="90">近90天</el-radio-button>
-    </el-radio-group>
+  <AnalyticsPage>
+    <AnalyticsPageHeader
+      v-model:range="range"
+      title="AI 调用分析"
+      description="调用是否稳定、哪些模型与业务需要关注、供应商与回退是否可靠"
+      :loading="loading"
+      @refresh="load"
+    />
+    <StatsMetaLine :meta="meta" />
+    <AnalyticsState
+      :loading="loading"
+      :error="error"
+      :has-data="!!data"
+      @retry="load"
+    />
 
-    <template v-if="data">
-      <el-row :gutter="16" style="margin-bottom: 16px">
-        <el-col :span="4">
-          <el-card shadow="hover"
-            ><el-statistic title="总调用" :value="data.totalCalls"
-          /></el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover"
-            ><el-statistic
-              title="成功率"
-              :value="data.successRate"
-              suffix="%"
-              :value-style="{
-                color: data.successRate >= 80 ? '#67c23a' : '#e6a23c'
-              }"
-          /></el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover"
-            ><el-statistic
-              title="失败率"
-              :value="data.failRate"
-              suffix="%"
-              :value-style="{ color: '#f56c6c' }"
-          /></el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover"
-            ><el-statistic title="平均耗时" :value="data.avgCostMs" suffix="ms"
-          /></el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover"
-            ><el-statistic title="Token总量" :value="data.totalTokens"
-          /></el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card shadow="hover"
-            ><el-statistic
-              title="Fallback触发率"
-              :value="data.fallbackRate"
-              suffix="%"
-              :value-style="{ color: '#409eff' }"
-          /></el-card>
-        </el-col>
-      </el-row>
+    <template v-if="data && lead">
+      <section class="ai-lead" aria-label="核心读数">
+        <Readout
+          size="lead"
+          label="调用次数"
+          :value="data.totalCalls"
+          :spark="lead.callSpark"
+          :caption="`成功 ${formatNumber(data.successCount)} · 失败 ${formatNumber(data.failCount)}`"
+        />
+        <Readout
+          size="lead"
+          label="成功率"
+          kind="percent"
+          :value="data.successRate"
+          :tone="successRateTone(data.successRate)"
+          :spark="lead.successSpark"
+          :caption="`失败率 ${formatPercent(data.failRate)}`"
+        />
+        <Readout
+          size="lead"
+          label="平均耗时"
+          kind="duration"
+          :value="data.avgCostMs"
+          :spark="lead.costSpark"
+        />
+        <Readout
+          size="lead"
+          label="Token 消耗"
+          kind="tokens"
+          :value="data.totalTokens"
+          :spark="lead.tokenSpark"
+        />
+        <Readout
+          size="lead"
+          label="Fallback 触发率"
+          kind="percent"
+          :value="data.fallbackRate"
+          :tone="data.fallbackRate > 20 ? 'warning' : 'neutral'"
+          :spark="lead.fallbackSpark"
+          :caption="`${formatNumber(data.fallbackTriggered)} 次触发，最终成功率 ${formatPercent(data.fallbackSuccessRate)}`"
+          hint="触发过回退的调用占总调用的比例；最终成功率为回退后成功的比例"
+        />
+      </section>
 
-      <el-row :gutter="16">
-        <el-col :span="12">
-          <PanelCard
-            title="模型失败率对比"
-            description="点击柱状图可跳转到对应调用记录"
+      <section v-if="findings.length" class="ai-findings" aria-label="本期发现">
+        <h2>本期发现</h2>
+        <FindingList :items="findings" :rules="findingRules" />
+      </section>
+
+      <Chapter index="01" question="调用量与失败率在如何变化？">
+        <template #facts>
+          <dl class="facts">
+            <div v-for="f in trendFacts" :key="f.label">
+              <dt>{{ f.label }}</dt>
+              <dd>{{ f.value }}</dd>
+              <p>{{ f.hint }}</p>
+            </div>
+          </dl>
+        </template>
+        <div class="chart-bar">
+          <el-radio-group
+            v-model="trendMetric"
+            size="small"
+            aria-label="趋势指标"
           >
-            <div
-              :ref="el => setChartRef('model', el)"
-              style=" width: 100%;height: 380px"
-            />
-          </PanelCard>
-        </el-col>
-        <el-col :span="12">
-          <PanelCard
-            title="业务类型分布"
-            description="点击扇区可跳转到对应调用记录"
-          >
-            <div
-              :ref="el => setChartRef('bizType', el)"
-              style=" width: 100%;height: 380px"
-            />
-          </PanelCard>
-        </el-col>
-      </el-row>
+            <el-radio-button
+              v-for="o in TREND_OPTIONS"
+              :key="o.value"
+              :value="o.value"
+            >
+              {{ o.label }}
+            </el-radio-button>
+          </el-radio-group>
+          <span>按月统计 · 虚线为 {{ FAIL_RATE_WARN }}% 关注线</span>
+        </div>
+        <AnalyticsChart
+          :option="trendOption"
+          :height="300"
+          label="AI 调用月度趋势"
+        />
+      </Chapter>
 
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="24">
-          <PanelCard
-            title="月度趋势"
-            description="调用总量、失败数与失败率变化"
-          >
-            <div
-              :ref="el => setChartRef('trend', el)"
-              style=" width: 100%;height: 340px"
-            />
-          </PanelCard>
-        </el-col>
-      </el-row>
-
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="24">
-          <PanelCard
-            title="Token 消耗与 Fallback 触发趋势"
-            description="月度 Token 消耗量、回退次数与触发率"
-          >
-            <div
-              :ref="el => setChartRef('tokenTrend', el)"
-              style=" width: 100%;height: 320px"
-            />
-          </PanelCard>
-        </el-col>
-      </el-row>
-
-      <PanelCard
-        v-if="data.fallbackPatterns?.length"
-        title="Fallback 回退链路模式"
-        description="按回退路径聚合，成功率 = 最终成功 / 该路径调用次数"
-        style="margin-top: 16px"
-      >
-        <el-table :data="data.fallbackPatterns" stripe size="small">
-          <el-table-column prop="pattern" label="回退链路" min-width="260" />
-          <el-table-column prop="count" label="触发次数" width="110" />
-          <el-table-column prop="successCount" label="最终成功" width="110" />
-          <el-table-column prop="successRate" label="成功率" width="120">
-            <template #default="{ row }">
-              <el-tag
-                :type="
-                  row.successRate >= 80
-                    ? 'success'
-                    : row.successRate >= 50
-                      ? 'warning'
-                      : 'danger'
-                "
-                size="small"
-              >
-                {{ row.successRate }}%
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
-      </PanelCard>
-
-      <PanelCard
-        v-if="data.fallbackChains?.length"
-        title="Fallback 明细（最近 20 条多供应商回退）"
-        description="基于 ai_call_record.fallback_tried 原始字段，未做推断"
-        style="margin-top: 16px"
-      >
-        <el-table :data="data.fallbackChains" stripe size="small">
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="model" label="最终模型" width="150" />
-          <el-table-column
-            prop="fallbackTried"
-            label="尝试链路"
-            min-width="220"
+      <Chapter index="02" question="哪些模型值得关注？">
+        <template #facts>
+          <p class="facts-note">
+            横轴是平均耗时，纵轴是失败率，气泡越大调用越多。越靠右上越需要关注；点击气泡或表格行查看详情。
+          </p>
+        </template>
+        <div class="models">
+          <AnalyticsChart
+            :option="scatterOption"
+            :height="320"
+            clickable
+            label="模型失败率与平均耗时散点图"
+            @chart-click="onScatterClick"
           />
-          <el-table-column prop="attemptCount" label="尝试次数" width="100" />
-          <el-table-column prop="status" label="最终状态" width="100">
-            <template #default="{ row }">
-              <el-tag
-                :type="row.status === 'SUCCESS' ? 'success' : 'danger'"
+          <aside class="models__detail" aria-live="polite">
+            <template v-if="selected">
+              <h3>{{ selected.model }}</h3>
+              <dl>
+                <div>
+                  <dt>调用次数</dt>
+                  <dd>{{ formatNumber(selected.total) }}</dd>
+                </div>
+                <div>
+                  <dt>失败次数</dt>
+                  <dd>{{ formatNumber(selected.fail) }}</dd>
+                </div>
+                <div>
+                  <dt>失败率</dt>
+                  <dd>{{ formatPercent(selected.failRate) }}</dd>
+                </div>
+                <div>
+                  <dt>平均耗时</dt>
+                  <dd>{{ formatDuration(selected.avgCostMs) }}</dd>
+                </div>
+                <div>
+                  <dt>Token</dt>
+                  <dd>{{ formatTokens(selected.totalTokens) }}</dd>
+                </div>
+                <div>
+                  <dt>使用 Fallback</dt>
+                  <dd>{{ formatNumber(selected.fallbackUsed) }} 次</dd>
+                </div>
+              </dl>
+              <el-button
+                type="primary"
                 size="small"
-                >{{ row.status }}</el-tag
+                @click="goCallRecords({ model: selected.model })"
               >
+                查看调用记录
+              </el-button>
+            </template>
+            <p v-else class="models__hint">
+              选择一个模型，在这里查看它的完整数据。
+            </p>
+          </aside>
+        </div>
+        <DataTable
+          :data="models"
+          clickable
+          :row-class-name="modelRowClass"
+          @row-click="(row: any) => toggleModel(row.model)"
+        >
+          <el-table-column prop="model" label="模型" min-width="160" />
+          <el-table-column
+            label="调用次数"
+            width="110"
+            align="right"
+            sortable
+            prop="total"
+          >
+            <template #default="{ row }">{{
+              formatNumber(row.total)
+            }}</template>
+          </el-table-column>
+          <el-table-column label="失败率" width="190" sortable prop="failRate">
+            <template #default="{ row }">
+              <RateBar
+                :value="row.failRate"
+                :tone="failRateTone(row.failRate)"
+              />
             </template>
           </el-table-column>
-          <el-table-column prop="costTimeMs" label="耗时(ms)" width="110" />
-          <el-table-column prop="bizType" label="业务类型" width="150" />
-          <el-table-column prop="createdTime" label="时间" min-width="160" />
-        </el-table>
-      </PanelCard>
+          <el-table-column
+            label="平均耗时"
+            width="110"
+            align="right"
+            sortable
+            prop="avgCostMs"
+          >
+            <template #default="{ row }">{{
+              formatDuration(row.avgCostMs)
+            }}</template>
+          </el-table-column>
+          <el-table-column
+            label="Token"
+            width="110"
+            align="right"
+            sortable
+            prop="totalTokens"
+          >
+            <template #default="{ row }">{{
+              formatTokens(row.totalTokens)
+            }}</template>
+          </el-table-column>
+          <el-table-column
+            label="Fallback"
+            width="100"
+            align="right"
+            prop="fallbackUsed"
+          >
+            <template #default="{ row }">{{
+              formatNumber(row.fallbackUsed)
+            }}</template>
+          </el-table-column>
+        </DataTable>
+      </Chapter>
 
-      <PanelCard
-        title="供应商健康 vs 实际失败率"
-        description="标记不匹配项（health=UP 但失败率>20%）"
-        style="margin-top: 16px"
-      >
-        <el-table :data="data.providerHealthCompare" stripe size="small">
-          <el-table-column prop="provider" label="供应商" width="180" />
-          <el-table-column prop="healthStatus" label="健康状态" width="120">
+      <Chapter index="03" question="哪些业务在调用，哪些业务容易失败？">
+        <template #facts>
+          <p class="facts-note">
+            左图看调用量，右图看失败率（仅统计调用 ≥
+            {{ MIN_SAMPLE_AI }} 次且有失败的业务）。点击条形查看调用记录。
+          </p>
+        </template>
+        <div class="pair">
+          <div>
+            <h3 class="pair__title">调用量 TOP10</h3>
+            <AnalyticsChart
+              :option="bizVolumeOption"
+              :height="Math.max(200, Math.min(10, bizTypes.length) * 30 + 16)"
+              clickable
+              label="业务类型调用量排行"
+              @chart-click="p => p?.name && goCallRecords({ bizType: p.name })"
+            />
+          </div>
+          <div>
+            <h3 class="pair__title">失败率 TOP10</h3>
+            <AnalyticsChart
+              v-if="bizFailItems.length"
+              :option="bizFailOption"
+              :height="Math.max(200, bizFailItems.length * 30 + 16)"
+              clickable
+              label="业务类型失败率排行"
+              @chart-click="p => p?.name && goCallRecords({ bizType: p.name })"
+            />
+            <p v-else class="pair__empty">
+              没有满足样本要求且存在失败的业务类型。
+            </p>
+          </div>
+        </div>
+      </Chapter>
+
+      <Chapter index="04" question="供应商与回退是否可靠？">
+        <template #facts>
+          <p class="facts-note">
+            健康状态来自供应商探测，实际失败率来自真实调用；两者不一致说明探测没有反映真实情况。
+          </p>
+        </template>
+        <h3 class="pair__title">供应商健康 vs 实际失败率</h3>
+        <DataTable :data="data.providerHealthCompare">
+          <el-table-column prop="provider" label="供应商" min-width="140" />
+          <el-table-column label="健康状态" width="120">
             <template #default="{ row }">
               <el-tag
                 :type="
@@ -397,52 +654,312 @@ onMounted(() => loadData());
                       : 'warning'
                 "
                 size="small"
-                >{{ row.healthStatus }}</el-tag
               >
+                {{ row.healthStatus }}
+              </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="healthReason" label="原因" width="180" />
-          <el-table-column prop="actualSuccess" label="实际成功" width="100" />
-          <el-table-column prop="actualFail" label="实际失败" width="100" />
-          <el-table-column prop="actualFailRate" label="实际失败率" width="120">
+          <el-table-column
+            prop="healthReason"
+            label="原因"
+            min-width="160"
+            show-overflow-tooltip
+          />
+          <el-table-column
+            prop="actualSuccess"
+            label="实际成功"
+            width="100"
+            align="right"
+          />
+          <el-table-column
+            prop="actualFail"
+            label="实际失败"
+            width="100"
+            align="right"
+          />
+          <el-table-column label="实际失败率" width="180">
             <template #default="{ row }">
-              <span
-                :style="{
-                  color: row.actualFailRate > 20 ? '#f56c6c' : '#67c23a'
-                }"
-                >{{ row.actualFailRate }}%</span
-              >
+              <RateBar
+                :value="row.actualFailRate"
+                :tone="failRateTone(row.actualFailRate)"
+              />
             </template>
           </el-table-column>
-          <el-table-column label="匹配" width="90">
+          <el-table-column label="状态一致性" width="110">
             <template #default="{ row }">
-              <el-tag
-                :type="row.mismatch ? 'danger' : 'success'"
-                size="small"
-                >{{ row.mismatch ? "不匹配" : "匹配" }}</el-tag
-              >
+              <el-tag :type="row.mismatch ? 'danger' : 'success'" size="small">
+                {{ row.mismatch ? "不匹配" : "匹配" }}
+              </el-tag>
             </template>
           </el-table-column>
-        </el-table>
-      </PanelCard>
+        </DataTable>
 
-      <PanelCard
-        v-if="data.slowCalls?.length"
-        title="慢调用 TOP10（耗时>30s）"
-        style="margin-top: 16px"
-      >
-        <el-table :data="data.slowCalls" stripe size="small">
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column prop="model" label="模型" width="150" />
-          <el-table-column prop="biz_type" label="业务类型" width="150" />
-          <el-table-column prop="STATUS" label="状态" width="100" />
-          <el-table-column prop="cost_time_ms" label="耗时(ms)" width="120" />
-          <el-table-column prop="created_time" label="时间" />
-        </el-table>
-      </PanelCard>
+        <template v-if="data.fallbackPatterns?.length">
+          <h3 class="pair__title pair__title--spaced">Fallback 回退链路模式</h3>
+          <DataTable :data="data.fallbackPatterns">
+            <el-table-column prop="pattern" label="回退链路" min-width="260" />
+            <el-table-column
+              prop="count"
+              label="触发次数"
+              width="110"
+              align="right"
+            />
+            <el-table-column
+              prop="successCount"
+              label="最终成功"
+              width="110"
+              align="right"
+            />
+            <el-table-column label="成功率" width="180">
+              <template #default="{ row }">
+                <RateBar
+                  :value="row.successRate"
+                  :tone="successRateTone(row.successRate)"
+                />
+              </template>
+            </el-table-column>
+          </DataTable>
+        </template>
+      </Chapter>
+
+      <Chapter index="05" question="明细：最近的回退与慢调用">
+        <el-collapse>
+          <el-collapse-item
+            v-if="data.fallbackChains?.length"
+            title="Fallback 明细（最近 20 条多供应商回退）"
+            name="chains"
+          >
+            <DataTable :data="data.fallbackChains">
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="model" label="最终模型" min-width="140" />
+              <el-table-column
+                prop="fallbackTried"
+                label="尝试链路"
+                min-width="220"
+                show-overflow-tooltip
+              />
+              <el-table-column
+                prop="attemptCount"
+                label="尝试次数"
+                width="100"
+                align="right"
+              />
+              <el-table-column label="最终状态" width="100">
+                <template #default="{ row }">
+                  <el-tag
+                    :type="row.status === 'SUCCESS' ? 'success' : 'danger'"
+                    size="small"
+                  >
+                    {{ row.status }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="耗时" width="100" align="right">
+                <template #default="{ row }">{{
+                  formatDuration(row.costTimeMs)
+                }}</template>
+              </el-table-column>
+              <el-table-column
+                prop="bizType"
+                label="业务类型"
+                min-width="140"
+              />
+              <el-table-column
+                prop="createdTime"
+                label="时间"
+                min-width="160"
+              />
+            </DataTable>
+          </el-collapse-item>
+          <el-collapse-item
+            v-if="data.slowCalls?.length"
+            title="慢调用 TOP10（耗时 > 30 秒）"
+            name="slow"
+          >
+            <DataTable :data="data.slowCalls">
+              <el-table-column prop="id" label="ID" width="80" />
+              <el-table-column prop="model" label="模型" min-width="140" />
+              <el-table-column
+                prop="biz_type"
+                label="业务类型"
+                min-width="140"
+              />
+              <el-table-column prop="STATUS" label="状态" width="100" />
+              <el-table-column label="耗时" width="100" align="right">
+                <template #default="{ row }">{{
+                  formatDuration(row.cost_time_ms)
+                }}</template>
+              </el-table-column>
+              <el-table-column
+                prop="created_time"
+                label="时间"
+                min-width="160"
+              />
+            </DataTable>
+          </el-collapse-item>
+        </el-collapse>
+        <p
+          v-if="!data.fallbackChains?.length && !data.slowCalls?.length"
+          class="pair__empty"
+        >
+          当前周期没有多供应商回退，也没有超过 30 秒的慢调用。
+        </p>
+      </Chapter>
     </template>
-
-    <el-empty v-else-if="!loading" description="暂无数据" />
-    <el-skeleton v-if="loading" :rows="6" animated />
-  </div>
+  </AnalyticsPage>
 </template>
+
+<style scoped lang="scss">
+.ai-lead {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  padding: var(--ra-space-lg) 0;
+
+  > * {
+    padding: 0 var(--ra-space-lg);
+    border-left: 1px solid var(--el-border-color-lighter);
+
+    &:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+}
+
+.ai-findings {
+  padding: var(--ra-space-lg);
+  background: var(--el-fill-color-lighter);
+  border-radius: var(--ra-radius-lg);
+
+  h2 {
+    margin: 0 0 var(--ra-space-sm);
+    font-size: var(--ra-font-md);
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ra-space-md);
+  margin: var(--ra-space-md) 0 0;
+
+  dt {
+    font-size: var(--ra-font-xs);
+    color: var(--el-text-color-secondary);
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-size: var(--ra-font-lg);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-text-color-primary);
+  }
+
+  p {
+    margin: 2px 0 0;
+    font-size: var(--ra-font-xs);
+    color: var(--el-text-color-secondary);
+  }
+}
+
+.facts-note {
+  margin: var(--ra-space-sm) 0 0;
+  font-size: var(--ra-font-xs);
+  line-height: 1.7;
+  color: var(--el-text-color-secondary);
+}
+
+.chart-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ra-space-sm) var(--ra-space-md);
+  align-items: center;
+  margin-bottom: var(--ra-space-sm);
+  font-size: var(--ra-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.models {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: var(--ra-space-xl);
+  margin-bottom: var(--ra-space-lg);
+}
+
+.models__detail {
+  padding-left: var(--ra-space-lg);
+  border-left: 1px solid var(--el-border-color-lighter);
+
+  h3 {
+    margin: 0 0 var(--ra-space-sm);
+    font-size: var(--ra-font-md);
+    color: var(--el-text-color-primary);
+    word-break: break-all;
+  }
+
+  dl {
+    margin: 0 0 var(--ra-space-md);
+  }
+
+  dl > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: var(--ra-font-sm);
+    border-bottom: 1px solid var(--el-border-color-extra-light);
+  }
+
+  dt {
+    color: var(--el-text-color-secondary);
+  }
+
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    color: var(--el-text-color-primary);
+  }
+}
+
+.models__hint,
+.pair__empty {
+  font-size: var(--ra-font-sm);
+  color: var(--el-text-color-secondary);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ra-space-xl);
+}
+
+.pair__title {
+  margin: 0 0 var(--ra-space-sm);
+  font-size: var(--ra-font-base);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+
+  &--spaced {
+    margin-top: var(--ra-space-xl);
+  }
+}
+
+:deep(.is-selected-row > td) {
+  background: var(--el-color-primary-light-9) !important;
+}
+
+@media (width <= 1100px) {
+  .models,
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .models__detail {
+    padding: var(--ra-space-md) 0 0;
+    border-top: 1px solid var(--el-border-color-lighter);
+    border-left: 0;
+  }
+}
+</style>

@@ -1,418 +1,516 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import PanelCard from "@/components/PanelCard/index.vue";
 import {
   getAnalyticsAccessOverview,
   type AnalyticsAccessOverview
 } from "@/api/analytics";
-import { useChartMount } from "../useChartMount";
+import AnalyticsPage from "../components/AnalyticsPage.vue";
+import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
+import AnalyticsState from "../components/AnalyticsState.vue";
+import AnalyticsSection from "../components/AnalyticsSection.vue";
+import StatsMetaLine from "../components/StatsMetaLine.vue";
+import MetricCard from "../components/MetricCard.vue";
+import ChartCard from "../components/ChartCard.vue";
+import DataTable from "../components/DataTable.vue";
+import InsightPanel, { type Insight } from "../components/InsightPanel.vue";
+import { useAnalyticsQuery } from "../composables/useAnalyticsQuery";
+import {
+  SEMANTIC,
+  cartesianOption,
+  rankingOption,
+  donutOption,
+  tooltipHtml,
+  toneColor
+} from "../utils/chartTheme";
+import {
+  failRateTone,
+  formatDuration,
+  formatNumber,
+  formatPercent
+} from "../utils/format";
 
 defineOptions({ name: "AnalyticsAccess" });
 
 const router = useRouter();
-const { setChartRef, mountChart, resizeAll, onChartClick } = useChartMount();
-
-const loading = ref(true);
-const data = ref<AnalyticsAccessOverview | null>(null);
 const range = ref(30);
+const scope = computed(() => `近 ${range.value} 天`);
 
-const CHART_COLORS = [
-  "#2563eb",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ef4444",
-  "#06b6d4",
-  "#f97316",
-  "#14b8a6"
-];
+const { data, meta, loading, error, load } =
+  useAnalyticsQuery<AnalyticsAccessOverview>(
+    days => getAnalyticsAccessOverview(days),
+    { range, errorLabel: "加载访问分析数据失败" }
+  );
 
-async function loadData() {
-  loading.value = true;
-  try {
-    const res = await getAnalyticsAccessOverview(range.value);
-    data.value = res.data?.data ?? null;
-  } catch (e) {
-    console.error("加载访问分析数据失败", e);
+function goSystemLog(query: Record<string, string>) {
+  router.push({ path: "/log/system", query });
+}
+
+const insights = computed<Insight[]>(() => {
+  const d = data.value;
+  if (!d) return [];
+  const list: Insight[] = [];
+
+  if (d.failRate > 5) {
+    list.push({
+      level: d.failRate > 10 ? "critical" : "warning",
+      title: "整体请求失败率偏高",
+      evidence: `${scope.value}失败率 ${formatPercent(d.failRate)}（阈值 5% / 10%）`,
+      actionLabel: "查看失败日志",
+      onAction: () => goSystemLog({ success: "false" })
+    });
   }
-  loading.value = false;
-  await nextTick();
-  setTimeout(renderCharts, 60);
-}
 
-function renderCharts() {
-  renderDailyChart();
-  renderFailChart();
-  renderClientChart();
-  renderHeatmap();
-  renderLatencyBuckets();
-  resizeAll();
-}
+  const worst = [...(d.failApis ?? [])].sort(
+    (a, b) => b.failRate - a.failRate
+  )[0];
+  if (worst && worst.failRate > 50) {
+    list.push({
+      level: "critical",
+      title: `接口 ${worst.uri} 失败率超过一半`,
+      evidence: `失败率 ${formatPercent(worst.failRate)}，建议优先排查`,
+      actionLabel: "查看该接口日志",
+      onAction: () => goSystemLog({ uri: worst.uri, success: "false" })
+    });
+  }
 
-function renderLatencyBuckets() {
-  const buckets = data.value?.latencyBuckets ?? [];
-  if (!buckets.length) return;
-  mountChart("latencyBucket", {
-    color: ["#10b981", "#2563eb", "#f59e0b", "#ef4444"],
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "shadow" },
-      formatter: (params: any) => {
-        const p = params[0];
-        const item = buckets[p.dataIndex];
-        return `${item.bucket}<br/>${item.count} 次（${item.percentage}%）`;
-      }
-    },
-    grid: { left: 16, right: 16, bottom: 8, top: 24, containLabel: true },
-    xAxis: { type: "category", data: buckets.map(b => b.bucket) },
-    yAxis: { type: "value", name: "请求数" },
-    series: [
-      {
-        type: "bar",
-        barMaxWidth: 56,
-        data: buckets.map((b, i) => ({
-          value: b.count,
-          itemStyle: {
-            color: ["#10b981", "#2563eb", "#f59e0b", "#ef4444"][i],
-            borderRadius: [4, 4, 0, 0]
-          }
-        })),
-        label: {
-          show: true,
-          position: "top",
-          formatter: (p: any) => `${buckets[p.dataIndex].percentage}%`
-        }
-      }
-    ]
-  });
-}
+  const slow = (d.apiLatency ?? []).filter(a => a.p95 > 1000);
+  if (slow.length) {
+    list.push({
+      level: "warning",
+      title: `${slow.length} 个接口 P95 耗时超过 1 秒`,
+      evidence: `最慢：${slow[0].uri}，P95 ${formatDuration(slow[0].p95)}（请求量 ≥ 20 的接口，阈值 1000ms）`
+    });
+  }
 
-function renderDailyChart() {
-  if (!data.value) return;
-  const trend = data.value.dailyTrend ?? [];
-  mountChart("daily", {
-    color: ["#2563eb", "#e6a23c"],
-    tooltip: { trigger: "axis" },
-    legend: { data: ["有效请求", "轮询请求"], top: 0 },
-    grid: { left: 16, right: 16, bottom: 8, top: 40, containLabel: true },
-    xAxis: { type: "category", data: trend.map(t => t.date) },
-    yAxis: { type: "value" },
+  const scripts = d.batchScripts?.length ?? 0;
+  if (scripts > 0) {
+    list.push({
+      level: "info",
+      title: `检测到 ${scripts} 个疑似批量脚本`,
+      evidence:
+        "同一 IP + 接口请求 ≥ 50 次且 80% 以上耗时 0ms，详见页面下方列表"
+    });
+  }
+  return list;
+});
+
+const dailyOption = computed(() => {
+  const t = data.value?.dailyTrend ?? [];
+  return cartesianOption({
+    categories: t.map(i => i.date),
     series: [
       {
         name: "有效请求",
         type: "line",
-        smooth: 0.25,
-        symbol: "circle",
-        symbolSize: 5,
-        data: trend.map(t => t.effective)
+        data: t.map(i => i.effective),
+        color: SEMANTIC.primary,
+        area: true
       },
       {
         name: "轮询请求",
         type: "line",
-        smooth: 0.25,
-        symbol: "circle",
-        symbolSize: 5,
-        data: trend.map(t => t.polling)
+        data: t.map(i => i.polling),
+        color: SEMANTIC.muted,
+        dashed: true
       }
-    ]
+    ],
+    leftAxis: { name: "次" },
+    tooltipFormatters: {
+      有效请求: v => `${formatNumber(v)} 次`,
+      轮询请求: v => `${formatNumber(v)} 次`
+    }
   });
-}
+});
 
-function renderFailChart() {
-  if (!data.value) return;
-  const apis = [...(data.value.failApis ?? [])].sort(
-    (a, b) => a.failRate - b.failRate
+const clientTotal = computed(() =>
+  (data.value?.clientTypes ?? []).reduce((s, i) => s + i.count, 0)
+);
+
+const clientOption = computed(() => {
+  const list = [...(data.value?.clientTypes ?? [])].sort(
+    (a, b) => b.count - a.count
   );
-  mountChart("fail", {
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    grid: { left: 16, right: 56, bottom: 8, top: 16, containLabel: true },
-    xAxis: { type: "value", max: 100, axisLabel: { formatter: "{value}%" } },
-    yAxis: { type: "category", data: apis.map(a => a.uri) },
-    series: [
-      {
-        type: "bar",
-        barMaxWidth: 18,
-        data: apis.map(a => ({
-          value: a.failRate,
-          itemStyle: {
-            color: a.failRate > 50 ? "#ef4444" : "#f59e0b",
-            borderRadius: [0, 4, 4, 0]
-          }
-        })),
-        label: { show: true, position: "right", formatter: "{c}%" }
-      }
-    ]
-  });
-  onChartClick("fail", (params: any) => {
-    if (!params?.name) return;
-    router.push({
-      path: "/log/system",
-      query: { uri: params.name, success: "false" }
+  if (list.length <= 6) {
+    return donutOption({
+      items: list.map(c => ({ name: c.browserType, value: c.count })),
+      valueName: "请求数",
+      format: v => formatNumber(v),
+      centerValue: formatNumber(clientTotal.value),
+      centerTitle: "请求"
     });
+  }
+  return rankingOption({
+    items: list.slice(0, 10).map(c => ({
+      name: c.browserType,
+      value: c.count,
+      label: `${formatNumber(c.count)} · ${formatPercent(clientTotal.value ? (c.count / clientTotal.value) * 100 : 0)}`
+    })),
+    valueName: "请求数",
+    format: v => formatNumber(v)
   });
-}
+});
 
-function renderClientChart() {
-  if (!data.value) return;
-  const list = (data.value.clientTypes ?? []).slice(0, 8);
-  mountChart("client", {
-    color: CHART_COLORS,
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
-    legend: { type: "scroll", orient: "vertical", right: 8, top: "center" },
-    series: [
-      {
-        type: "pie",
-        radius: ["42%", "68%"],
-        center: ["36%", "50%"],
-        avoidLabelOverlap: true,
-        data: list.map(c => ({ name: c.browserType, value: c.count })),
-        label: { formatter: "{d}%" }
+const bucketColors = [
+  SEMANTIC.positive,
+  SEMANTIC.primary,
+  SEMANTIC.warning,
+  SEMANTIC.negative
+];
+
+const bucketOption = computed(() => {
+  const b = data.value?.latencyBuckets ?? [];
+  const option = cartesianOption({
+    categories: b.map(i => i.bucket),
+    series: [{ name: "请求数", data: b.map(i => i.count) }],
+    barMaxWidth: 56,
+    tooltipFormatters: { 请求数: v => `${formatNumber(v)} 次` },
+    tooltipNote: i => {
+      const item = b[i ?? -1];
+      return item
+        ? `占全部业务请求 ${formatPercent(item.percentage)}`
+        : undefined;
+    }
+  });
+  option.series[0] = {
+    ...option.series[0],
+    data: b.map((i, idx) => ({
+      value: i.count,
+      itemStyle: {
+        color: bucketColors[idx % bucketColors.length],
+        borderRadius: [3, 3, 0, 0]
       }
-    ]
-  });
-}
+    })),
+    label: {
+      show: true,
+      position: "top",
+      fontSize: 11,
+      formatter: (p: any) => formatPercent(b[p.dataIndex]?.percentage)
+    }
+  };
+  return option;
+});
 
-function renderHeatmap() {
+const failOption = computed(() =>
+  rankingOption({
+    items: (data.value?.failApis ?? []).map(a => ({
+      name: a.uri,
+      value: a.failRate,
+      color: toneColor(failRateTone(a.failRate)),
+      note: "点击查看该接口的失败日志"
+    })),
+    valueName: "失败率",
+    format: v => formatPercent(v),
+    max: 100,
+    labelWidth: 200
+  })
+);
+
+const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+const hours = Array.from({ length: 24 }, (_, i) => `${i} 时`);
+
+const heatmapOption = computed(() => {
   const points = data.value?.heatmap ?? [];
-  if (!points.length) return;
-  const days = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
-  const hours = Array.from({ length: 24 }, (_, i) => `${i}时`);
-  const seriesData = points.map(p => [p.hour, p.weekday - 1, p.count]);
   const max = Math.max(...points.map(p => p.count), 1);
-  mountChart("heatmap", {
+  return {
     tooltip: {
       position: "top",
-      formatter: (params: any) =>
-        `${days[params.value[1]]} ${hours[params.value[0]]}<br/>请求 ${params.value[2]} 次`
+      formatter: (p: any) =>
+        tooltipHtml(`${weekdays[p.value[1]]} ${hours[p.value[0]]}`, [
+          {
+            color: SEMANTIC.primary,
+            label: "请求",
+            value: `${formatNumber(p.value[2])} 次`
+          }
+        ])
     },
-    grid: { left: 16, right: 16, top: 16, bottom: 56, containLabel: true },
+    grid: { left: 4, right: 12, top: 8, bottom: 52, containLabel: true },
     xAxis: {
       type: "category",
       data: hours,
       splitArea: { show: true },
       axisLabel: { interval: 2 }
     },
-    yAxis: { type: "category", data: days, splitArea: { show: true } },
+    yAxis: { type: "category", data: weekdays, splitArea: { show: true } },
     visualMap: {
       min: 0,
       max,
-      calculable: true,
+      calculable: false,
       orient: "horizontal",
       left: "center",
       bottom: 0,
-      inRange: { color: ["#e8f3ff", "#7cb6f5", "#2563eb", "#0b3d91"] }
+      itemWidth: 12,
+      itemHeight: 140,
+      inRange: { color: ["#eef2ff", "#a5b4fc", "#4f46e5", "#312e81"] }
     },
     series: [
       {
-        name: "请求量",
         type: "heatmap",
-        data: seriesData,
-        label: { show: false },
-        emphasis: {
-          itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.4)" }
-        }
+        data: points.map(p => [p.hour, p.weekday - 1, p.count]),
+        emphasis: { itemStyle: { borderColor: "#fff", borderWidth: 1 } }
       }
     ]
-  });
+  };
+});
+
+function onIpClick(row: { ipLocation?: string }) {
+  if (row?.ipLocation) goSystemLog({ ipLocation: row.ipLocation });
 }
 
-function onIpClick(row: { ip?: string; ipLocation?: string }) {
-  const ipLocation = row?.ipLocation ?? "";
-  if (!ipLocation) return;
-  router.push({ path: "/log/system", query: { ipLocation } });
+function latencyClass(value: number, warn: number, danger: number) {
+  if (value > danger) return "text-negative";
+  if (value > warn) return "text-warning";
+  return "";
 }
-
-onMounted(() => loadData());
 </script>
 
 <template>
-  <div class="analytics-access" style="padding: 20px">
-    <el-radio-group
-      v-model="range"
-      style="margin-bottom: 16px"
-      @change="loadData"
-    >
-      <el-radio-button :value="7">近7天</el-radio-button>
-      <el-radio-button :value="30">近30天</el-radio-button>
-      <el-radio-button :value="90">近90天</el-radio-button>
-    </el-radio-group>
+  <AnalyticsPage>
+    <AnalyticsPageHeader
+      v-model:range="range"
+      title="访问分析"
+      description="请求量、接口性能与异常访问（已排除通知轮询）"
+      :loading="loading"
+      @refresh="load"
+    />
+    <StatsMetaLine :meta="meta" />
+
+    <AnalyticsState
+      :loading="loading"
+      :error="error"
+      :has-data="!!data"
+      @retry="load"
+    />
 
     <template v-if="data">
-      <el-row :gutter="16" style="margin-bottom: 16px">
-        <el-col :span="6"
-          ><el-card shadow="hover"
-            ><el-statistic
-              title="有效请求（排除轮询）"
-              :value="data.effectiveRequests" /></el-card
-        ></el-col>
-        <el-col :span="6"
-          ><el-card shadow="hover"
-            ><el-statistic
-              title="独立公网IP"
-              :value="data.uniqueIps" /></el-card
-        ></el-col>
-        <el-col :span="6"
-          ><el-card shadow="hover"
-            ><el-statistic
-              title="平均耗时"
-              :value="data.avgCostMs"
-              suffix="ms" /></el-card
-        ></el-col>
-        <el-col :span="6"
-          ><el-card shadow="hover"
-            ><el-statistic
-              title="失败率"
-              :value="data.failRate"
-              suffix="%"
-              :value-style="{
-                color: data.failRate > 5 ? '#f56c6c' : '#67c23a'
-              }" /></el-card
-        ></el-col>
-      </el-row>
+      <InsightPanel
+        :insights="insights"
+        rules="整体失败率 > 5%；单接口失败率 > 50%；接口 P95 > 1000ms；疑似批量脚本"
+        :loading="loading"
+      />
 
-      <el-row :gutter="16">
-        <el-col :span="16">
-          <PanelCard title="请求趋势" description="有效请求 vs 系统轮询">
-            <div
-              :ref="el => setChartRef('daily', el)"
-              style=" width: 100%;height: 340px"
+      <div class="access-metrics">
+        <MetricCard
+          label="有效请求"
+          :value="data.effectiveRequests"
+          size="hero"
+          hint="排除系统通知轮询后的业务请求"
+          :caption="scope"
+        />
+        <MetricCard label="独立公网 IP" :value="data.uniqueIps" size="hero" />
+        <MetricCard
+          label="平均耗时"
+          :value="data.avgCostMs"
+          kind="duration"
+          size="hero"
+        />
+        <MetricCard
+          label="失败率"
+          :value="data.failRate"
+          kind="percent"
+          size="hero"
+          :tone="failRateTone(data.failRate)"
+          clickable
+          @click="goSystemLog({ success: 'false' })"
+        />
+      </div>
+
+      <AnalyticsSection title="流量概览">
+        <div class="access-grid access-grid--wide">
+          <ChartCard
+            title="请求趋势"
+            description="有效请求与系统轮询"
+            :scope="scope"
+            :option="dailyOption"
+            :height="300"
+            :empty="!data.dailyTrend?.length"
+          />
+          <ChartCard
+            title="客户端类型"
+            :scope="scope"
+            :option="clientOption"
+            :height="300"
+            :empty="!data.clientTypes?.length"
+          />
+        </div>
+        <ChartCard
+          title="访问时间规律"
+          description="星期 × 小时，颜色越深请求越多"
+          :scope="scope"
+          :option="heatmapOption"
+          :height="300"
+          :empty="!data.heatmap?.length"
+        />
+      </AnalyticsSection>
+
+      <AnalyticsSection title="接口性能与失败">
+        <ChartCard
+          title="API 耗时分位数"
+          description="按 P95 降序，仅展示请求量 ≥ 20 的接口；P50 > 500ms 或 P95 > 1000ms 标色"
+          :scope="scope"
+          :empty="!data.apiLatency?.length"
+        >
+          <DataTable :data="data.apiLatency">
+            <el-table-column
+              prop="uri"
+              label="接口"
+              min-width="220"
+              show-overflow-tooltip
             />
-          </PanelCard>
-        </el-col>
-        <el-col :span="8">
-          <PanelCard title="客户端类型分布">
-            <div
-              :ref="el => setChartRef('client', el)"
-              style=" width: 100%;height: 340px"
-            />
-          </PanelCard>
-        </el-col>
-      </el-row>
+            <el-table-column label="请求数" width="100" align="right">
+              <template #default="{ row }">{{
+                formatNumber(row.count)
+              }}</template>
+            </el-table-column>
+            <el-table-column label="平均" width="90" align="right">
+              <template #default="{ row }">{{
+                formatDuration(row.avgMs)
+              }}</template>
+            </el-table-column>
+            <el-table-column label="P50" width="90" align="right">
+              <template #default="{ row }">
+                <span :class="latencyClass(row.p50, 500, Infinity)">
+                  {{ formatDuration(row.p50) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="P95" width="90" align="right">
+              <template #default="{ row }">
+                <span :class="latencyClass(row.p95, 500, 1000)">
+                  {{ formatDuration(row.p95) }}
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="P99" width="90" align="right">
+              <template #default="{ row }">{{
+                formatDuration(row.p99)
+              }}</template>
+            </el-table-column>
+            <el-table-column label="最大" width="90" align="right">
+              <template #default="{ row }">{{
+                formatDuration(row.maxMs)
+              }}</template>
+            </el-table-column>
+          </DataTable>
+        </ChartCard>
 
-      <PanelCard
-        title="API 耗时分位数（P50/P95/P99）"
-        description="按 P95 降序，仅展示请求量≥20 的接口"
-        style="margin-top: 16px"
-      >
-        <el-table :data="data.apiLatency" stripe size="small">
-          <el-table-column prop="uri" label="接口" min-width="200" />
-          <el-table-column prop="count" label="请求数" width="100" />
-          <el-table-column prop="avgMs" label="平均(ms)" width="100" />
-          <el-table-column prop="p50" label="P50(ms)" width="100">
-            <template #default="{ row }"
-              ><span :style="{ color: row.p50 > 500 ? '#e6a23c' : '' }">{{
-                row.p50
-              }}</span></template
-            >
-          </el-table-column>
-          <el-table-column prop="p95" label="P95(ms)" width="100">
-            <template #default="{ row }"
-              ><span :style="{ color: row.p95 > 1000 ? '#f56c6c' : '' }">{{
-                row.p95
-              }}</span></template
-            >
-          </el-table-column>
-          <el-table-column prop="p99" label="P99(ms)" width="100" />
-          <el-table-column prop="maxMs" label="最大(ms)" width="100" />
-        </el-table>
-      </PanelCard>
+        <div class="access-grid">
+          <ChartCard
+            title="耗时分段分布"
+            description="全量业务请求"
+            :scope="scope"
+            :option="bucketOption"
+            :height="280"
+            :empty="!data.latencyBuckets?.length"
+          />
+          <ChartCard
+            title="失败率 TOP10 接口"
+            description="点击条形查看该接口的失败日志"
+            :scope="scope"
+            :option="failOption"
+            :height="Math.max(240, (data.failApis?.length ?? 0) * 36)"
+            :empty="!data.failApis?.length"
+            clickable
+            @chart-click="
+              p => p?.name && goSystemLog({ uri: p.name, success: 'false' })
+            "
+          />
+        </div>
+      </AnalyticsSection>
 
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="12">
-          <PanelCard
-            title="API 耗时分段分布"
-            description="全量业务请求（排除轮询）"
+      <AnalyticsSection title="异常来源">
+        <div class="access-grid">
+          <ChartCard
+            title="高频 IP 排行 TOP15"
+            description="点击行查看该归属地访问日志"
+            :scope="scope"
+            :empty="!data.topIps?.length"
           >
-            <div
-              :ref="el => setChartRef('latencyBucket', el)"
-              style=" width: 100%;height: 300px"
-            />
-          </PanelCard>
-        </el-col>
-        <el-col :span="12">
-          <PanelCard
-            title="疑似批量脚本"
-            description="同一 IP+URI 请求≥50 次且 80% 以上耗时 0ms"
-          >
-            <el-table
-              :data="data.batchScripts"
-              stripe
-              size="small"
-              empty-text="未检测到批量脚本"
-            >
+            <DataTable :data="data.topIps" clickable @row-click="onIpClick">
               <el-table-column prop="ip" label="IP" width="130" />
               <el-table-column
                 prop="ipLocation"
                 label="归属地"
-                width="150"
+                min-width="140"
+                show-overflow-tooltip
+              />
+              <el-table-column label="请求数" width="90" align="right">
+                <template #default="{ row }">
+                  {{ formatNumber(row.requestCount) }}
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="distinctUris"
+                label="接口数"
+                width="80"
+                align="right"
+              />
+              <el-table-column
+                prop="lastSeen"
+                label="最后访问"
+                min-width="150"
+              />
+            </DataTable>
+          </ChartCard>
+          <ChartCard
+            title="疑似批量脚本"
+            description="同一 IP + 接口请求 ≥ 50 次且 80% 以上耗时 0ms"
+            :scope="scope"
+          >
+            <DataTable :data="data.batchScripts" empty-text="未检测到批量脚本">
+              <el-table-column prop="ip" label="IP" width="130" />
+              <el-table-column
+                prop="ipLocation"
+                label="归属地"
+                min-width="120"
                 show-overflow-tooltip
               />
               <el-table-column
                 prop="uri"
                 label="接口"
-                min-width="170"
+                min-width="160"
                 show-overflow-tooltip
               />
-              <el-table-column prop="requestCount" label="请求数" width="90" />
-              <el-table-column prop="zeroCostRate" label="0ms占比" width="95">
-                <template #default="{ row }">{{ row.zeroCostRate }}%</template>
+              <el-table-column label="请求数" width="90" align="right">
+                <template #default="{ row }">
+                  {{ formatNumber(row.requestCount) }}
+                </template>
               </el-table-column>
-            </el-table>
-          </PanelCard>
-        </el-col>
-      </el-row>
-
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="24">
-          <PanelCard
-            title="访问时间规律热力图"
-            description="星期 × 小时，已排除通知轮询"
-          >
-            <div
-              :ref="el => setChartRef('heatmap', el)"
-              style=" width: 100%;height: 320px"
-            />
-          </PanelCard>
-        </el-col>
-      </el-row>
-
-      <el-row :gutter="16" style="margin-top: 16px">
-        <el-col :span="12">
-          <PanelCard
-            title="失败率 TOP10"
-            description="点击柱状图查看对应访问日志"
-          >
-            <div
-              :ref="el => setChartRef('fail', el)"
-              style=" width: 100%;height: 340px"
-            />
-          </PanelCard>
-        </el-col>
-        <el-col :span="12">
-          <PanelCard
-            title="高频 IP 排行 TOP15"
-            description="点击行查看该归属地访问日志"
-          >
-            <el-table
-              :data="data.topIps"
-              stripe
-              size="small"
-              style="cursor: pointer"
-              @row-click="onIpClick"
-            >
-              <el-table-column prop="ip" label="IP" width="140" />
-              <el-table-column prop="ipLocation" label="归属地" width="160" />
-              <el-table-column prop="requestCount" label="请求数" width="80" />
-              <el-table-column prop="distinctUris" label="接口数" width="80" />
-              <el-table-column prop="lastSeen" label="最后访问" />
-            </el-table>
-          </PanelCard>
-        </el-col>
-      </el-row>
+              <el-table-column label="0ms 占比" width="90" align="right">
+                <template #default="{ row }">
+                  {{ formatPercent(row.zeroCostRate) }}
+                </template>
+              </el-table-column>
+            </DataTable>
+          </ChartCard>
+        </div>
+      </AnalyticsSection>
     </template>
-
-    <el-empty v-else-if="!loading" description="暂无数据" />
-    <el-skeleton v-if="loading" :rows="6" animated />
-  </div>
+  </AnalyticsPage>
 </template>
+
+<style scoped lang="scss">
+.access-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--ra-space-md);
+}
+
+.access-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: var(--ra-space-md);
+
+  &--wide {
+    grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  }
+}
+
+.text-negative {
+  color: var(--el-color-danger);
+}
+
+.text-warning {
+  color: var(--el-color-warning);
+}
+</style>
