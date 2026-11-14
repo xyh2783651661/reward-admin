@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import ReStatusTag from "@/components/ReStatusTag/index.vue";
 import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
 import ReJsonField from "@/components/ReJsonField/index.vue";
 import {
   DetailFields,
@@ -13,6 +14,18 @@ import {
 } from "@/components/ReDetail";
 
 defineOptions({ name: "SystemLogDetail" });
+
+const router = useRouter();
+
+/**
+ * 跨页联动：同一 traceId 跳转到 AI 调用记录。
+ * 仅当存在 traceId 时可用，避免伪造关联。
+ */
+function goAiCallRecords() {
+  const traceId = item.value.traceId;
+  if (!traceId) return;
+  router.push({ path: "/monitor/ai-call-records", query: { traceId } });
+}
 
 interface SystemLogDetailItem {
   ip?: string;
@@ -145,6 +158,15 @@ const payloadTabs = computed(() => {
     <DetailHeader :title="title || '系统日志'">
       <template #tags>
         <ReStatusTag :active="!!item.success" preset="result" effect="light" />
+        <el-button
+          v-if="item.traceId"
+          size="small"
+          type="primary"
+          text
+          @click="goAiCallRecords"
+        >
+          查看同 TraceId 的 AI 调用
+        </el-button>
       </template>
       <template #subtitle>
         <span v-if="item.method" class="log-method">{{ item.method }}</span>

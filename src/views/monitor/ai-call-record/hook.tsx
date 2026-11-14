@@ -1,6 +1,7 @@
 import { getErrorMessage } from "@/utils/error";
 import dayjs from "dayjs";
 import { reactive, ref, toRaw, type Ref, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import { addDialog } from "@/components/ReDialog";
 import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
@@ -109,15 +110,20 @@ function buildRequest(form: Record<string, any>): AiCallRecordPageReq {
 }
 
 export function useAiCallRecord(_tableRef?: Ref) {
+  // 支持从数据分析中心下钻：读取 URL query 预填筛选条件
+  const route = useRoute();
+  const queryText = (key: string) =>
+    typeof route.query[key] === "string" ? (route.query[key] as string) : "";
+
   const form = reactive({
-    id: "",
-    bizType: "",
-    bizId: "",
-    model: "",
+    id: queryText("id"),
+    bizType: queryText("bizType"),
+    bizId: queryText("bizId"),
+    model: queryText("model"),
     templateName: "",
-    status: "",
+    status: queryText("status"),
     operator: "",
-    traceId: "",
+    traceId: queryText("traceId"),
     actualModel: "",
     requestTime: [] as string[],
     current: 1,

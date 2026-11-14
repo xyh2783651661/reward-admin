@@ -10,6 +10,7 @@ import type { TaskLogListItem, TaskLogPageReq } from "@/api/logs";
 import { useDownload } from "@/hooks/useDownload";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
+import { useRoute } from "vue-router";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/operation/detail.vue";
@@ -157,10 +158,14 @@ function renderNode(row: TaskLogListItem) {
 }
 
 export function useOperationLog(_tableRef?: Ref) {
+  const route = useRoute();
   const form = reactive<TaskLogPageReq>({
-    taskName: "",
+    taskName:
+      typeof route.query.taskName === "string" ? route.query.taskName : "",
     classMethod: "",
-    status: "",
+    status: (typeof route.query.status === "string"
+      ? route.query.status
+      : "") as TaskLogPageReq["status"],
     triggerType: "",
     timeRange: ["", ""],
     current: 1,

@@ -7,6 +7,7 @@ import { useDownload } from "@/hooks/useDownload";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw, computed } from "vue";
+import { useRoute } from "vue-router";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { useCopyToClipboard } from "@pureadmin/utils";
 import {
@@ -19,15 +20,20 @@ import { getAccessLogOptions } from "@/api/logs";
 import Info from "~icons/ri/question-line";
 
 export function useSystemLog(_tableRef: Ref) {
+  // 支持从数据分析中心下钻：读取 URL query 预填筛选条件
+  const route = useRoute();
+  const queryText = (key: string) =>
+    typeof route.query[key] === "string" ? (route.query[key] as string) : "";
+
   const form = reactive({
-    traceId: "",
+    traceId: queryText("traceId"),
     module: "",
     method: "",
-    uri: "",
-    ipLocation: "",
+    uri: queryText("uri"),
+    ipLocation: queryText("ipLocation"),
     browserType: "",
     description: "",
-    success: "",
+    success: queryText("success"),
     action: "",
     resourceType: "",
     resourceId: "",

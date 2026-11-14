@@ -57,6 +57,8 @@ interface WorkbenchTrendData {
   categories: string[];
   rewardIssued: number[];
   aiCallCount: number[];
+  /** AI 调用失败率（%），与 aiCallCount 逐日对齐（V2 新增） */
+  aiFailRate?: number[];
   taskExecutions: number[];
 }
 

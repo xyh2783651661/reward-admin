@@ -78,13 +78,25 @@ function buildOption(data: WorkbenchTrendData): EChartsOption {
       axisLine: { lineStyle: { color: grid } },
       axisLabel: { color: text, hideOverlap: true }
     },
-    yAxis: {
-      type: "value",
-      axisLine: { show: false },
-      axisTick: { show: false },
-      axisLabel: { color: text },
-      splitLine: { lineStyle: { color: grid, type: "dashed" } }
-    },
+    yAxis: [
+      {
+        type: "value",
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: text },
+        splitLine: { lineStyle: { color: grid, type: "dashed" } }
+      },
+      {
+        type: "value",
+        name: "失败率%",
+        min: 0,
+        max: 100,
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: text, formatter: "{value}%" },
+        splitLine: { show: false }
+      }
+    ],
     series: [
       {
         name: "奖励发放",
@@ -108,6 +120,17 @@ function buildOption(data: WorkbenchTrendData): EChartsOption {
         symbolSize: 6,
         lineStyle: { width: 2.5 },
         data: data.taskExecutions
+      },
+      {
+        name: "AI 失败率",
+        type: "line",
+        yAxisIndex: 1,
+        smooth: 0.25,
+        symbol: "circle",
+        symbolSize: 5,
+        lineStyle: { width: 2, type: "dashed", color: "#f56c6c" },
+        itemStyle: { color: "#f56c6c" },
+        data: data.aiFailRate ?? []
       }
     ]
   };

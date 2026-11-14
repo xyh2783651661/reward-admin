@@ -8,16 +8,21 @@ import type { OptionsResponse } from "@/components/ReSelect/types";
 import { usePublicHooks } from "@/hooks/usePublicHooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw, computed } from "vue";
+import { useRoute } from "vue-router";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import { addDialog } from "@/components/ReDialog/index";
 import Detail from "@/views/monitor/logs/login/detail.vue";
 import type { MailSendRecordItem } from "./types";
 
 export function useMailLog() {
+  // 支持从数据分析中心下钻：读取 URL query 预填筛选条件
+  const route = useRoute();
   const form = reactive({
     subject: "",
-    status: "" as number | "",
-    type: "",
+    status: (typeof route.query.status === "string" && route.query.status !== ""
+      ? Number(route.query.status)
+      : "") as number | "",
+    type: typeof route.query.type === "string" ? route.query.type : "",
     mqStatus: "" as number | "",
     recipient: "",
     messageId: "",
