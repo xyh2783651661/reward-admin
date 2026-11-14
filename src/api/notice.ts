@@ -20,6 +20,13 @@ interface NoticePageData {
   hasMore: boolean;
 }
 
+/** 通知面板轮询摘要（无条目列表） */
+interface NoticePanelSummary {
+  generatedAt: string;
+  version: string;
+  tabs: { key: string; name: string; total: number; unread: number }[];
+}
+
 interface NoticePanelOptions {
   clientType?: NoticeClientType;
 }
@@ -47,6 +54,14 @@ const getNoticePanel = (options?: NoticePanelOptions) => {
         ? { "X-Client-Type": options.clientType }
         : undefined
     }
+  );
+};
+
+/** 通知面板「轮询摘要」：只返回各分组计数与版本号，约 200 字节，替代轮询时拉全量面板 */
+const getNoticeSummary = () => {
+  return http.request<ApiResult<NoticePanelSummary>>(
+    "get",
+    "/api/notifications/panel/summary"
   );
 };
 
@@ -189,6 +204,7 @@ export const getUnreadCount = () => {
 
 export {
   getNoticePanel,
+  getNoticeSummary,
   getNotifyPage,
   markNotificationRead,
   markAllNotificationsRead
@@ -196,6 +212,7 @@ export {
 export type {
   NoticeClientType,
   NoticePanelData,
+  NoticePanelSummary,
   NoticePanelOptions,
   NoticePageData,
   NotifyPageParams

@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import {
   getNoticePanel,
+  getNoticeSummary,
   getNotifyPage,
   getSysNoticeDetail,
   markAllNoticeRead,
@@ -18,7 +19,11 @@ import BackIcon from "~icons/ep/arrow-left";
 import DoneIcon from "~icons/ep/check";
 import { navigateTo } from "@/utils/navigation";
 
-/** 未读轮询间隔，页面不可见时自动跳过 */
+/**
+ * 轮询间隔。
+ * <p>轮询只拉摘要（约 200 字节），不再拉全量面板（约 50KB），
+ * 因此保持 60s 也不会造成压力；页面不可见时跳过。</p>
+ */
 const POLL_INTERVAL = 60_000;
 
 const { t } = useI18n();
@@ -377,11 +382,41 @@ function goDetailStep(step: number) {
   openNoticeDetail(target);
 }
 
+/** 上一次摘要版本；空串表示尚未建立基线 */
+const summaryVersion = ref("");
+
+/**
+ * 轮询摘要：仅当版本变化时才拉取全量面板。
+ * <p>
+ * 改造前每次轮询都请求 /notifications/panel 并返回三个分组的完整列表（约 50KB），
+ * 4 个月累计 3.7 万次调用，是访问日志明细膨胀到 3.6GB 的主因。
+ * 摘要接口只返回计数与版本号，单次约 200 字节。
+ * </p>
+ */
+async function pollNoticeSummary() {
+  try {
+    const { data } = await getNoticeSummary();
+    const version = data?.version ?? "";
+    if (!version) return;
+    if (!summaryVersion.value) {
+      // 首次建立基线，避免刚进页面就重复拉一次全量
+      summaryVersion.value = version;
+      return;
+    }
+    if (version === summaryVersion.value) return;
+    summaryVersion.value = version;
+    await loadNotices(true);
+  } catch (error) {
+    // 轮询失败不打扰用户，下一次 tick 会重试
+    console.warn("通知摘要轮询失败", error);
+  }
+}
+
 onMounted(() => {
   loadNotices(true);
   pollTimer = setInterval(() => {
     if (document.hidden || detailLoading.value) return;
-    loadNotices(true);
+    void pollNoticeSummary();
   }, POLL_INTERVAL);
 });
 
