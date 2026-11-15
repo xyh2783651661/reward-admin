@@ -30,6 +30,8 @@ export default ({ mode }: ConfigEnv): UserConfigExport => {
           // 这里填写后端地址
           target: "http://127.0.0.1:86",
           changeOrigin: true,
+          // 通知推送走 WebSocket（/api/ws/notify），必须开启 upgrade 代理
+          ws: true,
           rewrite: path => path.replace(/^\/api/, "")
         }
       },
