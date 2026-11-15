@@ -11,6 +11,8 @@ import {
   markNoticeRead
 } from "@/api/notice";
 import { message } from "@/utils/message";
+import { getToken } from "@/utils/auth";
+import { NoticeSocket } from "@/utils/noticeSocket";
 import type { NoticeListItem, NoticeTabItem } from "./data";
 import NoticeList from "./components/NoticeList.vue";
 import BellIcon from "~icons/ep/bell";
@@ -18,13 +20,6 @@ import RefreshIcon from "~icons/ep/refresh";
 import BackIcon from "~icons/ep/arrow-left";
 import DoneIcon from "~icons/ep/check";
 import { navigateTo } from "@/utils/navigation";
-
-/**
- * 轮询间隔。
- * <p>轮询只拉摘要（约 200 字节），不再拉全量面板（约 50KB），
- * 因此保持 60s 也不会造成压力；页面不可见时跳过。</p>
- */
-const POLL_INTERVAL = 60_000;
 
 const { t } = useI18n();
 const router = useRouter();
@@ -386,11 +381,11 @@ function goDetailStep(step: number) {
 const summaryVersion = ref("");
 
 /**
- * 轮询摘要：仅当版本变化时才拉取全量面板。
+ * 摘要轮询：**仅作为 WebSocket 断开时的兜底**。
  * <p>
- * 改造前每次轮询都请求 /notifications/panel 并返回三个分组的完整列表（约 50KB），
- * 4 个月累计 3.7 万次调用，是访问日志明细膨胀到 3.6GB 的主因。
- * 摘要接口只返回计数与版本号，单次约 200 字节。
+ * 主链路是 WebSocket 推送（公告发布/修改/撤回时服务端主动推一帧）；
+ * 推送不可用时（企业网络拦截 WS、代理未配置 upgrade 等）退回低频轮询，
+ * 间隔拉长到 5 分钟——只用来兜底漏推，不再承担实时性。
  * </p>
  */
 async function pollNoticeSummary() {
@@ -412,15 +407,64 @@ async function pollNoticeSummary() {
   }
 }
 
+/** 兜底轮询间隔：远离实时性诉求，只为最终一致 */
+const FALLBACK_POLL_INTERVAL = 5 * 60_000;
+
+/** WebSocket 是否已连通；断开时启用兜底轮询 */
+const socketConnected = ref(false);
+
+/**
+ * 推送去抖：批量创建公告时服务端会连推多帧，合并成一次刷新。
+ */
+let pushDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+function refreshByPush() {
+  if (pushDebounceTimer) clearTimeout(pushDebounceTimer);
+  pushDebounceTimer = setTimeout(() => {
+    summaryVersion.value = "";
+    void loadNotices(true);
+  }, 300);
+}
+
+/**
+ * 页面从后台回到前台时补一次刷新：
+ * 标签页休眠期间 WebSocket 可能被浏览器挂起，推送有丢失可能。
+ */
+function onVisibilityChange() {
+  if (!document.hidden) {
+    void loadNotices(true);
+  }
+}
+
+const noticeSocket = new NoticeSocket({
+  getToken: () => getToken()?.accessToken,
+  onMessage: msg => {
+    // 只认业务变更信号，收到即刷新面板
+    if (msg.type === "NOTICE_CHANGED") {
+      refreshByPush();
+    }
+  },
+  onStatus: status => {
+    socketConnected.value = status === "open";
+  }
+});
+
 onMounted(() => {
   loadNotices(true);
+  // 主链路：服务端主动推送
+  noticeSocket.connect();
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  // 兜底：WS 未连通时才轮询，间隔 5 分钟
   pollTimer = setInterval(() => {
     if (document.hidden || detailLoading.value) return;
+    if (socketConnected.value) return;
     void pollNoticeSummary();
-  }, POLL_INTERVAL);
+  }, FALLBACK_POLL_INTERVAL);
 });
 
 onBeforeUnmount(() => {
+  noticeSocket.disconnect();
+  document.removeEventListener("visibilitychange", onVisibilityChange);
+  if (pushDebounceTimer) clearTimeout(pushDebounceTimer);
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
 });
