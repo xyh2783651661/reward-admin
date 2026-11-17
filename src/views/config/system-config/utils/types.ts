@@ -1,4 +1,10 @@
-type SystemConfigValueType = "string" | "int" | "double" | "boolean" | "json";
+type SystemConfigValueType =
+  | "string"
+  | "int"
+  | "long"
+  | "double"
+  | "boolean"
+  | "json";
 
 type ToggleValue = 0 | 1;
 

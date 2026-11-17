@@ -20,6 +20,7 @@ import {
 import { computed, h, reactive, ref, toRaw } from "vue";
 import { useTableExport } from "../../composables";
 import ReJsonField from "@/components/ReJsonField/index.vue";
+import { normalizeBooleanValue } from "./rule";
 import type { SearchField } from "@/components/ReSearchBar/types";
 import type {
   ToggleValue,
@@ -98,11 +99,41 @@ function getOptionLabel<T>(
   return options.find(item => item.value === value)?.label ?? value ?? "-";
 }
 
+/**
+ * 落库前按值类型规范化配置值。
+ * <p>
+ * 后端的 ValueType 校验只会拒绝格式错误，不会统一写法：
+ * boolean 的 {@code 1 / on / yes} 都是合法值，落库前统一成 {@code true / false}，
+ * 避免同一种语义在库里出现五六种写法，后续读配置的人还要自己猜。
+ * <p>
+ * JSON 仍然在这里做「解析 + 压缩」：语法错误会抛出，由调用方提示「表单校验失败」。
+ */
+function normalizeConfigValue(
+  valueType: SystemConfigValueType | "",
+  rawValue: string
+) {
+  const value = String(rawValue ?? "").trim();
+  if (!value) return "";
+
+  if (valueType === "boolean") {
+    return normalizeBooleanValue(value) || value;
+  }
+
+  if (valueType === "json") {
+    return JSON.stringify(JSON.parse(value));
+  }
+
+  return value;
+}
+
 function buildSubmitPayload(formInline: SystemConfigItem) {
   const payload = {
     id: formInline.id,
     configKey: formInline.configKey.trim(),
-    configValue: formInline.configValue ?? "",
+    configValue: normalizeConfigValue(
+      formInline.valueType,
+      formInline.configValue
+    ),
     configGroup: formInline.configGroup.trim(),
     valueType: formInline.valueType || "string",
     description: formInline.description ?? "",
@@ -112,10 +143,6 @@ function buildSubmitPayload(formInline: SystemConfigItem) {
 
   if (!payload.configKey) {
     throw new Error("配置 Key 为必填项");
-  }
-
-  if (payload.valueType === "json" && payload.configValue.trim()) {
-    payload.configValue = JSON.stringify(JSON.parse(payload.configValue));
   }
 
   return payload;

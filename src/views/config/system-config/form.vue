@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { ReSelect } from "@/components/ReSelect";
 import { computed, ref, watch } from "vue";
-import { formRules } from "./utils/rule";
-import type { FormProps } from "./utils/types";
+import {
+  buildConfigValueRules,
+  formRules,
+  isConfigValueCompatible,
+  normalizeBooleanValue
+} from "./utils/rule";
+import type { FormProps, SystemConfigValueType } from "./utils/types";
 import ReJsonField from "@/components/ReJsonField/index.vue";
 import ImageProviderModelsField from "./components/image-provider-models-field.vue";
 import { message } from "@/utils/message";
@@ -57,6 +62,120 @@ const configValuePlaceholder = computed(() => {
   return isJsonType.value
     ? "请输入合法 JSON，提交时会自动压缩为字符串"
     : "请输入配置值";
+});
+
+// ==================== 按值类型切换的配置值编辑器 ====================
+//
+// 配置值在库里统一是字符串，但语义由「值类型」决定。过去一律给文本域，
+// 布尔/数字全靠人手输，很容易写出 valueType=boolean 而值是 "abc" 这种脏数据
+// （保存时后端 ValueType 校验会拒，但用户要到提交才知道）。
+// 这里按 valueType 换控件：布尔给单选、数字给数字框、JSON 给专用编辑器，
+// 从输入源头减少不匹配。
+
+const valueType = computed<SystemConfigValueType | "">(
+  () => newFormInline.value.valueType || "string"
+);
+
+const isBooleanType = computed(() => valueType.value === "boolean");
+
+const isIntegerType = computed(
+  () => valueType.value === "int" || valueType.value === "long"
+);
+
+const isNumberType = computed(
+  () => isIntegerType.value || valueType.value === "double"
+);
+
+const numberLabel = computed(() => {
+  if (valueType.value === "double") return "小数";
+  return valueType.value === "long" ? "长整数" : "整数";
+});
+
+/** int 有明确的 32 位边界；long 交给数字框时不设上下限，避免误拦合法配置 */
+const numberBounds = computed(() => {
+  if (valueType.value === "int") {
+    return { min: -2147483648, max: 2147483647, precision: 0 };
+  }
+  if (valueType.value === "long") {
+    return { min: undefined, max: undefined, precision: 0 };
+  }
+  return { min: undefined, max: undefined, precision: undefined };
+});
+
+const rawConfigValue = computed(() =>
+  String(newFormInline.value.configValue ?? "").trim()
+);
+
+/**
+ * 数值型配置值：表单字段是 string，数字框要 number。
+ * <p>
+ * 取不到合法数字时返回 undefined 让输入框显示为空，而不是兜底成 0 ——
+ * 兜底会把「原值不合法」悄悄改成「0」，属于静默篡改数据。
+ */
+const numericValue = computed<number | undefined>({
+  get() {
+    if (!rawConfigValue.value) return undefined;
+    const parsed = Number(rawConfigValue.value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  },
+  set(val) {
+    newFormInline.value.configValue =
+      val === null || val === undefined || Number.isNaN(val) ? "" : String(val);
+  }
+});
+
+/** 布尔型配置值：兼容库里存量的 1/0/yes/no/on/off 写法 */
+const booleanValue = computed<"true" | "false" | "">({
+  get() {
+    return normalizeBooleanValue(newFormInline.value.configValue);
+  },
+  set(val) {
+    newFormInline.value.configValue = val;
+  }
+});
+
+const numberHint = computed(() => {
+  if (rawConfigValue.value && numericValue.value === undefined) {
+    return `当前值「${rawConfigValue.value}」不是合法${numberLabel.value}，请重新填写`;
+  }
+  if (valueType.value === "int") {
+    return "整数，范围 -2147483648 ~ 2147483647";
+  }
+  if (valueType.value === "long") {
+    return "长整数；超过 ±9007199254740991 会因浏览器数值精度失真，请慎用";
+  }
+  return "支持小数，如 0.75";
+});
+
+const booleanHint = computed(() => {
+  if (rawConfigValue.value && !booleanValue.value) {
+    return `当前值「${rawConfigValue.value}」不是合法布尔值，请重新选择 true / false`;
+  }
+  return "保存时写入 true / false";
+});
+
+/** 配置值校验随值类型变化，其余字段沿用公共规则 */
+const rules = computed(() => ({
+  ...formRules,
+  configValue: buildConfigValueRules(valueType.value)
+}));
+
+/**
+ * 切换值类型时清掉不兼容的旧值。
+ * <p>
+ * 不清会留下「控件显示为空、底层还存着旧值」的隐藏脏值：
+ * 用户看着是空的，点确定却被校验拦住，比直接清空更困惑。
+ * 此时弹窗尚未提交，清空不影响库里的数据。
+ */
+watch(valueType, (next, prev) => {
+  if (!prev || next === prev) return;
+  const raw = String(newFormInline.value.configValue ?? "").trim();
+  if (!raw || isConfigValueCompatible(next, raw)) return;
+
+  newFormInline.value.configValue = "";
+  message(`值类型已切换，原值「${raw}」不符合新类型，已清空，请重新填写`, {
+    type: "warning"
+  });
 });
 
 // ==================== AI 模型类配置的值编辑器 ====================
@@ -229,7 +348,7 @@ defineExpose({ getRef });
   <el-form
     ref="ruleFormRef"
     :model="newFormInline"
-    :rules="formRules"
+    :rules="rules"
     label-width="96px"
   >
     <el-form-item label="配置 Key" prop="configKey">
@@ -317,6 +436,28 @@ defineExpose({ getRef });
         :placeholder="configValuePlaceholder"
         :min-rows="4"
       />
+
+      <div v-else-if="isNumberType" class="config-value-editor">
+        <el-input-number
+          v-model="numericValue"
+          :min="numberBounds.min"
+          :max="numberBounds.max"
+          :precision="numberBounds.precision"
+          :step="isIntegerType ? 1 : 0.01"
+          controls-position="right"
+          placeholder="请输入数值"
+          class="w-full!"
+        />
+        <div class="config-value-editor__hint">{{ numberHint }}</div>
+      </div>
+
+      <div v-else-if="isBooleanType" class="config-value-editor">
+        <el-radio-group v-model="booleanValue">
+          <el-radio value="true">true</el-radio>
+          <el-radio value="false">false</el-radio>
+        </el-radio-group>
+        <div class="config-value-editor__hint">{{ booleanHint }}</div>
+      </div>
 
       <el-input
         v-else
