@@ -11,7 +11,9 @@ import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
 import AnalyticsState from "../components/AnalyticsState.vue";
 import Chapter from "../components/Chapter.vue";
 import DataTable from "../components/DataTable.vue";
-import FindingList from "../components/FindingList.vue";
+import FactList from "../components/FactList.vue";
+import FindingsSection from "../components/FindingsSection.vue";
+import LeadStrip from "../components/LeadStrip.vue";
 import RateBar from "../components/RateBar.vue";
 import Readout from "../components/Readout.vue";
 import StatsMetaLine from "../components/StatsMetaLine.vue";
@@ -401,7 +403,7 @@ const lead = computed(() => {
     />
 
     <template v-if="data && lead">
-      <section class="ai-lead" aria-label="核心读数">
+      <LeadStrip>
         <Readout
           size="lead"
           label="调用次数"
@@ -442,22 +444,13 @@ const lead = computed(() => {
           :caption="`${formatNumber(data.fallbackTriggered)} 次触发，最终成功率 ${formatPercent(data.fallbackSuccessRate)}`"
           hint="触发过回退的调用占总调用的比例；最终成功率为回退后成功的比例"
         />
-      </section>
+      </LeadStrip>
 
-      <section v-if="findings.length" class="ai-findings" aria-label="本期发现">
-        <h2>本期发现</h2>
-        <FindingList :items="findings" :rules="findingRules" />
-      </section>
+      <FindingsSection :items="findings" :rules="findingRules" />
 
       <Chapter index="01" question="调用量与失败率在如何变化？">
         <template #facts>
-          <dl class="facts">
-            <div v-for="f in trendFacts" :key="f.label">
-              <dt>{{ f.label }}</dt>
-              <dd>{{ f.value }}</dd>
-              <p>{{ f.hint }}</p>
-            </div>
-          </dl>
+          <FactList :items="trendFacts" />
         </template>
         <div class="chart-bar">
           <el-radio-group
@@ -484,9 +477,9 @@ const lead = computed(() => {
 
       <Chapter index="02" question="哪些模型值得关注？">
         <template #facts>
-          <p class="facts-note">
-            横轴是平均耗时，纵轴是失败率，气泡越大调用越多。越靠右上越需要关注；点击气泡或表格行查看详情。
-          </p>
+          <FactList
+            note="横轴是平均耗时，纵轴是失败率，气泡越大调用越多。越靠右上越需要关注；点击气泡或表格行查看详情。"
+          />
         </template>
         <div class="models">
           <AnalyticsChart
@@ -601,10 +594,9 @@ const lead = computed(() => {
 
       <Chapter index="03" question="哪些业务在调用，哪些业务容易失败？">
         <template #facts>
-          <p class="facts-note">
-            左图看调用量，右图看失败率（仅统计调用 ≥
-            {{ MIN_SAMPLE_AI }} 次且有失败的业务）。点击条形查看调用记录。
-          </p>
+          <FactList
+            :note="`左图看调用量，右图看失败率（仅统计调用 ≥ ${MIN_SAMPLE_AI} 次且有失败的业务）。点击条形查看调用记录。`"
+          />
         </template>
         <div class="pair">
           <div>
@@ -636,9 +628,9 @@ const lead = computed(() => {
 
       <Chapter index="04" question="供应商与回退是否可靠？">
         <template #facts>
-          <p class="facts-note">
-            健康状态来自供应商探测，实际失败率来自真实调用；两者不一致说明探测没有反映真实情况。
-          </p>
+          <FactList
+            note="健康状态来自供应商探测，实际失败率来自真实调用；两者不一致说明探测没有反映真实情况。"
+          />
         </template>
         <h3 class="pair__title">供应商健康 vs 实际失败率</h3>
         <DataTable :data="data.providerHealthCompare">
@@ -810,68 +802,6 @@ const lead = computed(() => {
 </template>
 
 <style scoped lang="scss">
-.ai-lead {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  padding: var(--ra-space-lg) 0;
-
-  > * {
-    padding: 0 var(--ra-space-lg);
-    border-left: 1px solid var(--el-border-color-lighter);
-
-    &:first-child {
-      padding-left: 0;
-      border-left: 0;
-    }
-  }
-}
-
-.ai-findings {
-  padding: var(--ra-space-lg);
-  background: var(--el-fill-color-lighter);
-  border-radius: var(--ra-radius-lg);
-
-  h2 {
-    margin: 0 0 var(--ra-space-sm);
-    font-size: var(--ra-font-md);
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
-}
-
-.facts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ra-space-md);
-  margin: var(--ra-space-md) 0 0;
-
-  dt {
-    font-size: var(--ra-font-xs);
-    color: var(--el-text-color-secondary);
-  }
-
-  dd {
-    margin: 2px 0 0;
-    font-size: var(--ra-font-lg);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--el-text-color-primary);
-  }
-
-  p {
-    margin: 2px 0 0;
-    font-size: var(--ra-font-xs);
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.facts-note {
-  margin: var(--ra-space-sm) 0 0;
-  font-size: var(--ra-font-xs);
-  line-height: 1.7;
-  color: var(--el-text-color-secondary);
-}
-
 .chart-bar {
   display: flex;
   flex-wrap: wrap;

@@ -17,11 +17,13 @@ import AnalyticsState from "../components/AnalyticsState.vue";
 import AnalyticsSection from "../components/AnalyticsSection.vue";
 import AnalyticsNote from "../components/AnalyticsNote.vue";
 import StatsMetaLine from "../components/StatsMetaLine.vue";
-import MetricCard from "../components/MetricCard.vue";
 import ChartCard from "../components/ChartCard.vue";
 import DataTable from "../components/DataTable.vue";
 import RateBar from "../components/RateBar.vue";
-import InsightPanel, { type Insight } from "../components/InsightPanel.vue";
+import Readout from "../components/Readout.vue";
+import LeadStrip from "../components/LeadStrip.vue";
+import FindingsSection from "../components/FindingsSection.vue";
+import type { Finding } from "../components/FindingList.vue";
 import { useAnalyticsQuery } from "../composables/useAnalyticsQuery";
 import {
   PALETTE,
@@ -111,10 +113,10 @@ const partialRows = computed(() =>
   })
 );
 
-const taskInsights = computed<Insight[]>(() => {
+const taskInsights = computed<Finding[]>(() => {
   const d = task.data.value;
   if (!d) return [];
-  const list: Insight[] = [];
+  const list: Finding[] = [];
   for (const t of d.taskStats ?? []) {
     if (t.total < 5 || t.successRate >= 90) continue;
     list.push({
@@ -177,10 +179,10 @@ const taskTrendOption = computed(() => {
 
 // ==================== 内容生产 ====================
 
-const contentInsights = computed<Insight[]>(() => {
+const contentInsights = computed<Finding[]>(() => {
   const d = content.data.value;
   if (!d) return [];
-  const list: Insight[] = [];
+  const list: Finding[] = [];
   if (d.fetchSuccessRate < 80) {
     list.push({
       level: d.fetchSuccessRate < 60 ? "critical" : "warning",
@@ -226,10 +228,10 @@ const sourceFetchOption = computed(() =>
 
 const img = computed(() => image.data.value);
 
-const imageInsights = computed<Insight[]>(() => {
+const imageInsights = computed<Finding[]>(() => {
   const d = img.value;
   if (!d) return [];
-  const list: Insight[] = [];
+  const list: Finding[] = [];
   if (d.coverageRate < 80) {
     list.push({
       level: d.coverageRate < 50 ? "critical" : "warning",
@@ -466,10 +468,10 @@ function demandTag(index: number) {
 
 // ==================== 发布链路 ====================
 
-const publishInsights = computed<Insight[]>(() => {
+const publishInsights = computed<Finding[]>(() => {
   const d = publish.data.value;
   if (!d) return [];
-  const list: Insight[] = [];
+  const list: Finding[] = [];
   if (d.totalPackages > 0 && d.publishSuccessRate < 90) {
     const top = [...(d.failReasons ?? [])].sort((a, b) => b.count - a.count)[0];
     list.push({
@@ -569,40 +571,41 @@ const packageTrendOption = computed(() => {
             @retry="task.load"
           />
           <template v-if="task.data.value">
-            <InsightPanel
-              :insights="taskInsights"
-              rules="任务成功率 < 90%（样本 ≥ 5）；存在部分成功任务"
-              :loading="task.loading.value"
-            />
-            <div class="task-metrics">
-              <MetricCard
+            <LeadStrip>
+              <Readout
+                size="lead"
                 label="总执行"
                 :value="task.data.value.totalTasks"
-                size="hero"
+                :spark="task.data.value.monthlyTrend?.map(i => i.total)"
                 :caption="scope"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="成功率"
-                :value="task.data.value.successRate"
                 kind="percent"
-                size="hero"
+                :value="task.data.value.successRate"
                 :tone="successRateTone(task.data.value.successRate)"
+                :spark="task.data.value.monthlyTrend?.map(i => i.successRate)"
                 :caption="`失败 ${formatNumber(task.data.value.failCount)} 次`"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="部分成功"
                 :value="task.data.value.partialCount"
-                size="hero"
                 :tone="task.data.value.partialCount > 0 ? 'warning' : 'neutral'"
                 hint="部分步骤失败但整体未中断的执行"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="平均耗时"
-                :value="task.data.value.avgCostMs"
                 kind="duration"
-                size="hero"
+                :value="task.data.value.avgCostMs"
               />
-            </div>
+            </LeadStrip>
+            <FindingsSection
+              :items="taskInsights"
+              rules="任务成功率 < 90%（样本 ≥ 5）；存在部分成功任务"
+            />
 
             <ChartCard
               title="月度执行趋势"
@@ -789,40 +792,39 @@ const packageTrendOption = computed(() => {
             @retry="content.load"
           />
           <template v-if="content.data.value">
-            <InsightPanel
-              :insights="contentInsights"
-              rules="抓取成功率 < 80%；信源成功率 < 60%（样本 ≥ 10）；视觉描述覆盖率 < 80%"
-              :loading="content.loading.value"
-            />
-            <div class="task-metrics">
-              <MetricCard
+            <LeadStrip>
+              <Readout
+                size="lead"
                 label="抓取总次数"
                 :value="content.data.value.fetchTotal"
-                size="hero"
                 :caption="scope"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="抓取成功率"
-                :value="content.data.value.fetchSuccessRate"
                 kind="percent"
-                size="hero"
+                :value="content.data.value.fetchSuccessRate"
                 :tone="successRateTone(content.data.value.fetchSuccessRate)"
                 :caption="`成功 ${formatNumber(content.data.value.fetchSuccess)} · 空结果 ${formatNumber(content.data.value.fetchEmpty)} · 失败 ${formatNumber(content.data.value.fetchFailed)}`"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="图片归档数"
                 :value="content.data.value.imageTotal"
-                size="hero"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="视觉描述覆盖率"
-                :value="content.data.value.visionCoverage"
                 kind="percent"
-                size="hero"
+                :value="content.data.value.visionCoverage"
                 :tone="successRateTone(content.data.value.visionCoverage)"
                 :caption="`完成 ${formatNumber(content.data.value.visionDone)} · 失败 ${formatNumber(content.data.value.visionFailed)} · 待处理 ${formatNumber(content.data.value.visionPending)}`"
               />
-            </div>
+            </LeadStrip>
+            <FindingsSection
+              :items="contentInsights"
+              rules="抓取成功率 < 80%；信源成功率 < 60%（样本 ≥ 10）；视觉描述覆盖率 < 80%"
+            />
 
             <AnalyticsSection
               title="信源抓取可用性"
@@ -919,50 +921,45 @@ const packageTrendOption = computed(() => {
               {{ formatNumber(img.distinctImagesReferenced) }} 张计算，平均每图
               {{ img.avgUsesPerImage }} 次。</AnalyticsNote
             >
-            <InsightPanel
-              :insights="imageInsights"
-              rules="覆盖率 < 80%；无描述 / 描述失败图片被消费率 < 20%；单一作者占比 > 30%；选图利用率 < 70%"
-              :loading="image.loading.value"
-            />
-
-            <div class="task-metrics task-metrics--six">
-              <MetricCard
+            <LeadStrip>
+              <Readout
+                size="lead"
                 label="消费次数"
                 :value="img.totalUsageRecords"
-                size="hero"
+                :spark="
+                  img.dailyTrend?.map(
+                    t => t.counts?.reduce((s, n) => s + n, 0) ?? 0
+                  )
+                "
                 caption="近 90 天"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="覆盖率"
+                kind="percent"
                 :value="img.coverageRate"
-                kind="percent"
-                size="hero"
                 :tone="successRateTone(img.coverageRate)"
+                :caption="`${formatNumber(img.distinctImagesUsed)} / ${formatNumber(img.activeImageTotal)} 张活跃图片`"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="复用率"
-                :value="img.reuseRate"
                 kind="percent"
-                size="hero"
+                :value="img.reuseRate"
               />
-              <MetricCard
-                label="活跃图片"
-                :value="img.activeImageTotal"
-                size="hero"
-              />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="沉睡图片"
                 :value="img.unusedImageCount"
-                size="hero"
                 :tone="img.unusedImageCount > 0 ? 'warning' : 'positive'"
                 hint="活跃但在统计窗口内从未被消费的图片"
+                :caption="`单图最高复用 ${formatNumber(img.maxUses)} 次`"
               />
-              <MetricCard
-                label="单图最高复用"
-                :value="img.maxUses"
-                size="hero"
-              />
-            </div>
+            </LeadStrip>
+            <FindingsSection
+              :items="imageInsights"
+              rules="覆盖率 < 80%；无描述 / 描述失败图片被消费率 < 20%；单一作者占比 > 30%；选图利用率 < 70%"
+            />
 
             <AnalyticsNote
               v-if="
@@ -1284,21 +1281,18 @@ const packageTrendOption = computed(() => {
                 </DataTable>
               </ChartCard>
 
-              <div
-                v-if="img.selectionEfficiency"
-                class="task-metrics task-metrics--six"
-              >
-                <MetricCard
+              <LeadStrip v-if="img.selectionEfficiency">
+                <Readout
                   label="选图总数"
                   :value="img.selectionEfficiency.totalSelected"
                   caption="内容包选中（全量）"
                 />
-                <MetricCard
+                <Readout
                   label="已发布"
                   :value="img.selectionEfficiency.publishedImages"
                   tone="positive"
                 />
-                <MetricCard
+                <Readout
                   label="随失败包沉没"
                   :value="img.selectionEfficiency.failedImages"
                   :tone="
@@ -1307,25 +1301,25 @@ const packageTrendOption = computed(() => {
                       : 'neutral'
                   "
                 />
-                <MetricCard
+                <Readout
                   label="待发布"
                   :value="img.selectionEfficiency.otherImages"
                   tone="warning"
                 />
-                <MetricCard
+                <Readout
                   label="去重图片数"
                   :value="img.selectionEfficiency.distinctImages"
                 />
-                <MetricCard
+                <Readout
                   label="选图利用率"
-                  :value="img.selectionEfficiency.utilizationRate"
                   kind="percent"
+                  :value="img.selectionEfficiency.utilizationRate"
                   :tone="
                     successRateTone(img.selectionEfficiency.utilizationRate)
                   "
                   hint="选中图片中最终随内容包成功发布的比例"
                 />
-              </div>
+              </LeadStrip>
 
               <ChartCard
                 v-if="img.topImages?.length"
@@ -1396,40 +1390,44 @@ const packageTrendOption = computed(() => {
             @retry="publish.load"
           />
           <template v-if="publish.data.value">
-            <InsightPanel
-              :insights="publishInsights"
-              rules="内容包发布成功率 < 90%；平台上传成功率 < 90%（样本 ≥ 10）；平台 AI 文案失败率 > 15%"
-              :loading="publish.loading.value"
-            />
-            <div class="task-metrics">
-              <MetricCard
+            <LeadStrip>
+              <Readout
+                size="lead"
                 label="内容包总数"
                 :value="publish.data.value.totalPackages"
-                size="hero"
+                :spark="
+                  publish.data.value.packageDailyTrend?.map(
+                    i => i.published + i.failed
+                  )
+                "
                 :caption="scope"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="发布成功"
                 :value="publish.data.value.publishedCount"
-                size="hero"
                 tone="positive"
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="发布失败"
                 :value="publish.data.value.failedCount"
-                size="hero"
                 :tone="
                   publish.data.value.failedCount > 0 ? 'negative' : 'neutral'
                 "
               />
-              <MetricCard
+              <Readout
+                size="lead"
                 label="发布成功率"
-                :value="publish.data.value.publishSuccessRate"
                 kind="percent"
-                size="hero"
+                :value="publish.data.value.publishSuccessRate"
                 :tone="successRateTone(publish.data.value.publishSuccessRate)"
               />
-            </div>
+            </LeadStrip>
+            <FindingsSection
+              :items="publishInsights"
+              rules="内容包发布成功率 < 90%；平台上传成功率 < 90%（样本 ≥ 10）；平台 AI 文案失败率 > 15%"
+            />
 
             <div class="task-grid">
               <ChartCard
@@ -1579,16 +1577,6 @@ const packageTrendOption = computed(() => {
   flex-direction: column;
   gap: var(--ra-space-lg);
   padding-top: var(--ra-space-sm);
-}
-
-.task-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--ra-space-md);
-
-  &--six {
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  }
 }
 
 .task-grid {

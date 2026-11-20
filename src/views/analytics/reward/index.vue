@@ -4,19 +4,23 @@ import {
   getAnalyticsRewardOverview,
   type AnalyticsRewardOverview
 } from "@/api/analytics";
+import AnalyticsChart from "../components/AnalyticsChart.vue";
 import AnalyticsPage from "../components/AnalyticsPage.vue";
 import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
 import AnalyticsState from "../components/AnalyticsState.vue";
-import AnalyticsSection from "../components/AnalyticsSection.vue";
-import StatsMetaLine from "../components/StatsMetaLine.vue";
-import MetricCard from "../components/MetricCard.vue";
-import ChartCard from "../components/ChartCard.vue";
+import Chapter from "../components/Chapter.vue";
 import DataTable from "../components/DataTable.vue";
+import FactList, { type Fact } from "../components/FactList.vue";
+import type { Finding } from "../components/FindingList.vue";
+import FindingsSection from "../components/FindingsSection.vue";
+import LeadStrip from "../components/LeadStrip.vue";
 import RateBar from "../components/RateBar.vue";
-import InsightPanel, { type Insight } from "../components/InsightPanel.vue";
+import Readout from "../components/Readout.vue";
+import StatsMetaLine from "../components/StatsMetaLine.vue";
 import { useAnalyticsQuery } from "../composables/useAnalyticsQuery";
 import { SEMANTIC, cartesianOption, rankingOption } from "../utils/chartTheme";
 import { formatNumber, formatPercent, successRateTone } from "../utils/format";
+import { compareHalves, peakIndex, sum } from "../utils/series";
 
 defineOptions({ name: "AnalyticsReward" });
 
@@ -26,33 +30,117 @@ const { data, meta, loading, error, load } =
     { errorLabel: "加载成绩分析数据失败" }
   );
 
-const insights = computed<Insight[]>(() => {
+const scoreTrend = computed(() => data.value?.scoreTrend ?? []);
+const rankTrend = computed(() => data.value?.rankTrend ?? []);
+
+const totalReward = computed(() =>
+  sum(scoreTrend.value.map(i => i.totalReward))
+);
+
+const lead = computed(() => ({
+  rateSpark: scoreTrend.value.map(i => i.scoreRate),
+  rewardSpark: scoreTrend.value.map(i => i.totalReward)
+}));
+
+const latestExam = computed(() => scoreTrend.value.at(-1));
+
+const findingRules =
+  "科目平均分低于目标（达标率 < 50% 为严重，仅展示差距最大的 3 个科目）；最近一次考试排名下降";
+
+const findings = computed<Finding[]>(() => {
   const d = data.value;
   if (!d) return [];
-  const list: Insight[] = [];
+  const list: Finding[] = [];
   const behind = [...(d.targetGapStats ?? [])]
     .filter(s => s.avgGap < 0)
     .sort((a, b) => a.avgGap - b.avgGap);
   for (const s of behind.slice(0, 3)) {
     list.push({
       level: s.achievementRate < 50 ? "critical" : "warning",
+      module: "成绩",
       title: `${s.subjectName} 平均分低于目标`,
       evidence: `平均 ${formatNumber(s.avgScore, 1)} 分，目标 ${formatNumber(s.avgTarget, 1)} 分，差 ${formatNumber(Math.abs(s.avgGap), 1)} 分；达标 ${s.aboveCount} 次 / 未达标 ${s.belowCount} 次（达标率 ${formatPercent(s.achievementRate)}）`
     });
   }
-  const trend = d.rankTrend ?? [];
-  if (trend.length >= 2) {
-    const last = trend[trend.length - 1];
-    const prev = trend[trend.length - 2];
+  const rank = rankTrend.value;
+  if (rank.length >= 2) {
+    const last = rank[rank.length - 1];
+    const prev = rank[rank.length - 2];
     if (last.rankValue > prev.rankValue) {
       list.push({
         level: "info",
+        module: "成绩",
         title: "最近一次考试排名下降",
         evidence: `${prev.examName} 第 ${prev.rankValue} 名 → ${last.examName} 第 ${last.rankValue} 名（下降 ${last.rankValue - prev.rankValue} 名）`
       });
     }
   }
   return list;
+});
+
+const trendFacts = computed<Fact[]>(() => {
+  const t = scoreTrend.value;
+  const facts: Fact[] = [];
+  if (!t.length) return facts;
+  const best = peakIndex(t.map(i => i.scoreRate));
+  if (best >= 0)
+    facts.push({
+      label: "得分率最高的一次",
+      value: formatPercent(t[best].scoreRate),
+      hint: `${t[best].examName}（${t[best].examDate}）`
+    });
+  const cmp = compareHalves(t.map(i => i.scoreRate));
+  if (cmp)
+    facts.push({
+      label: "近期 vs 早期得分率",
+      value: `${cmp.diff >= 0 ? "+" : ""}${formatNumber(cmp.diff, 1)} 个百分点`,
+      hint: `${formatPercent(cmp.first)} → ${formatPercent(cmp.second)}`
+    });
+  const ranks = rankTrend.value;
+  if (ranks.length) {
+    const bestRank = ranks.reduce((a, b) =>
+      b.rankValue < a.rankValue ? b : a
+    );
+    facts.push({
+      label: "历史最佳排名",
+      value: `第 ${bestRank.rankValue} 名`,
+      hint: `${bestRank.examName}（${bestRank.examDate}）`
+    });
+  }
+  return facts;
+});
+
+const subjectFacts = computed<Fact[]>(() => {
+  const d = data.value;
+  const facts: Fact[] = [];
+  if (!d) return facts;
+  const subjects = d.subjectStats ?? [];
+  if (subjects.length) {
+    const top = [...subjects].sort((a, b) => b.avgScoreRate - a.avgScoreRate);
+    facts.push({
+      label: "得分率最高的科目",
+      value: top[0].subjectName,
+      hint: formatPercent(top[0].avgScoreRate)
+    });
+    if (top.length > 1) {
+      const low = top[top.length - 1];
+      facts.push({
+        label: "得分率最低的科目",
+        value: low.subjectName,
+        hint: formatPercent(low.avgScoreRate)
+      });
+    }
+  }
+  const gaps = d.targetGapStats ?? [];
+  if (gaps.length) {
+    const reached = gaps.filter(g => g.avgGap >= 0).length;
+    facts.push({
+      label: "平均分达到目标的科目",
+      value: `${reached} / ${gaps.length}`,
+      hint: "平均分 ≥ 目标分记为达标"
+    });
+  }
+  return facts;
 });
 
 const subjectRateOption = computed(() =>
@@ -83,7 +171,7 @@ const gapOption = computed(() =>
 );
 
 const scoreTrendOption = computed(() => {
-  const t = data.value?.scoreTrend ?? [];
+  const t = scoreTrend.value;
   return cartesianOption({
     categories: t.map(i => i.examDate),
     series: [
@@ -117,7 +205,7 @@ const scoreTrendOption = computed(() => {
 });
 
 const rankOption = computed(() => {
-  const t = data.value?.rankTrend ?? [];
+  const t = rankTrend.value;
   const option = cartesianOption({
     categories: t.map(i => i.examDate),
     series: [
@@ -142,22 +230,17 @@ const rankOption = computed(() => {
   option.series[0].label = { show: true, position: "top", fontSize: 11 };
   return option;
 });
-
-const totalReward = computed(() =>
-  (data.value?.scoreTrend ?? []).reduce((s, i) => s + (i.totalReward ?? 0), 0)
-);
 </script>
 
 <template>
   <AnalyticsPage>
     <AnalyticsPageHeader
       title="成绩分析"
-      description="科目表现、目标达成与历次考试变化（全部历史数据）"
+      description="成绩整体趋势、各科目距离目标还有多远（全部历史数据）"
       :loading="loading"
       @refresh="load"
     />
     <StatsMetaLine :meta="meta" />
-
     <AnalyticsState
       :loading="loading"
       :error="error"
@@ -166,48 +249,94 @@ const totalReward = computed(() =>
     />
 
     <template v-if="data">
-      <InsightPanel
-        :insights="insights"
-        rules="科目平均分低于目标；最近一次考试排名下降"
-        :loading="loading"
-      />
-
-      <div class="reward-metrics">
-        <MetricCard label="考试总数" :value="data.totalExams" size="hero" />
-        <MetricCard
+      <LeadStrip>
+        <Readout
+          size="lead"
+          label="考试总数"
+          :value="data.totalExams"
+          :spark="lead.rateSpark"
+          :caption="
+            latestExam
+              ? `最近：${latestExam.examName}，得分率 ${formatPercent(latestExam.scoreRate)}`
+              : ''
+          "
+        />
+        <Readout
+          size="lead"
           label="奖励记录数"
           :value="data.totalRewards"
-          size="hero"
+          :spark="lead.rewardSpark"
           :caption="`累计奖励金额 ${formatNumber(totalReward, 2)}`"
         />
-        <MetricCard
+        <Readout
+          size="lead"
           label="科目数"
           :value="data.subjectStats?.length ?? 0"
-          size="hero"
         />
-      </div>
+      </LeadStrip>
 
-      <AnalyticsSection
-        title="科目表现"
-        description="得分率便于跨科目比较，不受满分差异影响"
-      >
-        <div class="reward-grid">
-          <ChartCard
-            title="科目平均得分率"
-            :option="subjectRateOption"
-            :height="Math.max(220, (data.subjectStats?.length ?? 0) * 40)"
-            :empty="!data.subjectStats?.length"
+      <FindingsSection :items="findings" :rules="findingRules" />
+
+      <Chapter index="01" question="成绩整体在往哪个方向走？">
+        <template #facts>
+          <FactList :items="trendFacts" />
+        </template>
+        <h3 class="pair__title">得分率与奖励金额</h3>
+        <p class="chart-note">得分率 = 各科分数合计 / 满分合计</p>
+        <AnalyticsChart
+          v-if="scoreTrend.length"
+          :option="scoreTrendOption"
+          :height="300"
+          label="历次考试得分率与奖励金额"
+        />
+        <p v-else class="empty">还没有可用于趋势的考试数据。</p>
+
+        <template v-if="rankTrend.length">
+          <h3 class="pair__title pair__title--spaced">总分排名变化</h3>
+          <p class="chart-note">排名越靠上越好（纵轴已反转）</p>
+          <AnalyticsChart
+            :option="rankOption"
+            :height="280"
+            label="历次考试总分排名变化"
           />
-          <ChartCard
-            title="科目目标达成差距"
-            description="分差 = 平均分 − 目标分；绿色达标，红色未达标"
-            :option="gapOption"
-            :height="Math.max(220, (data.targetGapStats?.length ?? 0) * 40)"
-            :empty="!data.targetGapStats?.length"
+        </template>
+      </Chapter>
+
+      <Chapter index="02" question="哪些科目离目标最远？">
+        <template #facts>
+          <FactList
+            :items="subjectFacts"
+            note="得分率便于跨科目比较，不受满分差异影响；分差 = 平均分 − 目标分。"
           />
+        </template>
+        <div class="pair">
+          <div>
+            <h3 class="pair__title">科目平均得分率</h3>
+            <AnalyticsChart
+              v-if="data.subjectStats?.length"
+              :option="subjectRateOption"
+              :height="Math.max(220, data.subjectStats.length * 40)"
+              label="科目平均得分率排行"
+            />
+            <p v-else class="empty">没有科目成绩数据。</p>
+          </div>
+          <div>
+            <h3 class="pair__title">
+              科目目标达成差距（绿色达标，红色未达标）
+            </h3>
+            <AnalyticsChart
+              v-if="data.targetGapStats?.length"
+              :option="gapOption"
+              :height="Math.max(220, data.targetGapStats.length * 40)"
+              label="科目目标达成差距"
+            />
+            <p v-else class="empty">没有设置目标分的科目。</p>
+          </div>
         </div>
-        <div class="reward-grid">
-          <ChartCard title="科目成绩明细" :empty="!data.subjectStats?.length">
+
+        <div class="pair pair--spaced">
+          <div>
+            <h3 class="pair__title">科目成绩明细</h3>
             <DataTable :data="data.subjectStats">
               <el-table-column prop="subjectName" label="科目" min-width="90" />
               <el-table-column
@@ -243,11 +372,9 @@ const totalReward = computed(() =>
                 align="right"
               />
             </DataTable>
-          </ChartCard>
-          <ChartCard
-            title="科目目标达成明细"
-            :empty="!data.targetGapStats?.length"
-          >
+          </div>
+          <div>
+            <h3 class="pair__title">科目目标达成明细</h3>
             <DataTable :data="data.targetGapStats">
               <el-table-column prop="subjectName" label="科目" min-width="90" />
               <el-table-column
@@ -285,50 +412,53 @@ const totalReward = computed(() =>
                 </template>
               </el-table-column>
             </DataTable>
-          </ChartCard>
+          </div>
         </div>
-      </AnalyticsSection>
+      </Chapter>
 
-      <AnalyticsSection title="历次考试变化">
-        <ChartCard
-          v-if="data.scoreTrend?.length"
-          title="得分率与奖励金额"
-          description="得分率 = 各科分数合计 / 满分合计"
-          :option="scoreTrendOption"
-          :height="300"
-        />
-        <ChartCard
-          v-if="data.rankTrend?.length"
-          title="总分排名变化"
-          description="排名越靠上越好（纵轴已反转）"
-          :option="rankOption"
-          :height="280"
-        />
-      </AnalyticsSection>
-
-      <ChartCard title="考试记录" :empty="!data.examResults?.length">
-        <DataTable :data="data.examResults">
+      <Chapter index="03" question="明细：考试记录">
+        <DataTable :data="data.examResults" empty-text="还没有考试记录">
           <el-table-column prop="examName" label="考试名称" min-width="200" />
           <el-table-column prop="examDate" label="日期" width="120" />
           <el-table-column prop="stage" label="学段" width="100" />
           <el-table-column prop="rewardStatus" label="奖励状态" width="120" />
         </DataTable>
-      </ChartCard>
+      </Chapter>
     </template>
   </AnalyticsPage>
 </template>
 
 <style scoped lang="scss">
-.reward-metrics {
+.pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--ra-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ra-space-xl);
+
+  &--spaced {
+    margin-top: var(--ra-space-xl);
+  }
 }
 
-.reward-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: var(--ra-space-md);
+.pair__title {
+  margin: 0 0 var(--ra-space-sm);
+  font-size: var(--ra-font-base);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+
+  &--spaced {
+    margin-top: var(--ra-space-xl);
+  }
+}
+
+.chart-note,
+.empty {
+  margin: 0 0 var(--ra-space-sm);
+  font-size: var(--ra-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.empty {
+  font-size: var(--ra-font-sm);
 }
 
 .text-positive {
@@ -337,5 +467,11 @@ const totalReward = computed(() =>
 
 .text-negative {
   color: var(--el-color-danger);
+}
+
+@media (width <= 1100px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>
