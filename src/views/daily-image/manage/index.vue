@@ -137,7 +137,16 @@ function hasObj(v: unknown) {
 /** 各分组是否包含有效字段（整组无有效字段时隐藏标题） */
 const groupFlags = computed(() => {
   const d = detail.value;
-  if (!d) return { A: false, B: false, C: false, D: false, E: false, F: false };
+  if (!d)
+    return {
+      A: false,
+      B: false,
+      C: false,
+      D: false,
+      E: false,
+      F: false,
+      G: false
+    };
   return {
     A: [d.id, d.originalName, d.extension, d.fileSize, d.source].some(hasVal),
     B: [
@@ -177,12 +186,33 @@ const groupFlags = computed(() => {
         d.updatedBy,
         d.storagePath,
         d.thumbnailPath
-      ].some(hasVal) || hasObj(d.extraJson)
+      ].some(hasVal) || hasObj(d.extraJson),
+    // AI 打分快照由选图流程写入 extraJson.ai_score（见 PublishPackageWriter）
+    G: hasObj(d.extraJson?.ai_score)
   };
 });
 
-/** 折叠面板默认展开 A/B/C/D，E/F 折叠 */
-const activeGroups = ref(["A", "B", "C", "D"]);
+/** 折叠面板默认展开 A/B/C/D/G（G 仅在图片有 AI 打分快照时才渲染），E/F 折叠 */
+const activeGroups = ref(["A", "B", "C", "D", "G"]);
+
+/**
+ * AI 打分快照。
+ *
+ * 语义提醒：这是「最近一次」打分，不是图片的固有属性——
+ * 同一张图在不同主题下分数不同，权威记录在对应发布包上。
+ */
+const aiScore = computed(() => {
+  const raw = detail.value?.extraJson?.ai_score;
+  return (raw && typeof raw === "object" ? raw : {}) as Record<string, any>;
+});
+
+/** 分数着色：<60 红（不建议用），60~79 黄（可用），>=80 绿（推荐） */
+function aiScoreType(score?: number | null) {
+  if (score === undefined || score === null) return "info";
+  if (score >= 80) return "success";
+  if (score >= 60) return "warning";
+  return "danger";
+}
 
 /** 视觉描述元数据 key（与语言描述区分） */
 const VISION_META_KEYS = ["model", "template", "cost_ms", "errors"];
@@ -863,6 +893,51 @@ function uploadStatusLabel(status: string) {
                   <dd>{{ detail?.downloadCostMs }} ms</dd>
                 </template>
               </dl>
+            </el-collapse-item>
+
+            <!-- G AI 打分（最近一次快照，由选图流程写入 extraJson.ai_score） -->
+            <el-collapse-item v-if="groupFlags.G" title="AI 打分" name="G">
+              <dl class="drawer-body__fields">
+                <dt>得分</dt>
+                <dd>
+                  <el-tag
+                    :type="aiScoreType(aiScore.score) as any"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ aiScore.score ?? "-" }} 分
+                  </el-tag>
+                  <span
+                    v-if="hasVal(aiScore.theme)"
+                    class="drawer-body__score-theme"
+                  >
+                    主题：{{ aiScore.theme }}
+                  </span>
+                </dd>
+                <template v-if="hasVal(aiScore.reason)">
+                  <dt>打分理由</dt>
+                  <dd class="drawer-body__score-reason">
+                    {{ aiScore.reason }}
+                  </dd>
+                </template>
+                <template v-if="hasVal(aiScore.scoredAt)">
+                  <dt>打分时间</dt>
+                  <dd>{{ aiScore.scoredAt }}</dd>
+                </template>
+                <template v-if="hasVal(aiScore.callRecordId)">
+                  <dt>AI 调用记录</dt>
+                  <dd>#{{ aiScore.callRecordId }}</dd>
+                </template>
+                <template v-if="hasVal(aiScore.packageId)">
+                  <dt>来源发布包</dt>
+                  <dd>#{{ aiScore.packageId }}</dd>
+                </template>
+              </dl>
+              <p class="drawer-body__score-tip">
+                这是该图<b>最近一次</b> AI
+                打分的快照；同一张图在不同主题下分数会变，
+                权威记录以对应发布包为准。
+              </p>
             </el-collapse-item>
 
             <!-- F 存储与审计 -->
@@ -1738,6 +1813,26 @@ function uploadStatusLabel(status: string) {
 
 .drawer-body__vision-time {
   font-size: var(--ra-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+/* AI 打分（G 组） */
+.drawer-body__score-theme {
+  margin-left: 8px;
+  font-size: var(--ra-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.drawer-body__score-reason {
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.drawer-body__score-tip {
+  margin: 8px 0 0;
+  font-size: var(--ra-font-xs);
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
