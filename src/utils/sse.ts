@@ -101,7 +101,9 @@ export function subscribeSse<T>(
       });
 
       if (!resp.ok) {
-        onError?.(new Error(`SSE 连接失败：HTTP ${resp.status}`));
+        // 后端改为按语义返回真实 HTTP 状态后，握手失败会直接落在非 2xx 分支。
+        // 错误体仍是统一 Result，这里把 msg 读出来，避免只给用户「HTTP 400」。
+        onError?.(new Error(await sseErrorMessage(resp)));
         return;
       }
       if (!resp.body) {
@@ -142,4 +144,31 @@ export function subscribeSse<T>(
   })();
 
   return () => controller.abort();
+}
+
+/**
+ * 从 SSE 握手失败的响应里取可读文案。
+ *
+ * 后端错误体是统一 Result（`{ code, msg }`），但 SSE 端点也可能直接返回
+ * 纯文本或空体，因此这里逐级降级：msg → 纯文本 → 状态码。
+ */
+async function sseErrorMessage(resp: Response): Promise<string> {
+  const fallback = `SSE 连接失败：HTTP ${resp.status}`;
+  try {
+    const text = await resp.text();
+    if (!text) return fallback;
+    try {
+      const body = JSON.parse(text);
+      if (body && typeof body.msg === "string" && body.msg) return body.msg;
+    } catch {
+      // 非 JSON：短文本可以直接展示，长文本大概率是 HTML 错误页
+      const trimmed = text.trim();
+      if (trimmed && trimmed.length <= 200 && !trimmed.startsWith("<")) {
+        return trimmed;
+      }
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
 }

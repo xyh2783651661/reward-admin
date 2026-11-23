@@ -176,7 +176,9 @@ function handleError(
   defaults.onError?.(error);
 
   const detail =
-    error instanceof DownloadError && error.message ? error.message : "";
+    error instanceof DownloadError && error.message
+      ? error.message
+      : backendMessage(error);
 
   console.error(errorText, error);
   message(detail ? `${errorText}：${detail}` : errorText, { type: "error" });
@@ -185,4 +187,25 @@ function handleError(
 function delay(ms: number): Promise<void> {
   if (ms <= 0) return Promise.resolve();
   return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+/**
+ * 从失败响应里取后端文案。
+ *
+ * 后端改为返回真实 HTTP 状态后，导出接口失败会走 axios 的 reject 分支，
+ * 错误体仍是我们约定的 `Result{code,msg}`（拦截器已把 blob 解析回 JSON）。
+ * 这里只取 `msg`，不展开 axios 自己的英文 message，避免把
+ * "Request failed with status code 400" 这类内部文案抛给用户。
+ */
+function backendMessage(error: unknown): string {
+  const anyErr = error as {
+    msg?: unknown;
+    response?: { data?: { msg?: unknown } };
+  };
+  const fromBody = anyErr?.response?.data?.msg;
+  if (typeof fromBody === "string" && fromBody.trim()) return fromBody.trim();
+  if (typeof anyErr?.msg === "string" && anyErr.msg.trim()) {
+    return anyErr.msg.trim();
+  }
+  return "";
 }

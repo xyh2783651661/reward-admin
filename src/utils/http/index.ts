@@ -148,9 +148,13 @@ class PureHttp {
         }
         return response.data;
       },
-      (error: PureHttpError) => {
+      async (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
+        // 后端已改为按语义返回真实 HTTP 状态（400/403/404/500...），失败响应不再走 then，
+        // 统一落到这里。responseType: "blob"（导出接口）拿到的错误体是 Blob，
+        // getErrorMessage 读不到 body.msg，因此这里先把它解析回 JSON 对象。
+        await normalizeBlobErrorBody($error);
         // 401：登录态失效，清理 token 并跳转登录页（不弹 toast，已跳转登录）
         if ($error?.response?.status === 401) {
           removeToken();
@@ -210,3 +214,31 @@ class PureHttp {
 }
 
 export const http = new PureHttp();
+
+/**
+ * 把 blob 形态的错误响应体还原成 JSON 对象。
+ *
+ * 背景：导出类接口用 `responseType: "blob"`，后端出错时返回的是
+ * `application/json` 的错误体（被包成 Blob）。axios 拒绝后
+ * `error.response.data` 是 Blob，`getErrorMessage` / `useDownload`
+ * 都读不到 `msg`，用户只能看到笼统的「导出失败」。
+ *
+ * 只处理 json / text 类型的 Blob；真二进制错误体（极罕见）保持原样，
+ * 避免把文件内容误当 JSON 解析。
+ */
+async function normalizeBlobErrorBody(error: PureHttpError): Promise<void> {
+  const response = error?.response;
+  const raw = response?.data;
+  if (!(raw instanceof Blob)) return;
+
+  const type = (raw.type || "").toLowerCase();
+  if (!type.includes("json") && !type.includes("text")) return;
+
+  try {
+    const text = await raw.text();
+    if (!text) return;
+    (response as { data: unknown }).data = JSON.parse(text);
+  } catch {
+    // 解析失败就保持 Blob 原样，交给调用方的兜底文案
+  }
+}
