@@ -5,8 +5,6 @@ import {
   getAnalyticsAiOverview,
   type AnalyticsAiOverview
 } from "@/api/analytics";
-import { getAiModelPrices, saveAiModelPrices } from "@/api/ai";
-import { message } from "@/utils/message";
 import AnalyticsChart from "../components/AnalyticsChart.vue";
 import AnalyticsPage from "../components/AnalyticsPage.vue";
 import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
@@ -137,73 +135,17 @@ const dailyCostOption = computed(() => {
   });
 });
 
-// ---------- 单价配置 ----------
+// ---------- 单价维护入口 ----------
 
-type PriceRow = {
-  model: string;
-  currency: string;
-  inputPrice: number;
-  outputPrice: number;
-  enabled: boolean;
-  remark?: string;
-};
-
-const priceDrawer = ref(false);
-const priceLoading = ref(false);
-const priceSaving = ref(false);
-const priceRows = ref<PriceRow[]>([]);
-
-async function openPriceDrawer() {
-  priceDrawer.value = true;
-  priceLoading.value = true;
-  try {
-    const res = await getAiModelPrices();
-    priceRows.value = (res.data ?? []).map(i => ({
-      model: i.model,
-      currency: i.currency || "CNY",
-      inputPrice: Number(i.inputPrice ?? 0),
-      outputPrice: Number(i.outputPrice ?? 0),
-      enabled: i.enabled !== false,
-      remark: i.remark || ""
-    }));
-  } catch (e) {
-    message("加载单价失败", { type: "error" });
-  } finally {
-    priceLoading.value = false;
-  }
-}
-
-function addPriceRow() {
-  priceRows.value.push({
-    model: "",
-    currency: "CNY",
-    inputPrice: 0,
-    outputPrice: 0,
-    enabled: true,
-    remark: ""
-  });
-}
-
-function removePriceRow(index: number) {
-  priceRows.value.splice(index, 1);
-}
-
-async function savePrices() {
-  if (priceRows.value.some(i => !i.model.trim())) {
-    message("模型 ID 不能为空", { type: "warning" });
-    return;
-  }
-  priceSaving.value = true;
-  try {
-    await saveAiModelPrices(priceRows.value);
-    message("单价已保存，成本将按新单价重算", { type: "success" });
-    priceDrawer.value = false;
-    load();
-  } catch (e) {
-    message("保存失败", { type: "error" });
-  } finally {
-    priceSaving.value = false;
-  }
+/**
+ * 单价维护跳转到独立的「AI 模型单价」页（/ai/model-price）。
+ *
+ * 这里曾经有个内嵌抽屉，但单价是「供应商 + 模型」二维的，
+ * 抽屉里编辑要再复制一套表格；两处编辑入口迟早会不一致，
+ * 所以统一收口到管理页，本页只负责展示成本与提示缺口。
+ */
+function goModelPrice() {
+  router.push("/ai/model-price");
 }
 
 // ==================== 01 调用趋势 ====================
@@ -988,7 +930,7 @@ const lead = computed(() => {
         >
           <template #default>
             成本是按「单价 × token」算出来的，没有单价就只能看消耗量。
-            <el-button type="primary" link @click="openPriceDrawer">
+            <el-button type="primary" link @click="goModelPrice">
               立即配置
             </el-button>
           </template>
@@ -999,7 +941,7 @@ const lead = computed(() => {
             资产口径：调用量按天汇总；成本按「实际服务模型」计价（actual_model →
             remote_model → model）
           </span>
-          <el-button type="primary" plain @click="openPriceDrawer">
+          <el-button type="primary" plain @click="goModelPrice">
             配置单价
           </el-button>
         </div>
@@ -1011,6 +953,12 @@ const lead = computed(() => {
         />
 
         <DataTable :data="data.modelCostStats ?? []">
+          <el-table-column label="供应商" width="150">
+            <template #default="{ row }">
+              <span v-if="row.provider">{{ row.provider }}</span>
+              <el-tag v-else size="small" type="info">全局</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column
             prop="model"
             label="模型"
@@ -1075,102 +1023,6 @@ const lead = computed(() => {
         </p>
       </Chapter>
     </template>
-
-    <!-- 单价配置抽屉 -->
-    <el-drawer
-      v-model="priceDrawer"
-      title="AI 模型单价"
-      size="760px"
-      :close-on-click-modal="false"
-    >
-      <el-alert
-        type="info"
-        show-icon
-        :closable="false"
-        class="price-tip"
-        title="单价单位：每百万 token，请与供应商报价口径保持一致"
-        description="不预置任何价格：供应商调价频繁，写死一份假数据会让面板长期显示一个没人怀疑的错误金额。"
-      />
-
-      <el-table
-        v-loading="priceLoading"
-        :data="priceRows"
-        size="small"
-        border
-        max-height="480"
-      >
-        <el-table-column label="模型 ID" min-width="200">
-          <template #default="{ row }">
-            <el-input v-model="row.model" placeholder="如 deepseek-chat" />
-          </template>
-        </el-table-column>
-        <el-table-column label="币种" width="100">
-          <template #default="{ row }">
-            <el-select v-model="row.currency">
-              <el-option label="CNY" value="CNY" />
-              <el-option label="USD" value="USD" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column label="输入单价" width="140">
-          <template #default="{ row }">
-            <el-input-number
-              v-model="row.inputPrice"
-              :min="0"
-              :precision="4"
-              :step="0.1"
-              controls-position="right"
-              class="price-input"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column label="输出单价" width="140">
-          <template #default="{ row }">
-            <el-input-number
-              v-model="row.outputPrice"
-              :min="0"
-              :precision="4"
-              :step="0.1"
-              controls-position="right"
-              class="price-input"
-            />
-          </template>
-        </el-table-column>
-        <el-table-column label="启用" width="70" align="center">
-          <template #default="{ row }">
-            <el-switch v-model="row.enabled" />
-          </template>
-        </el-table-column>
-        <el-table-column label="备注" min-width="150">
-          <template #default="{ row }">
-            <el-input v-model="row.remark" placeholder="价格来源/生效日期" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="70" align="center">
-          <template #default="{ $index }">
-            <el-button type="danger" link @click="removePriceRow($index)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-
-      <template #footer>
-        <div class="price-footer">
-          <el-button @click="addPriceRow">新增一行</el-button>
-          <div>
-            <el-button @click="priceDrawer = false">取消</el-button>
-            <el-button
-              type="primary"
-              :loading="priceSaving"
-              @click="savePrices"
-            >
-              保存
-            </el-button>
-          </div>
-        </div>
-      </template>
-    </el-drawer>
   </AnalyticsPage>
 </template>
 
@@ -1191,20 +1043,6 @@ const lead = computed(() => {
 
 .cost-alert {
   margin-bottom: 12px;
-}
-
-.price-tip {
-  margin-bottom: 12px;
-}
-
-.price-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.price-input {
-  width: 100%;
 }
 
 .ai-lead {

@@ -34,6 +34,8 @@ export const getAiCallRecordOptions = () => {
 /** 单价行：价格单位是「每百万 token」 */
 export type AiModelPrice = {
   id?: number;
+  /** 供应商槽位（如 QIAN_WEN）；空串 = 全局默认价 */
+  provider: string;
   model: string;
   currency: string;
   inputPrice: number;
@@ -56,5 +58,21 @@ export const saveAiModelPrices = (list: AiModelPrice[]) => {
     "post",
     "/api/ai/model-price/batch-save",
     { data: list }
+  );
+};
+
+/** 实际调用过但未配单价的组合（用于一键导入待填行） */
+export type AiModelPriceMissing = {
+  provider: string;
+  model: string;
+  calls: number;
+  promptTokens: number;
+  responseTokens: number;
+};
+
+export const getAiModelPriceMissing = (days = 90) => {
+  return http.request<ApiResult<AiModelPriceMissing[]>>(
+    "get",
+    `/api/ai/model-price/missing?days=${days}`
   );
 };

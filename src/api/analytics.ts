@@ -93,6 +93,8 @@ type ProviderHealthCompare = {
 
 /** 按实际模型的成本明细 */
 type ModelCostStats = {
+  /** 供应商槽位；空串表示记录里没有供应商信息（按全局默认价计价） */
+  provider?: string;
   model: string;
   calls: number;
   promptTokens: number;
