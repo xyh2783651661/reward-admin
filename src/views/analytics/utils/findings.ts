@@ -5,7 +5,7 @@ import type {
   AnalyticsPublishOverview,
   AnalyticsTaskOverview
 } from "@/api/analytics";
-import type { Finding } from "../components/FindingList.vue";
+import type { Finding } from "../components/types";
 import { formatNumber, formatPercent } from "./format";
 
 /**

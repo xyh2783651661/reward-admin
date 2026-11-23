@@ -1,14 +1,5 @@
 <script setup lang="ts">
-export interface Finding {
-  level: "critical" | "warning" | "info";
-  /** 来源模块，例如「AI 调用」 */
-  module?: string;
-  title: string;
-  /** 触发依据：必须包含真实数据与阈值 */
-  evidence: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}
+import type { Finding } from "./types";
 
 withDefaults(
   defineProps<{
