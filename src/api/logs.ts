@@ -21,6 +21,20 @@ export const getSystemLogsList = (data?: object) => {
   return http.request<ApiPageResult>("post", "/api/access-logs/page", { data });
 };
 
+/**
+ * 导出系统日志「详情」。
+ *
+ * 与 `exportAccessLogsList` 的区别：列表导出只有主表摘要字段；
+ * 详情导出额外带上完整请求参数 / 请求体 / 响应体 / 响应头 / 异常堆栈。
+ * 后端限制单次 1000 行（长文本很占内存），超限会返回业务异常而不是静默截断。
+ */
+export const exportAccessLogDetailList = (data?: object) => {
+  return http.request<Blob>("post", "/api/access-logs/export-detail-excel", {
+    data,
+    responseType: "blob"
+  });
+};
+
 export const getAccessLogsList = (params?: object) => {
   return http.request<ApiResult<Record<string, any>[]>>(
     "get",

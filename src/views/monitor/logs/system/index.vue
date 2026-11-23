@@ -26,6 +26,8 @@ const {
   resetForm,
   exportExcel,
   exportLoading,
+  exportDetailExcel,
+  exportDetailLoading,
   handleSizeChange,
   handleCellDblclick,
   handleCurrentChange
@@ -57,6 +59,20 @@ function handleSearch() {
         >
           导出
         </el-button>
+        <el-tooltip
+          content="额外包含完整请求参数、请求体、响应体与异常堆栈；单次最多 1000 条，超过请缩小时间范围"
+          placement="top"
+        >
+          <el-button
+            type="primary"
+            plain
+            :loading="exportDetailLoading"
+            :icon="useRenderIcon(HugeiconsDownload01)"
+            @click="exportDetailExcel"
+          >
+            导出详情
+          </el-button>
+        </el-tooltip>
       </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table

@@ -16,7 +16,7 @@ import {
   getAccessLogsFilterOptions,
   exportAccessLogsList
 } from "@/api/system";
-import { getAccessLogOptions } from "@/api/logs";
+import { getAccessLogOptions, exportAccessLogDetailList } from "@/api/logs";
 import Info from "~icons/ri/question-line";
 
 export function useSystemLog(_tableRef: Ref) {
@@ -48,6 +48,9 @@ export function useSystemLog(_tableRef: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
   const { loading: exportLoading, runExport } = useDownload();
+  // 详情导出与列表导出是两个独立按钮，各用一份 loading，避免互相把对方按钮点亮
+  const { loading: exportDetailLoading, runExport: runExportDetail } =
+    useDownload();
   const { copied, update } = useCopyToClipboard();
   const optionsLoading = ref(false);
   const successOptions = ref<{ value: string; label: string }[]>([]);
@@ -232,6 +235,20 @@ export function useSystemLog(_tableRef: Ref) {
 
   function exportExcel() {
     return runExport(() => exportAccessLogsList(toRaw(form)), "系统日志.xlsx");
+  }
+
+  /**
+   * 导出详情（带完整请求参数/响应体/异常堆栈）。
+   *
+   * 后端单次上限 1000 行，超限会返回明确文案，这里交给 useDownload 统一提示；
+   * 失败文案用「导出失败」+ 后端 msg 拼接，避免用户不知道是范围太大还是没数据。
+   */
+  function exportDetailExcel() {
+    return runExportDetail(
+      () => exportAccessLogDetailList(toRaw(form)),
+      "系统日志详情.xlsx",
+      { errorText: "详情导出失败" }
+    );
   }
 
   /** 双击快速复制请求接口或 TraceId */
@@ -431,6 +448,8 @@ export function useSystemLog(_tableRef: Ref) {
     resetForm,
     exportExcel,
     exportLoading,
+    exportDetailExcel,
+    exportDetailLoading,
     handleSizeChange,
     handleCellDblclick,
     handleCurrentChange
