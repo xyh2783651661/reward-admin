@@ -3,7 +3,7 @@
  * 约定：后端百分比字段均为 0–100 的数值（例如 12.5 表示 12.5%），不要再乘 100。
  */
 
-export type ValueKind = "number" | "percent" | "duration" | "tokens";
+export type ValueKind = "number" | "percent" | "duration" | "tokens" | "money";
 
 export interface ValueParts {
   main: string;
@@ -59,6 +59,20 @@ export function durationParts(ms: number | null | undefined): ValueParts {
   return { main: getFormatter(0).format(ms), unit: "ms" };
 }
 
+/**
+ * 金额：小于 0.01 时保留 4 位小数。
+ *
+ * 因为单次调用成本常在 0.001 元量级，按 2 位取整会全变成 0，
+ * 面板上就会出现「有 token 消耗但成本为 0」的误解。
+ * 单位单独返回，调用方自己拼币种符号（可能是 CNY 也可能是 USD）。
+ */
+export function moneyParts(value: number | null | undefined): ValueParts {
+  if (!isValid(value)) return { main: EMPTY_TEXT, unit: "" };
+  const abs = Math.abs(value);
+  const digits = abs > 0 && abs < 0.01 ? 4 : 2;
+  return { main: getFormatter(digits).format(value), unit: "" };
+}
+
 export function formatParts(
   value: number | null | undefined,
   kind: ValueKind = "number",
@@ -73,6 +87,8 @@ export function formatParts(
       return durationParts(value);
     case "tokens":
       return tokenParts(value);
+    case "money":
+      return moneyParts(value);
     default:
       return { main: formatNumber(value, digits ?? 0), unit: "" };
   }

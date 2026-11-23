@@ -43,6 +43,8 @@ type BizTypeStats = {
   avgCostMs: number;
   totalTokens: number;
   failCount: number;
+  /** 该业务类型的成本（按当前单价估算） */
+  cost?: number;
 };
 
 type MonthlyTrend = {
@@ -55,6 +57,8 @@ type MonthlyTrend = {
   totalTokens?: number;
   fallbackCount?: number;
   fallbackRate?: number;
+  /** 当月成本（按当前单价估算） */
+  cost?: number;
 };
 
 type FallbackChain = {
@@ -87,6 +91,25 @@ type ProviderHealthCompare = {
   mismatch: boolean;
 };
 
+/** 按实际模型的成本明细 */
+type ModelCostStats = {
+  model: string;
+  calls: number;
+  promptTokens: number;
+  responseTokens: number;
+  cost: number;
+  /** false 表示该模型没配单价，cost=0 不代表不花钱 */
+  priced: boolean;
+};
+
+/** 按天成本趋势 */
+type DailyCost = {
+  date: string;
+  calls: number;
+  totalTokens: number;
+  cost: number;
+};
+
 type AnalyticsAiOverview = {
   totalCalls: number;
   successCount: number;
@@ -105,6 +128,18 @@ type AnalyticsAiOverview = {
   providerHealthCompare: ProviderHealthCompare[];
   fallbackChains?: FallbackChain[];
   fallbackPatterns?: FallbackPattern[];
+  /** 总成本（按当前单价估算，非账单实付） */
+  totalCost?: number;
+  /** totalCost 的币种 */
+  currency?: string;
+  /** 各币种成本；多币种时不做汇率换算 */
+  costByCurrency?: Record<string, number>;
+  /** 是否已配置任何单价 */
+  priceConfigured?: boolean;
+  /** 未配单价的模型（按 token 量降序） */
+  unpricedModels?: string[];
+  modelCostStats?: ModelCostStats[];
+  dailyTrend?: DailyCost[];
 };
 
 export function getAnalyticsAiOverview(range = 30) {

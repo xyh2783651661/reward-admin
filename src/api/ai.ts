@@ -28,3 +28,33 @@ export const getAiCallRecordOptions = () => {
     "/api/ai/aiCallRecord/options"
   );
 };
+
+// ==================== AI 模型单价（成本监控依赖） ====================
+
+/** 单价行：价格单位是「每百万 token」 */
+export type AiModelPrice = {
+  id?: number;
+  model: string;
+  currency: string;
+  inputPrice: number;
+  outputPrice: number;
+  enabled: boolean;
+  remark?: string;
+};
+
+/** 查询全部单价（含停用，便于维护） */
+export const getAiModelPrices = () => {
+  return http.request<ApiResult<AiModelPrice[]>>(
+    "get",
+    "/api/ai/model-price/list"
+  );
+};
+
+/** 批量保存单价（后端按 model upsert） */
+export const saveAiModelPrices = (list: AiModelPrice[]) => {
+  return http.request<ApiResult<number>>(
+    "post",
+    "/api/ai/model-price/batch-save",
+    { data: list }
+  );
+};

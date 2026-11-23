@@ -5,6 +5,8 @@ import {
   getAnalyticsAiOverview,
   type AnalyticsAiOverview
 } from "@/api/analytics";
+import { getAiModelPrices, saveAiModelPrices } from "@/api/ai";
+import { message } from "@/utils/message";
 import AnalyticsChart from "../components/AnalyticsChart.vue";
 import AnalyticsPage from "../components/AnalyticsPage.vue";
 import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
@@ -34,6 +36,7 @@ import {
   failRateTone,
   formatDuration,
   formatNumber,
+  formatParts,
   formatPercent,
   formatTokens,
   successRateTone
@@ -72,8 +75,136 @@ const findings = computed(() => {
       title: `存在 ${slow} 条耗时超过 30 秒的慢调用`,
       evidence: "详见页面底部「明细」中的慢调用 TOP10，可按模型与业务类型定位"
     });
+
+  // 成本相关：单价缺失会让面板金额长期偏低，属于「看着正常其实错」的问题，必须显式提示
+  if (!d.priceConfigured)
+    list.push({
+      level: "warning",
+      module: "AI 成本",
+      title: "尚未配置模型单价，成本金额全部为 0",
+      evidence: `本期消耗 ${formatTokens(d.totalTokens)}，但没有任何启用单价，无法换算金额`
+    });
+  else if (d.unpricedModels?.length)
+    list.push({
+      level: "warning",
+      module: "AI 成本",
+      title: `${d.unpricedModels.length} 个模型未配置单价`,
+      evidence: `未配置：${d.unpricedModels.join("、")}；这些调用的成本按 0 计，总额会偏低`
+    });
+
   return list;
 });
+
+// ==================== 06 成本 ====================
+
+/** 金额符号：后端只给币种代码，不做汇率换算 */
+const currencySymbol = computed(() =>
+  data.value?.currency === "USD" ? "$" : "¥"
+);
+
+function money(value: number | null | undefined) {
+  return `${currencySymbol.value}${formatParts(value ?? 0, "money").main}`;
+}
+
+/** 出现多币种时，「总成本」只含主币种，需要额外说明 */
+const multiCurrency = computed(
+  () => Object.keys(data.value?.costByCurrency ?? {}).length > 1
+);
+
+const unpricedCount = computed(() => data.value?.unpricedModels?.length ?? 0);
+
+/** 每日成本趋势：柱=金额，折线=调用量 */
+const dailyCostOption = computed(() => {
+  const trend = data.value?.dailyTrend ?? [];
+  return cartesianOption({
+    categories: trend.map(i => i.date),
+    series: [
+      { name: "成本", data: trend.map(i => i.cost), color: SEMANTIC.primary },
+      {
+        name: "调用次数",
+        type: "line",
+        rightAxis: true,
+        data: trend.map(i => i.calls),
+        color: SEMANTIC.positive
+      }
+    ],
+    leftAxis: { name: `成本（${currencySymbol.value}）` },
+    rightAxis: { name: "次", formatter: v => formatNumber(v) },
+    tooltipFormatters: {
+      成本: v => money(v),
+      调用次数: v => `${formatNumber(v)} 次`
+    }
+  });
+});
+
+// ---------- 单价配置 ----------
+
+type PriceRow = {
+  model: string;
+  currency: string;
+  inputPrice: number;
+  outputPrice: number;
+  enabled: boolean;
+  remark?: string;
+};
+
+const priceDrawer = ref(false);
+const priceLoading = ref(false);
+const priceSaving = ref(false);
+const priceRows = ref<PriceRow[]>([]);
+
+async function openPriceDrawer() {
+  priceDrawer.value = true;
+  priceLoading.value = true;
+  try {
+    const res = await getAiModelPrices();
+    priceRows.value = (res.data ?? []).map(i => ({
+      model: i.model,
+      currency: i.currency || "CNY",
+      inputPrice: Number(i.inputPrice ?? 0),
+      outputPrice: Number(i.outputPrice ?? 0),
+      enabled: i.enabled !== false,
+      remark: i.remark || ""
+    }));
+  } catch (e) {
+    message("加载单价失败", { type: "error" });
+  } finally {
+    priceLoading.value = false;
+  }
+}
+
+function addPriceRow() {
+  priceRows.value.push({
+    model: "",
+    currency: "CNY",
+    inputPrice: 0,
+    outputPrice: 0,
+    enabled: true,
+    remark: ""
+  });
+}
+
+function removePriceRow(index: number) {
+  priceRows.value.splice(index, 1);
+}
+
+async function savePrices() {
+  if (priceRows.value.some(i => !i.model.trim())) {
+    message("模型 ID 不能为空", { type: "warning" });
+    return;
+  }
+  priceSaving.value = true;
+  try {
+    await saveAiModelPrices(priceRows.value);
+    message("单价已保存，成本将按新单价重算", { type: "success" });
+    priceDrawer.value = false;
+    load();
+  } catch (e) {
+    message("保存失败", { type: "error" });
+  } finally {
+    priceSaving.value = false;
+  }
+}
 
 // ==================== 01 调用趋势 ====================
 
@@ -431,6 +562,14 @@ const lead = computed(() => {
           kind="tokens"
           :value="data.totalTokens"
           :spark="lead.tokenSpark"
+        />
+        <Readout
+          size="lead"
+          label="成本（估算）"
+          kind="money"
+          :value="data.totalCost ?? 0"
+          :caption="`${data.currency ?? 'CNY'} · 按当前单价估算`"
+          hint="成本 = prompt token × 输入单价 + response token × 输出单价（单价按每百万 token 报价）；不是供应商账单实付金额"
         />
         <Readout
           size="lead"
@@ -805,11 +944,269 @@ const lead = computed(() => {
           当前周期没有多供应商回退，也没有超过 30 秒的慢调用。
         </p>
       </Chapter>
+
+      <Chapter index="06" question="这段时间在 AI 上花了多少钱？">
+        <template #facts>
+          <dl class="facts">
+            <div>
+              <dt>总成本</dt>
+              <dd>{{ money(data.totalCost) }}</dd>
+              <p>按当前配置单价估算，不是账单实付</p>
+            </div>
+            <div>
+              <dt>计价币种</dt>
+              <dd>{{ data.currency ?? "CNY" }}</dd>
+              <p>
+                {{
+                  multiCurrency
+                    ? "存在多币种，本页不做汇率换算，仅汇总主币种"
+                    : "全表统一币种"
+                }}
+              </p>
+            </div>
+            <div>
+              <dt>未配单价模型</dt>
+              <dd>{{ unpricedCount }}</dd>
+              <p>
+                {{
+                  unpricedCount
+                    ? data.unpricedModels?.join("、")
+                    : "所有出现过的模型都已配置单价"
+                }}
+              </p>
+            </div>
+          </dl>
+        </template>
+
+        <el-alert
+          v-if="!data.priceConfigured"
+          type="warning"
+          show-icon
+          :closable="false"
+          class="cost-alert"
+          title="尚未配置模型单价，成本金额全部为 0"
+        >
+          <template #default>
+            成本是按「单价 × token」算出来的，没有单价就只能看消耗量。
+            <el-button type="primary" link @click="openPriceDrawer">
+              立即配置
+            </el-button>
+          </template>
+        </el-alert>
+
+        <div class="cost-toolbar">
+          <span class="cost-toolbar__note">
+            资产口径：调用量按天汇总；成本按「实际服务模型」计价（actual_model →
+            remote_model → model）
+          </span>
+          <el-button type="primary" plain @click="openPriceDrawer">
+            配置单价
+          </el-button>
+        </div>
+
+        <AnalyticsChart
+          :option="dailyCostOption"
+          :height="300"
+          label="每日成本与调用量趋势"
+        />
+
+        <DataTable :data="data.modelCostStats ?? []">
+          <el-table-column
+            prop="model"
+            label="模型"
+            min-width="220"
+            show-overflow-tooltip
+          />
+          <el-table-column
+            prop="calls"
+            label="调用次数"
+            width="110"
+            align="right"
+          >
+            <template #default="{ row }">
+              {{ formatNumber(row.calls) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="promptTokens"
+            label="输入 Token"
+            width="140"
+            align="right"
+          >
+            <template #default="{ row }">
+              {{ formatTokens(row.promptTokens) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="responseTokens"
+            label="输出 Token"
+            width="140"
+            align="right"
+          >
+            <template #default="{ row }">
+              {{ formatTokens(row.responseTokens) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="cost"
+            label="成本（估算）"
+            width="150"
+            align="right"
+          >
+            <template #default="{ row }">
+              {{ money(row.cost) }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="priced"
+            label="单价"
+            width="110"
+            align="center"
+          >
+            <template #default="{ row }">
+              <el-tag :type="row.priced ? 'success' : 'warning'" size="small">
+                {{ row.priced ? "已配置" : "未配置" }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </DataTable>
+        <p v-if="!data.modelCostStats?.length" class="pair__empty">
+          当前周期没有 AI 调用记录。
+        </p>
+      </Chapter>
     </template>
+
+    <!-- 单价配置抽屉 -->
+    <el-drawer
+      v-model="priceDrawer"
+      title="AI 模型单价"
+      size="760px"
+      :close-on-click-modal="false"
+    >
+      <el-alert
+        type="info"
+        show-icon
+        :closable="false"
+        class="price-tip"
+        title="单价单位：每百万 token，请与供应商报价口径保持一致"
+        description="不预置任何价格：供应商调价频繁，写死一份假数据会让面板长期显示一个没人怀疑的错误金额。"
+      />
+
+      <el-table
+        v-loading="priceLoading"
+        :data="priceRows"
+        size="small"
+        border
+        max-height="480"
+      >
+        <el-table-column label="模型 ID" min-width="200">
+          <template #default="{ row }">
+            <el-input v-model="row.model" placeholder="如 deepseek-chat" />
+          </template>
+        </el-table-column>
+        <el-table-column label="币种" width="100">
+          <template #default="{ row }">
+            <el-select v-model="row.currency">
+              <el-option label="CNY" value="CNY" />
+              <el-option label="USD" value="USD" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="输入单价" width="140">
+          <template #default="{ row }">
+            <el-input-number
+              v-model="row.inputPrice"
+              :min="0"
+              :precision="4"
+              :step="0.1"
+              controls-position="right"
+              class="price-input"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="输出单价" width="140">
+          <template #default="{ row }">
+            <el-input-number
+              v-model="row.outputPrice"
+              :min="0"
+              :precision="4"
+              :step="0.1"
+              controls-position="right"
+              class="price-input"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column label="启用" width="70" align="center">
+          <template #default="{ row }">
+            <el-switch v-model="row.enabled" />
+          </template>
+        </el-table-column>
+        <el-table-column label="备注" min-width="150">
+          <template #default="{ row }">
+            <el-input v-model="row.remark" placeholder="价格来源/生效日期" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="70" align="center">
+          <template #default="{ $index }">
+            <el-button type="danger" link @click="removePriceRow($index)">
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <template #footer>
+        <div class="price-footer">
+          <el-button @click="addPriceRow">新增一行</el-button>
+          <div>
+            <el-button @click="priceDrawer = false">取消</el-button>
+            <el-button
+              type="primary"
+              :loading="priceSaving"
+              @click="savePrices"
+            >
+              保存
+            </el-button>
+          </div>
+        </div>
+      </template>
+    </el-drawer>
   </AnalyticsPage>
 </template>
 
 <style scoped lang="scss">
+.cost-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 12px;
+}
+
+.cost-toolbar__note {
+  font-size: var(--ra-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.cost-alert {
+  margin-bottom: 12px;
+}
+
+.price-tip {
+  margin-bottom: 12px;
+}
+
+.price-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.price-input {
+  width: 100%;
+}
+
 .ai-lead {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
