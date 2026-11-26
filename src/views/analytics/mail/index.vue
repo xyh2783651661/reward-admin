@@ -5,15 +5,18 @@ import {
   getAnalyticsMailOverview,
   type AnalyticsMailOverview
 } from "@/api/analytics";
+import AnalyticsChart from "../components/AnalyticsChart.vue";
 import AnalyticsPage from "../components/AnalyticsPage.vue";
 import AnalyticsPageHeader from "../components/AnalyticsPageHeader.vue";
 import AnalyticsState from "../components/AnalyticsState.vue";
-import AnalyticsSection from "../components/AnalyticsSection.vue";
-import StatsMetaLine from "../components/StatsMetaLine.vue";
-import MetricCard from "../components/MetricCard.vue";
-import ChartCard from "../components/ChartCard.vue";
+import Chapter from "../components/Chapter.vue";
 import DataTable from "../components/DataTable.vue";
-import InsightPanel, { type Insight } from "../components/InsightPanel.vue";
+import FactList, { type Fact } from "../components/FactList.vue";
+import type { Finding } from "../components/FindingList.vue";
+import FindingsSection from "../components/FindingsSection.vue";
+import LeadStrip from "../components/LeadStrip.vue";
+import Readout from "../components/Readout.vue";
+import StatsMetaLine from "../components/StatsMetaLine.vue";
 import { useAnalyticsQuery } from "../composables/useAnalyticsQuery";
 import { SEMANTIC, cartesianOption, rankingOption } from "../utils/chartTheme";
 import {
@@ -22,8 +25,13 @@ import {
   formatPercent,
   successRateTone
 } from "../utils/format";
+import { compareHalves, peakIndex, troughIndex } from "../utils/series";
 
 defineOptions({ name: "AnalyticsMail" });
+
+const FAIL_RATE_WARN = 10;
+const FAIL_RATE_CRITICAL = 20;
+const REASON_CONCENTRATION = 50;
 
 const router = useRouter();
 const range = ref(90);
@@ -40,34 +48,50 @@ const { data, meta, loading, error, load } =
     { range, errorLabel: "加载邮件分析数据失败" }
   );
 
+const trend = computed(() => data.value?.monthlyTrend ?? []);
+
 const failRate = computed(() => {
   const d = data.value;
   return d && d.totalSent > 0 ? (d.failCount / d.totalSent) * 100 : null;
 });
 
+const lead = computed(() => ({
+  totalSpark: trend.value.map(i => i.total),
+  successSpark: trend.value.map(i => (i.total > 0 ? i.successRate : null)),
+  failSpark: trend.value.map(i => i.fail)
+}));
+
 function goFailRecords() {
   router.push({ path: "/log/mail", query: { status: "2" } });
 }
 
-const insights = computed<Insight[]>(() => {
+const findingRules = `失败率 > ${FAIL_RATE_WARN}%（> ${FAIL_RATE_CRITICAL}% 为严重）；单一失败原因占全部失败 ≥ ${REASON_CONCENTRATION}%`;
+
+const findings = computed<Finding[]>(() => {
   const d = data.value;
   if (!d || failRate.value === null) return [];
-  const list: Insight[] = [];
-  if (failRate.value > 10) {
+  const list: Finding[] = [];
+  if (failRate.value > FAIL_RATE_WARN) {
     list.push({
-      level: failRate.value > 20 ? "critical" : "warning",
+      level: failRate.value > FAIL_RATE_CRITICAL ? "critical" : "warning",
+      module: "邮件",
       title: "邮件发送失败率偏高",
-      evidence: `${scope.value}失败 ${formatNumber(d.failCount)} / ${formatNumber(d.totalSent)} 封，失败率 ${formatPercent(failRate.value)}（阈值 10%）`,
+      evidence: `${scope.value}失败 ${formatNumber(d.failCount)} / ${formatNumber(d.totalSent)} 封，失败率 ${formatPercent(failRate.value)}（阈值 ${FAIL_RATE_WARN}%）`,
       actionLabel: "查看失败邮件",
       onAction: goFailRecords
     });
   }
   const top = d.failReasons?.[0];
-  if (top && d.failCount > 0 && top.count / d.failCount >= 0.5) {
+  if (
+    top &&
+    d.failCount > 0 &&
+    (top.count / d.failCount) * 100 >= REASON_CONCENTRATION
+  ) {
     list.push({
       level: "info",
+      module: "邮件",
       title: "失败原因高度集中",
-      evidence: `「${top.reason}」占全部失败的 ${formatPercent((top.count / d.failCount) * 100)}（${formatNumber(top.count)} 次），优先处理该原因收益最大`,
+      evidence: `「${top.reason}」占全部失败的 ${formatPercent((top.count / d.failCount) * 100)}（${formatNumber(top.count)} 次，阈值 ${REASON_CONCENTRATION}%），优先处理该原因收益最大`,
       actionLabel: "查看失败邮件",
       onAction: goFailRecords
     });
@@ -75,8 +99,58 @@ const insights = computed<Insight[]>(() => {
   return list;
 });
 
+const trendFacts = computed<Fact[]>(() => {
+  const t = trend.value;
+  const facts: Fact[] = [];
+  if (!t.length) return facts;
+  const pk = peakIndex(t.map(i => i.total));
+  if (pk >= 0)
+    facts.push({
+      label: "发送最多的月份",
+      value: t[pk].month,
+      hint: `${formatNumber(t[pk].total)} 封`
+    });
+  const rates = t.map(i => (i.total > 0 ? i.successRate : null));
+  const low = troughIndex(rates);
+  if (low >= 0)
+    facts.push({
+      label: "成功率最低的月份",
+      value: formatPercent(t[low].successRate),
+      hint: `${t[low].month}，失败 ${formatNumber(t[low].fail)} / ${formatNumber(t[low].total)} 封`
+    });
+  const cmp = compareHalves(rates);
+  if (cmp)
+    facts.push({
+      label: "成功率前后半段对比",
+      value: `${cmp.diff >= 0 ? "+" : ""}${formatNumber(cmp.diff, 1)} 个百分点`,
+      hint: `${formatPercent(cmp.first)} → ${formatPercent(cmp.second)}`
+    });
+  return facts;
+});
+
+const reasonFacts = computed<Fact[]>(() => {
+  const d = data.value;
+  const facts: Fact[] = [];
+  if (!d) return facts;
+  const topType = d.typeStats?.[0];
+  if (topType)
+    facts.push({
+      label: "占比最高的邮件类型",
+      value: formatPercent(topType.percentage),
+      hint: `${topType.type}，${formatNumber(topType.count)} 封`
+    });
+  const top = d.failReasons?.[0];
+  if (top && d.failCount > 0)
+    facts.push({
+      label: "最主要的失败原因",
+      value: formatPercent((top.count / d.failCount) * 100),
+      hint: `${top.reason}（${formatNumber(top.count)} 次）`
+    });
+  return facts;
+});
+
 const trendOption = computed(() => {
-  const t = data.value?.monthlyTrend ?? [];
+  const t = trend.value;
   return cartesianOption({
     categories: t.map(i => i.month),
     series: [
@@ -142,13 +216,12 @@ const failReasonOption = computed(() =>
     <AnalyticsPageHeader
       v-model:range="range"
       title="邮件分析"
-      description="邮件发送量、成功率与失败原因"
+      description="发送是否稳定，失败集中在哪些原因"
       :range-options="rangeOptions"
       :loading="loading"
       @refresh="load"
     />
     <StatsMetaLine :meta="meta" />
-
     <AnalyticsState
       :loading="loading"
       :error="error"
@@ -157,84 +230,86 @@ const failReasonOption = computed(() =>
     />
 
     <template v-if="data">
-      <InsightPanel
-        :insights="insights"
-        rules="失败率 > 10%；单一失败原因占比 ≥ 50%"
-        :loading="loading"
-      />
-
-      <div class="mail-metrics">
-        <MetricCard
+      <LeadStrip>
+        <Readout
+          size="lead"
           label="发送总量"
           :value="data.totalSent"
-          size="hero"
+          :spark="lead.totalSpark"
           :caption="scope"
         />
-        <MetricCard
+        <Readout
+          size="lead"
           label="成功率"
-          :value="data.successRate"
           kind="percent"
-          size="hero"
+          :value="data.successRate"
           :tone="successRateTone(data.successRate)"
+          :spark="lead.successSpark"
           :caption="`成功 ${formatNumber(data.successCount)} 封`"
         />
-        <MetricCard
+        <Readout
+          size="lead"
           label="失败数"
           :value="data.failCount"
-          size="hero"
           :tone="failRateTone(failRate)"
+          :spark="lead.failSpark"
           :caption="`失败率 ${formatPercent(failRate)}`"
-          clickable
-          @click="goFailRecords"
         />
-      </div>
+      </LeadStrip>
 
-      <AnalyticsSection title="趋势" description="按月统计">
-        <ChartCard
-          title="月度发送趋势"
-          description="成功与失败堆叠为发送总量，折线为成功率"
-          :scope="scope"
+      <FindingsSection :items="findings" :rules="findingRules" />
+
+      <Chapter index="01" question="发送是否稳定？">
+        <template #facts>
+          <FactList :items="trendFacts" />
+        </template>
+        <p class="chart-note">
+          按月统计：成功与失败堆叠为发送总量，折线为成功率
+        </p>
+        <AnalyticsChart
+          v-if="trend.length"
           :option="trendOption"
           :height="320"
-          :empty="!data.monthlyTrend?.length"
-          :loading="loading"
-          @retry="load"
+          label="邮件月度发送趋势"
         />
-      </AnalyticsSection>
+        <p v-else class="empty">当前周期没有邮件发送记录。</p>
+      </Chapter>
 
-      <AnalyticsSection title="构成与失败原因">
-        <div class="mail-grid">
-          <ChartCard
-            title="邮件类型分布"
-            :scope="scope"
-            :option="typeOption"
-            :height="Math.max(220, (data.typeStats?.length ?? 0) * 36)"
-            :empty="!data.typeStats?.length"
-            :loading="loading"
-          />
-          <ChartCard
-            title="失败原因 TOP10"
-            description="点击条形查看失败邮件明细"
-            :scope="scope"
-            :option="failReasonOption"
-            :height="Math.max(220, (data.failReasons?.length ?? 0) * 36)"
-            :empty="!data.failReasons?.length"
-            :loading="loading"
-            clickable
-            @chart-click="goFailRecords"
-          />
+      <Chapter index="02" question="失败集中在哪些原因与类型？">
+        <template #facts>
+          <FactList :items="reasonFacts" />
+        </template>
+        <div class="pair">
+          <div>
+            <h3 class="pair__title">邮件类型分布</h3>
+            <AnalyticsChart
+              v-if="data.typeStats?.length"
+              :option="typeOption"
+              :height="Math.max(220, data.typeStats.length * 36)"
+              label="邮件类型发送量排行"
+            />
+            <p v-else class="empty">没有邮件类型数据。</p>
+          </div>
+          <div>
+            <h3 class="pair__title">失败原因 TOP10（点击查看失败邮件）</h3>
+            <AnalyticsChart
+              v-if="data.failReasons?.length"
+              :option="failReasonOption"
+              :height="Math.max(220, data.failReasons.length * 36)"
+              clickable
+              label="邮件失败原因排行"
+              @chart-click="goFailRecords"
+            />
+            <p v-else class="empty">当前周期没有邮件发送失败。</p>
+          </div>
         </div>
-      </AnalyticsSection>
+      </Chapter>
 
-      <ChartCard
-        title="失败原因明细"
-        description="完整原因文案，点击行查看失败邮件"
-        :scope="scope"
-        :empty="!data.failReasons?.length"
-      >
+      <Chapter index="03" question="明细：完整失败原因">
         <DataTable
           :data="data.failReasons"
           clickable
+          empty-text="当前周期没有邮件发送失败"
           @row-click="goFailRecords"
         >
           <el-table-column
@@ -250,21 +325,39 @@ const failReasonOption = computed(() =>
             align="right"
           />
         </DataTable>
-      </ChartCard>
+      </Chapter>
     </template>
   </AnalyticsPage>
 </template>
 
 <style scoped lang="scss">
-.mail-metrics {
+.pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--ra-space-md);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ra-space-xl);
 }
 
-.mail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: var(--ra-space-md);
+.pair__title {
+  margin: 0 0 var(--ra-space-sm);
+  font-size: var(--ra-font-base);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.chart-note,
+.empty {
+  margin: 0 0 var(--ra-space-sm);
+  font-size: var(--ra-font-xs);
+  color: var(--el-text-color-secondary);
+}
+
+.empty {
+  font-size: var(--ra-font-sm);
+}
+
+@media (width <= 1100px) {
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>
